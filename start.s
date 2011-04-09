@@ -1,12 +1,12 @@
 interrupt_vector_table:
     b _start @ Reset
-    b halt @ bad instr
+    b khalt @ bad instr
     b swi_handler 
-    b halt @ prefetch abort 
-    b halt @ dab_handler @ data abort
-    b halt
+    b khalt @ prefetch abort 
+    b khalt @ dab_handler @ data abort
+    b khalt
     b irq_handler @ irq
-    b halt @fiq
+    b khalt @fiq
 
 .comm stack, 0x10000 @ Reserve 64k stack in the BSS
 _start:

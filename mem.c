@@ -6,6 +6,8 @@ void* mstart;
 size_t msize;
 size_t mpages;
 char *bitmap;
+size_t mcurrent;
+
 
 const char space[] =  {
 8 , 7 , 6 , 6 , 5 , 5 , 5 , 5 , 4 , 4 , 4 , 4 , 4 , 4 , 4 , 4 , 4 , 3 , 3 , 
@@ -56,7 +58,7 @@ const char beginning_space[] =  {
 
 
 
-void setup_mem_bounds(void)
+static void setup_mem_bounds(void)
 {
     size_t kend = (size_t) &_kend;
 
@@ -65,64 +67,66 @@ void setup_mem_bounds(void)
     mpages = msize / PAGE_SIZE;    
 
 
-    kprintf("Kernel %p - %p\n Memory %p for %u (%u pages, %u bytes total)\n", 
+    printk("Kernel %p - %p\n Memory %p for %u (%u pages, %u bytes total)", 
             &_kstart, &_kend, mstart, msize, mpages, get_mem_size());
 
 }
 
-void* get_addr_from_page(size_t page)
+static void* get_addr_from_page(size_t page)
 {
     return mstart + PAGE_SIZE * page;
 }
 
-void mark_page_used(size_t page)
+static void mark_page_used(size_t page)
 {
     size_t pos = page / 8; // find the byte
     size_t bit = page & 8;
     bitmap[pos] |= (1 << bit); // set bit
-    kprintf("Marking: byte: %x Byte (page %u)\n", bitmap[pos], page);
+    printk("Marking: byte: %x (page %u)", bitmap[pos], page);
 }
 
-void mark_page_free(size_t page)
+static void mark_page_free(size_t page)
 {
     size_t pos = page / 8; // find the byte
     size_t bit = page & 8;
     bitmap[pos] &= ~(1 << bit); // clear bit
 }
 
-void setup_memory(void)
+void ksetup_memory(void)
 {
-    kprintf("Setup memory\n");
+    printk("Setup memory ==>");
     setup_mem_bounds();
     
+    mcurrent = 0;
+
+    /*
     // we are limiting ourselves to ~134MBs right now,
     // but that's a reasonable tradeoff for simplicity
     // here we are taking the first page for our free-page bitmap
     bitmap = get_addr_from_page(0);
     memset(bitmap, 0, PAGE_SIZE);
     mark_page_used(0);
-
-    kprintf("Done mem setup\n");
+    */
+    printk("<== Done with memory setup");
 }
 
-void* get_page()
+void* kget_page()
 {
-    return get_pages(1);
+    return kget_pages(1);
 }
 
-void* get_pages(size_t num)
+void* kget_pages(size_t num)
 {
 
+    /*
     if (num > 8) return 0; // handle larger allocs later
 
     size_t start_page;
 
     for (size_t i = 0; i < mpages / 8; i++) {
         if (space[(int)bitmap[i]] >= num) {
-            kprintf("Test page: space: %u, byte %x\n", 
                 space[(int)bitmap[i]], bitmap[i]);
             size_t start = start_pos[(int)bitmap[i]];
-            kprintf("mem start: %u\n", start);
             start_page = i * 8 + start;
             for(size_t j = num; j != 0 ; j--) {
                 mark_page_used(start++);
@@ -130,29 +134,38 @@ void* get_pages(size_t num)
             break;
         }
     }
-    kprintf("Allocing %u pages at %p (page %u)\n", 
+    
+    */
+    
+    size_t start_page = mcurrent;
+    mcurrent += num;
+    printk("Allocing %u pages at %p (page %u)", 
         num, get_addr_from_page(start_page), start_page);
+    
+    *(char*)get_addr_from_page(start_page) = 0; // poke to make sure memory is actually there
     return get_addr_from_page(start_page);
 }
 
-size_t get_page_from_addr(void* addr)
+static size_t get_page_from_addr(void* addr)
 {
     size_t relative = addr - mstart;
     return (size_t)relative / PAGE_SIZE;
 }
 
-void free_page(void* pageaddr)
+void kfree_page(void* pageaddr)
 {
-    free_pages(pageaddr, 1);
+    kfree_pages(pageaddr, 1);
 }
 
-void free_pages(void* pageaddr, size_t num)
+void kfree_pages(void* pageaddr, size_t num)
 {
-    size_t page = get_page_from_addr(pageaddr);
-    kprintf("Free %u pages at %p (page %u)\n", 
+    //size_t page = get_page_from_addr(pageaddr);
+    printk("Free %u pages at %p (page %u)", 
         num, pageaddr, get_page_from_addr(pageaddr));
+
+    /*
     for(size_t i = 0; i < num; i++)
     {
         mark_page_free(page+i);
-    }
+    }*/
 }

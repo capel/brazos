@@ -14,7 +14,7 @@
 				DEV_CONS_ADDRESS + DEV_CONS_PUTGETCHAR)
 #define	HALT_ADDRESS		(PHYSADDR_OFFSET +		\
 				DEV_CONS_ADDRESS + DEV_CONS_HALT)
-int vprintf(char* buf, size_t size, const char* fmt, va_list va);
+int vprintf(char* buf, size_t size, const char* fmt, va_list va, int newline);
 
 char kgetch(void)
 {
@@ -22,7 +22,7 @@ char kgetch(void)
 	return ch;
 }
 
-void halt(void) 
+void khalt(void) 
 {
 	*((volatile unsigned char *) HALT_ADDRESS) = 0;
 }
@@ -44,12 +44,25 @@ int kprintf(const char* fmt, ...)
 
     va_list va;
     va_start(va, fmt);
-    vprintf(buf, 1024, fmt, va);
+    vprintf(buf, 1024, fmt, va, false);
     va_end(va);
 
     kputs(buf);
 
     return 0;
+}
+
+void printk(const char* fmt, ...)
+{
+    char buf[1024];
+
+    va_list va;
+    va_start(va, fmt);
+    vprintf(buf, 1024, fmt, va, true);
+    va_end(va);
+
+    kputs(buf);
+
 }
 
 int printf(const char* fmt, ...)
@@ -58,7 +71,7 @@ int printf(const char* fmt, ...)
 
     va_list va;
     va_start(va, fmt);
-    vprintf(buf, 1024, fmt, va);
+    vprintf(buf, 1024, fmt, va, false);
     va_end(va);
 
 
@@ -76,7 +89,7 @@ int snprintf(char* buf, size_t size, const char* fmt, ...)
 
     va_list va;
     va_start(va, fmt);
-    vprintf(buf, size, fmt, va);
+    vprintf(buf, size, fmt, va, false);
     va_end(va);
 
     return 0;
@@ -84,7 +97,7 @@ int snprintf(char* buf, size_t size, const char* fmt, ...)
 
 
 
-int vprintf(char* buf, size_t size, const char* fmt, va_list va)
+int vprintf(char* buf, size_t size, const char* fmt, va_list va, int newline)
 {
     const int BUFSIZE = 64;
     char tmpbuf[BUFSIZE]; // PLENTY of room for scratch stuff
@@ -137,10 +150,15 @@ int vprintf(char* buf, size_t size, const char* fmt, va_list va)
         }
     }
 
-    if (bufpos >= size) {
+    if (bufpos >= size-1) {
+        if (newline)
+            buf[size-2] = '\n';
+        
         buf[size-1] = '\0';
         return -1;
     } else {
+        if (newline)
+            buf[bufpos++] = '\n';
         buf[bufpos] = '\0'; // null-terminate regardless
         return 0;
     }

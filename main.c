@@ -43,19 +43,18 @@ char update_input()
 
 void kmain(void)
 {
-    kprintf("Starting main\n");
+    printk("Starting main\n");
     enable_interrupt();
     enable_cons_irq();
    
     get_cpuid();
 
     //enable_mmu();
-    setup_memory();
+    ksetup_memory();
 
-    char* swi_stack = get_page();
-    char* user_stack = get_page();
+    char* swi_stack = kget_pages(10);
+    char* user_stack = kget_pages(10);
 
-//    kprintf("buf: %u\n", buf);
     
 
     memset(input, 0, 500);
@@ -68,7 +67,6 @@ void kmain(void)
 
 void __attribute__ ((interrupt ("SWI"))) swi_handler (int r0, int r1, int r2, int r3) 
 {
-    //kprintf("In syscall, (type = %u)\n", r0);
     switch (r0) {
         case READ_STDIN:
             for (;;) {
@@ -77,7 +75,7 @@ void __attribute__ ((interrupt ("SWI"))) swi_handler (int r0, int r1, int r2, in
             }
             strlcpy((char*)r1, input, r2);
             inputpos = 0;
-            r0 = 0x1337;
+            r0 = 0;
             break;
         case WRITE_STDOUT:
             kputs((char*)r1);
@@ -87,12 +85,11 @@ void __attribute__ ((interrupt ("SWI"))) swi_handler (int r0, int r1, int r2, in
             halt();
             r0 =0;
             break;
-        case GET_PAGE:
-            r0 = (int)get_page();
-            //kprintf("k getpage: %u\n", r0);
+        case GET_PAGES:
+            r0 = (int)kget_pages(r1);
             break;
-        case FREE_PAGE:
-            free_page((void*)r0);
+        case FREE_PAGES:
+            kfree_page((void*)r1);
             r0 = 0;
             break;
     }

@@ -117,7 +117,7 @@ static inline unsigned disable_irq(void){
 
 static inline unsigned change_mode(unsigned mode)
 {
-    kprintf("Change mode to %x\n", mode);
+    printk("Change mode to %x\n", mode);
     unsigned temp = __get_CPSR();
     unsigned temp2 = temp & (~0x1f);
     __set_CPSR(temp2 | mode);
@@ -136,7 +136,7 @@ static inline void enable_mmu(void)
 static inline void get_cpuid(void)
 {
     unsigned temp = __get_CPR1();
-    kprintf("CPUID: %u\n", temp);
+    printk("CPUID: %u\n", temp);
 }
 
 
