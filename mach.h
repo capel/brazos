@@ -1,6 +1,10 @@
 #ifndef MACH_H
 #define MACH_H
 
+#ifdef USER
+#error __FILE__ " included from user code."
+#endif
+
 #include "types.h"
 #include "kio.h"
 #include "stdlib.h"
@@ -53,11 +57,6 @@ extern void* _kend;
 #define IRQ_CONS 2
 
 #define USER_STACK_SIZE 10
-
-void main();
-
-
-  
 
 static inline unsigned __get_CPSR(void) { 
     unsigned temp;

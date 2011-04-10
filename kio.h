@@ -1,6 +1,9 @@
 #ifndef KIO_H
 #define KIO_H
 
+#ifdef USER
+#error __file__ " included from user code."
+#endif
 
 char kgetch();
 void khalt() __attribute__((noreturn));
@@ -12,8 +15,6 @@ int kprintf(const char* fmt, ...);
 void _printk(const char* fmt, ...);
 void _panic(const char* fmt, ...) __attribute__((noreturn));
 
-int printf(const char* fmt, ...);
-int println(const char* fmt, ...);
 
 #define BLACK "\033[22;30m"
 #define RED "\033[22;31m"

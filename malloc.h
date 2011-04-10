@@ -1,14 +1,14 @@
-#ifndef __MEM_h__
-#define __MEM_h__
+#ifndef MALLOC_H
+#define MALLOC_H
 
-#define P_BESTFIT  (0)
-#define P_WORSTFIT (1)
-#define P_FIRSTFIT (2)
+#ifdef KERNEL
+#error __FILE__ " included from kernel code."
+#endif
 
-int Mem_Init(int sizeOfRegion, int policy);
-void *Mem_Alloc(int size);
-int Mem_Free(void *ptr);
+int mem_init(size_t pages);
+void* malloc(int size);
+int free(void *ptr);
 void Mem_Dump();
 
 
-#endif // __MEM_h__
+#endif 
