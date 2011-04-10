@@ -11,8 +11,7 @@ void main()
     printf("Hello\n");
     char * page = get_pages(1); 
     printf("Page %p\n", page);
-    for (;;)
-    {
+    for (;;) {
         gets(buf, 500);
         printf(buf);
     }

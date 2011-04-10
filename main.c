@@ -10,6 +10,10 @@ volatile bool newchar;
 char input[INPUTBUFSIZE];
 size_t inputpos;
 
+PCB *pcb;
+
+#define PCB_TO_ASM(pcb) (struct PCB*)(((char*)(pcb))+sizeof(PCB))
+#define PCB_FROM_ASM(pcb) (struct PCB*)(((char*)(pcb))-sizeof(PCB))
 
 void __attribute__ ((interrupt ("IRQ"))) irq_handler (void) {
     newchar = true;
@@ -54,9 +58,9 @@ void kmain(void)
 
     char* swi_stack = kget_pages(10);
     char* user_stack = kget_pages(10);
-
+    char* pcb_space = kget_page();
+    pcb =(PCB*) pcb_space;
     
-
     memset(input, 0, 500);
     inputpos = 0;
 
@@ -65,7 +69,15 @@ void kmain(void)
     switch_to_user(user_stack+PAGE_SIZE, exit, main,0);
 }
 
-void __attribute__ ((interrupt ("SWI"))) swi_handler (int r0, int r1, int r2, int r3) 
+void* syscall_handler (void* pcb_top) {
+    memcpy((char*)pcb, (char*)pcb_top, sizeof(PCB));
+    int temp = ksyscall(pcb->r0, pcb->r1, pcb->r2, pcb->r3);
+    pcb->r0 = temp;
+    return pcb;
+}
+
+
+int ksyscall (int r0, int r1, int r2, int r3) 
 {
     switch (r0) {
         case READ_STDIN:
@@ -75,26 +87,21 @@ void __attribute__ ((interrupt ("SWI"))) swi_handler (int r0, int r1, int r2, in
             }
             strlcpy((char*)r1, input, r2);
             inputpos = 0;
-            r0 = 0;
-            break;
+            return 0;
         case WRITE_STDOUT:
             kputs((char*)r1);
-            r0 = 0;
-            break;
+            return 0;
         case HALT:
-            halt();
-            r0 =0;
-            break;
+            khalt();
+            return 0;
         case GET_PAGES:
             r0 = (int)kget_pages(r1);
-            break;
+            return r0;
         case FREE_PAGES:
             kfree_page((void*)r1);
-            r0 = 0;
-            break;
+            return 0;
+        default:
+            return -1;
     }
-    asm volatile ("mov r5, %[r0]"::[r0]"r"(r0));
 }
-
-
 

@@ -14,8 +14,7 @@
 ** processes / threads
 PCB
 MMU
-stacks
-
+#stacks
 
 2======
 
