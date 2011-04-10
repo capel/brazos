@@ -55,6 +55,7 @@ set_swi_stack:
 .global swi_handler
 swi_handler:
     @ save it now, since it will get clobbered
+    @ lr is their pc + 4
     stmfd sp!, {lr}
 
     bl save_pcb

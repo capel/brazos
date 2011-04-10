@@ -16,7 +16,7 @@ all: ${TARGET}
 	gxemul  -VT -E testarm kernel
 
 ${TARGET}: ${OBJS} ${AOBJS}
-	${LD} ${LDFLAGS} ${OBJS} start.o -o ${TARGET}
+	${LD} ${LDFLAGS} -o ${TARGET} start.o ${OBJS}
 
 ${OBJS}: %.o: %.c
 	${CC} ${CCFLAGS} -o $@ -c $< 
