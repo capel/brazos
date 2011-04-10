@@ -1,29 +1,6 @@
 	.file	"main.c"
 	.text
 	.align	2
-	.type	syscall, %function
-syscall:
-	@ args = 0, pretend = 0, frame = 16
-	@ frame_needed = 1, uses_anonymous_args = 0
-	@ link register save eliminated.
-	str	fp, [sp, #-4]!
-	add	fp, sp, #0
-	sub	sp, sp, #16
-	str	r0, [fp, #-4]
-	str	r1, [fp, #-8]
-	str	r2, [fp, #-12]
-	str	r3, [fp, #-16]
-@ 12 "syscalls.h" 1
-	swi 0x0
-@ 0 "" 2
-	ldr	r3, [fp, #-4]
-	mov	r0, r3
-	add	sp, fp, #0
-	ldmfd	sp!, {fp}
-	bx	lr
-	.size	syscall, .-syscall
-	.align	2
-	.global	gets
 	.type	gets, %function
 gets:
 	@ args = 0, pretend = 0, frame = 8
@@ -43,10 +20,47 @@ gets:
 	sub	sp, fp, #4
 	ldmfd	sp!, {fp, pc}
 	.size	gets, .-gets
+	.align	2
+	.type	get_pages, %function
+get_pages:
+	@ args = 0, pretend = 0, frame = 4
+	@ frame_needed = 1, uses_anonymous_args = 0
+	stmfd	sp!, {fp, lr}
+	add	fp, sp, #4
+	sub	sp, sp, #4
+	str	r0, [fp, #-8]
+	ldr	r3, [fp, #-8]
+	mov	r0, #4
+	mov	r1, r3
+	mov	r2, #0
+	mov	r3, #0
+	bl	syscall
+	mov	r3, r0
+	mov	r0, r3
+	sub	sp, fp, #4
+	ldmfd	sp!, {fp, pc}
+	.size	get_pages, .-get_pages
+	.align	2
+	.type	halt, %function
+halt:
+	@ args = 0, pretend = 0, frame = 0
+	@ frame_needed = 1, uses_anonymous_args = 0
+	stmfd	sp!, {fp, lr}
+	add	fp, sp, #4
+	mov	r0, #3
+	mov	r1, #0
+	mov	r2, #0
+	mov	r3, #0
+	bl	syscall
+	ldmfd	sp!, {fp, pc}
+	.size	halt, .-halt
 	.section	.rodata
 	.align	2
 .LC0:
 	.ascii	"Hello\012\000"
+	.align	2
+.LC1:
+	.ascii	"Page %p\012\000"
 	.text
 	.align	2
 	.global	main
@@ -57,17 +71,16 @@ main:
 	stmfd	sp!, {fp, lr}
 	add	fp, sp, #4
 	sub	sp, sp, #504
-	ldr	r0, .L5
+	ldr	r0, .L6
 	bl	printf
-	sub	r3, fp, #508
-	mov	r0, #4
-	mov	r1, r3
-	mov	r2, #500
-	mov	r3, #0
-	bl	syscall
+	mov	r0, #1
+	bl	get_pages
 	mov	r3, r0
 	str	r3, [fp, #-8]
-.L4:
+	ldr	r0, .L6+4
+	ldr	r1, [fp, #-8]
+	bl	printf
+.L5:
 	sub	r3, fp, #508
 	mov	r0, r3
 	mov	r1, #500
@@ -75,15 +88,16 @@ main:
 	sub	r3, fp, #508
 	mov	r0, r3
 	bl	printf
-	b	.L4
-.L6:
+	b	.L5
+.L7:
 	.align	2
-.L5:
+.L6:
 	.word	.LC0
+	.word	.LC1
 	.size	main, .-main
 	.section	.rodata
 	.align	2
-.LC1:
+.LC2:
 	.ascii	"Death comes for us all\012\000"
 	.text
 	.align	2
@@ -94,18 +108,14 @@ exit:
 	@ frame_needed = 1, uses_anonymous_args = 0
 	stmfd	sp!, {fp, lr}
 	add	fp, sp, #4
-	ldr	r0, .L8
+	ldr	r0, .L9
 	bl	printf
-	mov	r0, #3
-	mov	r1, #0
-	mov	r2, #0
-	mov	r3, #0
-	bl	syscall
+	bl	halt
 	ldmfd	sp!, {fp, pc}
-.L9:
+.L10:
 	.align	2
-.L8:
-	.word	.LC1
+.L9:
+	.word	.LC2
 	.size	exit, .-exit
 	.align	2
 	.type	__get_CPSR, %function
@@ -116,7 +126,7 @@ __get_CPSR:
 	stmfd	sp!, {r4, fp}
 	add	fp, sp, #4
 	sub	sp, sp, #4
-@ 23 "kirq.h" 1
+@ 81 "mach.h" 1
 	mrs r4,CPSR
 @ 0 "" 2
 	str	r4, [fp, #-8]
@@ -137,7 +147,7 @@ __set_CPSR:
 	sub	sp, sp, #4
 	str	r0, [fp, #-4]
 	ldr	r3, [fp, #-4]
-@ 27 "kirq.h" 1
+@ 85 "mach.h" 1
 	 msr CPSR_c,r3
 @ 0 "" 2
 	add	sp, fp, #0
@@ -153,7 +163,7 @@ __get_CPR1:
 	stmfd	sp!, {r4, fp}
 	add	fp, sp, #4
 	sub	sp, sp, #4
-@ 38 "kirq.h" 1
+@ 96 "mach.h" 1
 	mrc p15, 0, r4, c0,c0
 @ 0 "" 2
 	str	r4, [fp, #-8]
@@ -180,38 +190,10 @@ enable_interrupt:
 	sub	sp, fp, #4
 	ldmfd	sp!, {fp, pc}
 	.size	enable_interrupt, .-enable_interrupt
-	.align	2
-	.type	switch_to_user, %function
-switch_to_user:
-	@ args = 0, pretend = 0, frame = 12
-	@ frame_needed = 1, uses_anonymous_args = 0
-	stmfd	sp!, {fp, lr}
-	add	fp, sp, #4
-	sub	sp, sp, #12
-	str	r0, [fp, #-12]
-	str	r1, [fp, #-16]
-	bl	__get_CPSR
-	str	r0, [fp, #-8]
-	ldr	r3, [fp, #-8]
-	orr	r3, r3, #16
-	mov	r0, r3
-	bl	__set_CPSR
-	ldr	r3, [fp, #-12]
-@ 84 "kirq.h" 1
-	mov sp,r3
-@ 0 "" 2
-	ldr	r3, [fp, #-16]
-@ 85 "kirq.h" 1
-	mov lr,r3
-@ 0 "" 2
-	bl	main
-	sub	sp, fp, #4
-	ldmfd	sp!, {fp, pc}
-	.size	switch_to_user, .-switch_to_user
 	.section	.rodata
 	.align	2
-.LC2:
-	.ascii	"CPUID: %u\000"
+.LC3:
+	.ascii	"CPUID: %u\012\000"
 	.text
 	.align	2
 	.type	get_cpuid, %function
@@ -225,31 +207,15 @@ get_cpuid:
 	str	r0, [fp, #-8]
 	ldr	r0, .L16
 	ldr	r1, [fp, #-8]
-	bl	kprintf
+	bl	printk
 	sub	sp, fp, #4
 	ldmfd	sp!, {fp, pc}
 .L17:
 	.align	2
 .L16:
-	.word	.LC2
+	.word	.LC3
 	.size	get_cpuid, .-get_cpuid
 	.align	2
-	.global	restore_interrupt
-	.type	restore_interrupt, %function
-restore_interrupt:
-	@ args = 0, pretend = 0, frame = 4
-	@ frame_needed = 1, uses_anonymous_args = 0
-	stmfd	sp!, {fp, lr}
-	add	fp, sp, #4
-	sub	sp, sp, #4
-	str	r0, [fp, #-8]
-	ldr	r0, [fp, #-8]
-	bl	__set_CPSR
-	sub	sp, fp, #4
-	ldmfd	sp!, {fp, pc}
-	.size	restore_interrupt, .-restore_interrupt
-	.align	2
-	.global	enable_cons_irq
 	.type	enable_cons_irq, %function
 enable_cons_irq:
 	@ args = 0, pretend = 0, frame = 0
@@ -265,42 +231,10 @@ enable_cons_irq:
 	ldmfd	sp!, {fp}
 	bx	lr
 	.size	enable_cons_irq, .-enable_cons_irq
-	.align	2
-	.global	disable_cons_irq
-	.type	disable_cons_irq, %function
-disable_cons_irq:
-	@ args = 0, pretend = 0, frame = 0
-	@ frame_needed = 1, uses_anonymous_args = 0
-	@ link register save eliminated.
-	str	fp, [sp, #-4]!
-	add	fp, sp, #0
-	mov	r3, #369098752
-	add	r3, r3, #4
-	mov	r2, #2
-	str	r2, [r3, #0]
-	add	sp, fp, #0
-	ldmfd	sp!, {fp}
-	bx	lr
-	.size	disable_cons_irq, .-disable_cons_irq
-	.align	2
-	.global	get_irq_mask
-	.type	get_irq_mask, %function
-get_irq_mask:
-	@ args = 0, pretend = 0, frame = 0
-	@ frame_needed = 1, uses_anonymous_args = 0
-	@ link register save eliminated.
-	str	fp, [sp, #-4]!
-	add	fp, sp, #0
-	mov	r3, #369098752
-	ldr	r3, [r3, #0]
-	mov	r0, r3
-	add	sp, fp, #0
-	ldmfd	sp!, {fp}
-	bx	lr
-	.size	get_irq_mask, .-get_irq_mask
 	.comm	newchar,4,4
 	.comm	input,500,4
 	.comm	inputpos,4,4
+	.comm	pcb,4,4
 	.align	2
 	.global	irq_handler
 	.type	irq_handler, %function
@@ -311,15 +245,15 @@ irq_handler:
 	@ link register save eliminated.
 	stmfd	sp!, {r2, r3, fp}
 	add	fp, sp, #8
-	ldr	r3, .L23
+	ldr	r3, .L20
 	mov	r2, #1
 	str	r2, [r3, #0]
 	sub	sp, fp, #8
 	ldmfd	sp!, {r2, r3, fp}
 	subs	pc, lr, #4
-.L24:
+.L21:
 	.align	2
-.L23:
+.L20:
 	.word	newchar
 	.size	irq_handler, .-irq_handler
 	.align	2
@@ -347,105 +281,180 @@ update_input:
 	sub	sp, sp, #4
 	mov	r3, #0
 	strb	r3, [fp, #-5]
-.L30:
+.L27:
 	bl	kgetch
 	mov	r3, r0
 	strb	r3, [fp, #-6]
 	ldrb	r3, [fp, #-6]	@ zero_extendqisi2
 	cmp	r3, #0
-	bne	.L27
+	bne	.L24
 	ldrb	r3, [fp, #-5]	@ zero_extendqisi2
 	mov	r0, r3
 	sub	sp, fp, #4
 	ldmfd	sp!, {fp, pc}
-.L27:
+.L24:
 	ldrb	r3, [fp, #-6]	@ zero_extendqisi2
 	cmp	r3, #13
-	bne	.L28
+	bne	.L25
 	mov	r3, #10
 	strb	r3, [fp, #-6]
-.L28:
-	ldr	r3, .L31
+.L25:
+	ldr	r3, .L28
 	ldr	r2, [r3, #0]
 	mov	r3, #496
 	add	r3, r3, #1
 	cmp	r2, r3
-	bhi	.L29
-	ldr	r3, .L31
+	bhi	.L26
+	ldr	r3, .L28
 	ldr	r3, [r3, #0]
-	ldr	r2, .L31+4
+	ldr	r2, .L28+4
 	ldrb	r1, [fp, #-6]
 	strb	r1, [r2, r3]
 	add	r2, r3, #1
-	ldr	r3, .L31
+	ldr	r3, .L28
 	str	r2, [r3, #0]
-	ldr	r3, .L31
+	ldr	r3, .L28
 	ldr	r3, [r3, #0]
-	ldr	r2, .L31+4
+	ldr	r2, .L28+4
 	mov	r1, #0
 	strb	r1, [r2, r3]
-.L29:
+.L26:
 	ldrb	r3, [fp, #-6]
 	strb	r3, [fp, #-5]
-	b	.L30
-.L32:
+	b	.L27
+.L29:
 	.align	2
-.L31:
+.L28:
 	.word	inputpos
 	.word	input
 	.size	update_input, .-update_input
+	.section	.rodata
+	.align	2
+.LC4:
+	.ascii	"Starting main\012\000"
+	.text
 	.align	2
 	.global	kmain
 	.type	kmain, %function
 kmain:
-	@ args = 0, pretend = 0, frame = 4
+	@ args = 0, pretend = 0, frame = 12
 	@ frame_needed = 1, uses_anonymous_args = 0
 	stmfd	sp!, {fp, lr}
 	add	fp, sp, #4
-	sub	sp, sp, #4
+	sub	sp, sp, #12
+	ldr	r0, .L31
+	bl	printk
 	bl	enable_interrupt
 	bl	enable_cons_irq
 	bl	get_cpuid
-	bl	setup_memory
-	bl	get_page
+	bl	ksetup_memory
+	mov	r0, #10
+	bl	kget_pages
 	mov	r3, r0
 	str	r3, [fp, #-8]
-	ldr	r0, .L34
+	mov	r0, #10
+	bl	kget_pages
+	mov	r3, r0
+	str	r3, [fp, #-12]
+	bl	kget_page
+	mov	r3, r0
+	str	r3, [fp, #-16]
+	ldr	r2, [fp, #-16]
+	ldr	r3, .L31+4
+	str	r2, [r3, #0]
+	ldr	r0, .L31+8
 	mov	r1, #0
 	mov	r2, #500
 	bl	memset
-	ldr	r3, .L34+4
+	ldr	r3, .L31+12
 	mov	r2, #0
 	str	r2, [r3, #0]
 	ldr	r3, [fp, #-8]
 	add	r3, r3, #4096
 	mov	r0, r3
-	ldr	r1, .L34+8
+	mov	r1, #0
+	mov	r2, #0
+	mov	r3, #0
+	bl	set_swi_stack
+	ldr	r3, [fp, #-12]
+	add	r3, r3, #4096
+	mov	r0, r3
+	ldr	r1, .L31+16
+	ldr	r2, .L31+20
+	mov	r3, #0
 	bl	switch_to_user
+	sub	sp, fp, #4
+	ldmfd	sp!, {fp, pc}
+.L32:
+	.align	2
+.L31:
+	.word	.LC4
+	.word	pcb
+	.word	input
+	.word	inputpos
+	.word	exit
+	.word	main
+	.size	kmain, .-kmain
+	.align	2
+	.global	syscall_handler
+	.type	syscall_handler, %function
+syscall_handler:
+	@ args = 0, pretend = 0, frame = 8
+	@ frame_needed = 1, uses_anonymous_args = 0
+	stmfd	sp!, {fp, lr}
+	add	fp, sp, #4
+	sub	sp, sp, #8
+	str	r0, [fp, #-12]
+	ldr	r3, .L34
+	ldr	r3, [r3, #0]
+	mov	r2, r3
+	ldr	r3, [fp, #-12]
+	mov	r0, r2
+	mov	r1, r3
+	mov	r2, #68
+	bl	memcpy
+	ldr	r3, .L34
+	ldr	r3, [r3, #0]
+	ldr	r0, [r3, #4]
+	ldr	r3, .L34
+	ldr	r3, [r3, #0]
+	ldr	r1, [r3, #8]
+	ldr	r3, .L34
+	ldr	r3, [r3, #0]
+	ldr	r2, [r3, #12]
+	ldr	r3, .L34
+	ldr	r3, [r3, #0]
+	ldr	r3, [r3, #16]
+	bl	ksyscall
+	str	r0, [fp, #-8]
+	ldr	r3, .L34
+	ldr	r3, [r3, #0]
+	ldr	r2, [fp, #-8]
+	str	r2, [r3, #4]
+	ldr	r3, .L34
+	ldr	r3, [r3, #0]
+	mov	r0, r3
 	sub	sp, fp, #4
 	ldmfd	sp!, {fp, pc}
 .L35:
 	.align	2
 .L34:
-	.word	input
-	.word	inputpos
-	.word	exit
-	.size	kmain, .-kmain
+	.word	pcb
+	.size	syscall_handler, .-syscall_handler
 	.align	2
-	.global	swi_handler
-	.type	swi_handler, %function
-swi_handler:
-	@ ARM Exception Handler.
+	.global	ksyscall
+	.type	ksyscall, %function
+ksyscall:
 	@ args = 0, pretend = 0, frame = 20
 	@ frame_needed = 1, uses_anonymous_args = 0
-	stmfd	sp!, {r0, r1, r2, r3, fp, ip, lr}
-	add	fp, sp, #24
+	stmfd	sp!, {fp, lr}
+	add	fp, sp, #4
 	sub	sp, sp, #20
-	str	r0, [fp, #-32]
-	str	r1, [fp, #-36]
-	str	r2, [fp, #-40]
-	str	r3, [fp, #-44]
-	ldr	r3, [fp, #-32]
+	str	r0, [fp, #-12]
+	str	r1, [fp, #-16]
+	str	r2, [fp, #-20]
+	str	r3, [fp, #-24]
+	ldr	r3, [fp, #-12]
 	sub	r3, r3, #1
 	cmp	r3, #4
 	ldrls	pc, [pc, r3, asl #2]
@@ -461,12 +470,12 @@ swi_handler:
 .L38:
 	bl	update_input
 	mov	r3, r0
-	strb	r3, [fp, #-25]
-	ldrb	r3, [fp, #-25]	@ zero_extendqisi2
+	strb	r3, [fp, #-5]
+	ldrb	r3, [fp, #-5]	@ zero_extendqisi2
 	cmp	r3, #0
 	beq	.L46
-	ldr	r2, [fp, #-36]
-	ldr	r3, [fp, #-40]
+	ldr	r2, [fp, #-16]
+	ldr	r3, [fp, #-20]
 	mov	r0, r2
 	ldr	r1, .L47
 	mov	r2, r3
@@ -475,40 +484,42 @@ swi_handler:
 	mov	r2, #0
 	str	r2, [r3, #0]
 	mov	r3, #0
-	str	r3, [fp, #-32]
-	b	.L37
+	b	.L45
 .L39:
-	ldr	r3, [fp, #-36]
+	ldr	r3, [fp, #-16]
 	mov	r0, r3
 	bl	kputs
 	mov	r3, #0
-	str	r3, [fp, #-32]
-	b	.L37
+	b	.L45
 .L40:
-	bl	halt
+	bl	khalt
 	mov	r3, #0
-	str	r3, [fp, #-32]
-	b	.L37
+	b	.L45
 .L41:
-	ldr	r3, [fp, #-32]
+	ldr	r3, [fp, #-16]
+	mov	r0, r3
+	bl	kget_pages
+	mov	r3, r0
+	str	r3, [fp, #-12]
+	ldr	r3, [fp, #-12]
 	b	.L45
 .L42:
-	ldr	r3, [fp, #-32]
+	ldr	r3, [fp, #-16]
 	mov	r0, r3
-	bl	free_page
+	bl	kfree_page
 	mov	r3, #0
-	str	r3, [fp, #-32]
-	mov	r0, r0	@ nop
+	b	.L45
 .L37:
-	ldr	r3, [fp, #-32]
+	b	.L36
 .L45:
+.L36:
 	mov	r0, r3
-	sub	sp, fp, #24
-	ldmfd	sp!, {r0, r1, r2, r3, fp, ip, pc}^
+	sub	sp, fp, #4
+	ldmfd	sp!, {fp, pc}
 .L48:
 	.align	2
 .L47:
 	.word	input
 	.word	inputpos
-	.size	swi_handler, .-swi_handler
+	.size	ksyscall, .-ksyscall
 	.ident	"GCC: (GNU) 4.5.0"

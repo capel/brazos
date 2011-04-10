@@ -52,6 +52,26 @@ extern void* _kend;
 #define IRQ_ETHER 3
 #define IRQ_CONS 2
 
+typedef struct _PCB {
+    int spsr;
+    int r0;  
+    int r1;
+    int r2;
+    int r3;
+    int r4;
+    int r5;
+    int r6;
+    int r7;
+    int r8;
+    int r9;
+    int r10;
+    int r11;
+    int r12;
+    int r13;
+    int r14;
+    int pc;
+} PCB;
+
 
 void main();
 
