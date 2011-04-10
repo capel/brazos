@@ -4,23 +4,17 @@
 #include "user.h"
 #include "mach.h"
 #include "mem.h"
+#include "sched.h"
+
 
 #define INPUTBUFSIZE 500
 volatile bool newchar;
 char input[INPUTBUFSIZE];
 size_t inputpos;
 
-PCB *pcb;
-
-#define PCB_TO_ASM(pcb) (struct PCB*)(((char*)(pcb))+sizeof(PCB))
-#define PCB_FROM_ASM(pcb) (struct PCB*)(((char*)(pcb))-sizeof(PCB))
-
-void __attribute__ ((interrupt ("IRQ"))) irq_handler (void) {
+PCB* kirq (PCB* stacked_pcb) {
     newchar = true;
-}
-
-void __attribute__ ((interrupt ("IRQ"))) dab_handler (void) {
-    halt();
+    return stacked_pcb;
 }
 
 char update_input()
@@ -57,27 +51,20 @@ void kmain(void)
     ksetup_memory();
 
     char* swi_stack = kget_pages(10);
-    char* user_stack = kget_pages(10);
-    char* pcb_space = kget_page();
-    pcb =(PCB*) pcb_space;
+    set_swi_stack(swi_stack+10*PAGE_SIZE, 0,0,0);
+   
+    kinit_sched();
     
     memset(input, 0, 500);
     inputpos = 0;
 
-    set_swi_stack(swi_stack+PAGE_SIZE, 0,0,0);
-
-    switch_to_user(user_stack+PAGE_SIZE, exit, main,0);
-}
-
-void* syscall_handler (void* pcb_top) {
-    memcpy((char*)pcb, (char*)pcb_top, sizeof(PCB));
-    int temp = ksyscall(pcb->r0, pcb->r1, pcb->r2, pcb->r3);
-    pcb->r0 = temp;
-    return pcb;
+    knew_proc(main, exit);
+    restore_pcb(&ksched()->pcb);
 }
 
 
-int ksyscall (int r0, int r1, int r2, int r3) 
+
+int _ksyscall (int r0, int r1, int r2, int r3) 
 {
     switch (r0) {
         case READ_STDIN:
@@ -100,8 +87,25 @@ int ksyscall (int r0, int r1, int r2, int r3)
         case FREE_PAGES:
             kfree_page((void*)r1);
             return 0;
+        case EXIT:
+            printk("Proc %d exiting", cp()->pid);
+            kfree_proc(cp());
+            return 0;
         default:
             return -1;
     }
 }
 
+PCB* ksyscall (void* stacked_pcb) {
+    printk("stacked pcb: %p, cp %x, cp->pcb %x",
+        stacked_pcb, cp(), &cp()->pcb);
+    kcopy_pcb(stacked_pcb);
+    PCB* pcb = &cp()->pcb;
+    printk("ks cur spsr %x", pcb->spsr);
+    int temp = _ksyscall(pcb->r0, pcb->r1, pcb->r2, pcb->r3);
+    printk("ks2 cur spsr %x", pcb->spsr);
+    pcb->r0 = temp;
+    proc *p = ksched();
+    printk("proc %p", p);
+    return &p->pcb;
+}
