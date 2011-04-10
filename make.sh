@@ -1,10 +1,9 @@
  #!/bin/sh
 
-OPTIONS="-Wall -Wextra -nostdlib -nostartfiles -ffreestanding -std=gnu99 -g" 
 CC="arm-elf-gcc-4.5"
 
  arm-elf-as -o start.o start.s && \
-$CC $OPTIONS --save-temps -c main.c -o main.o && \
+$CC $OPTIONS -c main.c -o main.o && \
 $CC $OPTIONS -c kio.c -o kio.o && \
 $CC $OPTIONS -c stdlib.c -o stdlib.o && \
 $CC $OPTIONS -c mem.c -o mem.o && \

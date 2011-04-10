@@ -1,3 +1,6 @@
+#define KERNEL
+
+
 #include "stdlib.h"
 #include "syscalls.h"
 #include "kio.h"
@@ -64,9 +67,9 @@ void kmain(void)
 
 
 
-int _ksyscall (int r0, int r1, int r2, int r3) 
+int _ksyscall (int code, int r1, int r2, int r3) 
 {
-    switch (r0) {
+    switch (code) {
         case READ_STDIN:
             for (;;) {
                 char c = update_input();
@@ -82,8 +85,7 @@ int _ksyscall (int r0, int r1, int r2, int r3)
             khalt();
             return 0;
         case GET_PAGES:
-            r0 = (int)kget_pages(r1);
-            return r0;
+            return (int)kget_pages(r1);
         case FREE_PAGES:
             kfree_page((void*)r1);
             return 0;
@@ -92,6 +94,7 @@ int _ksyscall (int r0, int r1, int r2, int r3)
             kfree_proc(cp());
             return -1;
         default:
+            printk("Bad syscall code %d", code);
             return -1;
     }
 }
@@ -99,9 +102,11 @@ int _ksyscall (int r0, int r1, int r2, int r3)
 PCB* ksyscall (void* stacked_pcb) {
     kcopy_pcb(stacked_pcb);
     PCB* pcb = &cp()->pcb;
-    int temp = _ksyscall(pcb->r0, pcb->r1, pcb->r2, pcb->r3);
-    if (temp >= 0) {
-        pcb->r0 = temp;
+    int ret = _ksyscall(pcb->r0, pcb->r1, pcb->r2, pcb->r3);
+    // ret < 0 means that the process doesn't exist anymore
+    // or something else went wildly wrong
+    if (ret >= 0) {
+        pcb->r0 = ret;
     }
     proc *p = ksched();
     return &p->pcb;

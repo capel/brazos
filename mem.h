@@ -1,6 +1,10 @@
 #ifndef MEM_H
 #define MEM_H
 
+#ifdef USER
+#error __FILE__ " included from user code."
+#endif
+
 #include "mach.h"
 
 #define PAGE_SIZE 4096

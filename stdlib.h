@@ -3,6 +3,7 @@
 
 #include "types.h"
 
+#define PAGE_SIZE 4096
 
 // Vararg handling, stdarg.h style, let GCC handle the nastiness..
 typedef __builtin_va_list va_list;
