@@ -12,7 +12,7 @@
 ** permissions
 #** syscalls
 ** processes / threads
-PCB
+#PCB
 MMU
 #stacks
 

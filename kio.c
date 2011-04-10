@@ -52,7 +52,7 @@ int kprintf(const char* fmt, ...)
     return 0;
 }
 
-void printk(const char* fmt, ...)
+void _printk(const char* fmt, ...)
 {
     char buf[1024];
 
@@ -63,6 +63,20 @@ void printk(const char* fmt, ...)
 
     kputs(buf);
 
+}
+
+
+void _panic(const char* fmt, ...)
+{
+    char buf[1024];
+
+    va_list va;
+    va_start(va, fmt);
+    vprintf(buf, 1024, fmt, va, true);
+    va_end(va);
+
+    kputs(buf);
+    khalt();
 }
 
 int printf(const char* fmt, ...)
@@ -81,6 +95,20 @@ int printf(const char* fmt, ...)
 }
 
 
+int println(const char* fmt, ...)
+{
+    char buf[1024];
+
+    va_list va;
+    va_start(va, fmt);
+    vprintf(buf, 1024, fmt, va, true);
+    va_end(va);
+
+
+    syscall(WRITE_STDOUT, (int)buf, 0, 0);
+
+    return 0;
+}
 
 int snprintf(char* buf, size_t size, const char* fmt, ...)
 {
@@ -129,8 +157,12 @@ int vprintf(char* buf, size_t size, const char* fmt, va_list va, int newline)
                 case 'x':
                     u = va_arg(va, unsigned);
                     utoa16(tmpbuf, BUFSIZE, u);
-                    chars = strlcpy(buf + bufpos, tmpbuf, size - bufpos);
-                    bufpos += chars -1; // remove null
+                    //bufpos += strlcpy(buf+bufpos, GREEN, strlen(GREEN));
+                    //bufpos--;
+                    bufpos += strlcpy(buf + bufpos, tmpbuf, size - bufpos);
+                    bufpos--; // remove null
+                    //bufpos += strlcpy(buf+bufpos, WHITE, strlen(WHITE));
+                    //bufpos--;
                     break;
                 case 's':
                     s = va_arg(va, char*);

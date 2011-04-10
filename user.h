@@ -7,21 +7,19 @@
 
 void main()
 {
-    char buf[500];
-    printf("Hello\n");
-    char * page = get_pages(1); 
-    printf("Page %p\n", page);
+    printf("!!!Hello\n");
+    //char * page = get_pages(1); 
+    //printf("Page %p\n", page);
     for (;;) {
-        gets(buf, 500);
-        printf(buf);
+    //    gets(buf, 500);
+    //`printf("Hello2\n");
+    //    printf(buf);
     }
 }
 
-void exit()
-{
-    printf("Death comes for us all\n");
-    halt();
 
+void exit(void) {
+    _exit();
 }
 
 #endif

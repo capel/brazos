@@ -8,24 +8,10 @@ interrupt_vector_table:
     b irq_handler @ irq
     b khalt @fiq
 
-.comm swi_stack, 4, 4
-.global swi_stack
-
-.comm pcb, 128, 4
-.global pcb
-
 .comm stack, 0x10000 @ Reserve 64k stack in the BSS
 
 _start:
     .globl _start
-    mov r0, #0x3
-    ldr r1, =pcb
-    str r0, [r1]
-    str r0, [r1, #4]
-    str r0, [r1, #4]
-    str r0, [r1, #4]
-    str r0, [r1, #4]
-
     
     ldr sp, =stack+0x10000 @ Set up the stack
     bl kmain @ Jump to the main function
@@ -70,11 +56,12 @@ set_swi_stack:
 .align 2
 .global switch_to_user
 switch_to_user:
+    @ r0 is process*
     mrs r3,CPSR
     
     @ change mode to 0x10 (user)
     bic r3, #0x1f
-    orr r3, #0x10
+    orr r3, #0x1
     msr CPSR,r3
     @ setup stack
     mov sp, r0
@@ -84,21 +71,45 @@ switch_to_user:
 
 .text
 .align 2
-.global save_pcb
+.global swi_handler
 swi_handler:
+    bl save_pcb
+
+    bl ksyscall
+
+    @ no return
+    b restore_pcb
+
+.text
+.align 2
+.global irq_handler
+irq_handler:
+    bl save_pcb
+
+    bl kirq
+
+    b restore_pcb
+
+.text
+.align 2
+save_pcb:
 
     @ save pcb stuff
     stmfd sp!, {lr}
     stmfd sp!, {r0-r14}^
     
-    mrs lr, spsr
-    stmfd sp!, {lr}
+    mrs r0, spsr
+    stmfd sp!, {r0}
 
-    @ arg0 = address of PCB on stack (the top)
-    mov r0, sp
+    @ r0 = address of PCB on stack (the top)
+        mov r0, sp
+    mov pc, lr
 
-    @ return value of syscall_handler is the PCB to pop
-    bl syscall_handler
+.text
+.align 2
+.global restore_pcb
+restore_pcb:
+    @ pcb block is in r0
 
     @ clean up our stack space
     sub sp, #68

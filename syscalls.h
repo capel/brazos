@@ -6,6 +6,7 @@
 #define HALT 3
 #define GET_PAGES 4
 #define FREE_PAGES 5
+#define EXIT 6
 
 int syscall(int r0, int r1, int r2, int r3);
 
@@ -23,6 +24,10 @@ static inline void free_pages(void* page) {
 
 static inline void halt() {
     syscall(HALT, 0, 0, 0);
+}
+
+static inline void _exit() {
+    syscall(EXIT, 0, 0, 0);
 }
 
 #endif
