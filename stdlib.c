@@ -14,6 +14,8 @@ void memset(char* start, char fill, size_t bytes)
 
 void memcpy(char* dst,const char * src, size_t len)
 {
+    if (dst == src)
+        return;
     for ( ; len; len--) {
         *dst++ = *src++;
     }

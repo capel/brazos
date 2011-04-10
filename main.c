@@ -41,12 +41,10 @@ char update_input()
 
 void kmain(void)
 {
-    printk("Starting main\n");
+    printk("Starting main");
     enable_interrupt();
     enable_cons_irq();
    
-    get_cpuid();
-
     //enable_mmu();
     ksetup_memory();
 
@@ -59,7 +57,9 @@ void kmain(void)
     inputpos = 0;
 
     knew_proc(main, exit);
-    restore_pcb(&ksched()->pcb);
+    knew_proc(main2, exit);
+    proc *p = ksched();
+    restore_pcb(&p->pcb);
 }
 
 
@@ -90,22 +90,19 @@ int _ksyscall (int r0, int r1, int r2, int r3)
         case EXIT:
             printk("Proc %d exiting", cp()->pid);
             kfree_proc(cp());
-            return 0;
+            return -1;
         default:
             return -1;
     }
 }
 
 PCB* ksyscall (void* stacked_pcb) {
-    printk("stacked pcb: %p, cp %x, cp->pcb %x",
-        stacked_pcb, cp(), &cp()->pcb);
     kcopy_pcb(stacked_pcb);
     PCB* pcb = &cp()->pcb;
-    printk("ks cur spsr %x", pcb->spsr);
     int temp = _ksyscall(pcb->r0, pcb->r1, pcb->r2, pcb->r3);
-    printk("ks2 cur spsr %x", pcb->spsr);
-    pcb->r0 = temp;
+    if (temp >= 0) {
+        pcb->r0 = temp;
+    }
     proc *p = ksched();
-    printk("proc %p", p);
     return &p->pcb;
 }
