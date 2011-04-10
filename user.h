@@ -7,16 +7,24 @@
 
 void main()
 {
-    printf("!!!Hello\n");
-    //char * page = get_pages(1); 
-    //printf("Page %p\n", page);
+    printf("!!!HelloA\n");
+    char * page = get_pages(1); 
+    printf("Page %p\n", page);
     for (;;) {
-    //    gets(buf, 500);
-    //`printf("Hello2\n");
-    //    printf(buf);
+        gets(page, 4096);
+        printf("%s", page);
     }
 }
 
+void main2()
+{
+    printf("!!!HelloB\n");
+    char * page = get_pages(1); 
+    printf("Page %p\n", page);
+    for (;;) {
+        printf("B");
+    }
+}
 
 void exit(void) {
     _exit();

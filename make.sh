@@ -10,4 +10,4 @@ $CC $OPTIONS -c stdlib.c -o stdlib.o && \
 $CC $OPTIONS -c mem.c -o mem.o && \
 $CC $OPTIONS -c sched.c -o sched.o && \
  arm-elf-ld  -T link.ld -o kernel start.o main.o stdlib.o kio.o mem.o sched.o && \
-gxemul -vvvvv -VT -E testarm kernel
+gxemul  -VT -E testarm kernel
