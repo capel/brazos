@@ -27,6 +27,9 @@ void khalt(void)
 	*((volatile unsigned char *) HALT_ADDRESS) = 0;
 }
 
+void kputc(char c) {
+	    *((volatile unsigned char *) PUTCHAR_ADDRESS) = c;
+}
 
 void kputs(const char *s)
 {
