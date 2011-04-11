@@ -1,6 +1,12 @@
-#include "mem.h"
+#include "malloc.h"
+#include "stdio.h"
+#include "user_syscalls.h"
 
 #define CAPEL_MAGIC_NUMBER 0xdeadbeef
+
+#define NULL 0
+
+void exit();
 
 #define MAX(A, B) (A) > (B) ? (A) : (B) 
 
@@ -12,7 +18,7 @@ typedef struct free_node_t
 
 typedef struct allocated_node_t
 {
-	int magic_number;
+	unsigned magic_number;
 	int size;
 } allocated_node;
 
@@ -33,47 +39,31 @@ static int _policy;
 static int _size;
 static void* _start;
 
-int Mem_Init(int sizeOfRegion, int policy)
+
+#define PAGE_SIZE 4096
+
+#define assert(x) do { if (!(x)) { printf("Assert (%s) in %s at " __FILE__ ":%d failed.", #x, __func__, __LINE__); exit(); } } while(0)
+
+int mem_init(size_t pages)
 {
-	static int called = 0;
-	if (called == 0)
-		called = 1;
-	else
-		return -1; // this has already been called once.
-		
-	if (sizeOfRegion <= 0)
-		return -1;
-		
-	if (policy < 0 || policy > 2)
-		return -1;
-		
 	
-	_policy = policy;
+	_size = pages * PAGE_SIZE;
 	
-	// round up to page size
-	if (sizeOfRegion % getpagesize() != 0)
-	{
-		sizeOfRegion += getpagesize() - (sizeOfRegion % getpagesize());	
-	}
-	
-	_size = sizeOfRegion;
-	
-	printf("Init: size: %d, Policy: %d ", _size, _policy);
+	//printf("Init: size: %d, Policy: %d ", _size, _policy);
 
-
-    // TODO get memory
+    _start = get_pages(pages);
 
 	_head = make_free_node(_start, _size);
-	printf(" Head: %ld\n", (long unsigned int)_head % (2 << 15));
+	//printf(" Head: %p\n", _head);
 	
 
-	printf("Sizeof(free_node): %ld Sizeof(allocated_node): %ld\n", sizeof(free_node), sizeof(allocated_node));
+	//printf("Sizeof(free_node): %d Sizeof(allocated_node): %d\n", sizeof(free_node), sizeof(allocated_node));
 
 	return 0;
 }
 
 
-void *Mem_Alloc(int size)
+void *malloc(size_t size)
 {
 	if (size <= 0)
 		return NULL;
@@ -98,14 +88,14 @@ void *Mem_Alloc(int size)
 	
 	void* p = allocate_free_space(node, size);
 	
-	printf("Alloc of size %d at address %ld\n", size, (long unsigned int)p % (2 << 15));
+	//printf("Alloc of size %d at address %p\n", size, p);
 	
 	
 	assert(p);
 	return p;
 }
 
-int Mem_Free(void *ptr)
+int free(void *ptr)
 {
 	if (!ptr)
 	{
@@ -119,14 +109,12 @@ int Mem_Free(void *ptr)
 			return -1;	
 	}
 
-	Mem_Dump();
+	//Mem_Dump();
 
 	free_node* node = free_allocated_space(a);
 	merge_adjacent_space(node);
 	
-	printf("Free at address %ld\n", (long unsigned int)ptr % (2 << 15));
-	
-	Mem_Dump();
+	printf("Free at address %p\n");
 	
 	return 0;
 }
@@ -140,7 +128,7 @@ void Mem_Dump()
 	for(; current; current = current->next)
 	{
 		i += current->free;
-		printf("%-10lx : %-8d \n", (long unsigned int)current % (2 << 17), current->free);
+		printf("%-10p : %d \n", current, current->free);
 	}
 	printf("Allocated: %d\n", _size - i);
 	printf("============================\n");
@@ -221,82 +209,27 @@ void list_insert(free_node* node)
 	
 	node->next = NULL;
 	
-	if (_policy == P_FIRSTFIT) // we don't sort the list: we just add to the head
-	{
-		node->next = _head;
-		_head = node;
-		return;
-	}
+    node->next = _head;
+    _head = node;
+    return;
 	
-	if (_policy == P_BESTFIT) // we sort the list ascendingly	
-	{
-		if (_head == NULL)
-		{
-			_head = node;	
-			return;
-		}
-		if (_head->free > node->free)
-		{
-			node->next = _head;
-			_head = node;
-			return;
-		}
-		
-		free_node* current = _head;
-		for(; current->next && current->next->free < node->free; current = current->next);
-		node->next = current->next;
-		current->next = node;
-		return;
-	}
-	
-	if (_policy == P_WORSTFIT) // we sort the list descendingly	
-	{
-		if (_head == NULL)
-		{
-			_head = node;	
-			return;
-		}
-		if (_head->free < node->free)
-		{
-			node->next = _head;
-			_head = node;
-			return;
-		}
-		
-		free_node* current = _head;
-		for(; current->next && current->next->free > node->free; current = current->next);
-		node->next = current->next;
-		current->next = node;
-		return;
-	}
 }
 
 free_node* find_fit(int required)
 {
 	assert(required >= 16);
-	
-	free_node* current = _head;
-	if (_policy == P_WORSTFIT)
-	{
-		if (_head->free < required)
-			return 0; // the list is sorted with biggest at top: FAIL
-		else
-			return _head;	
-	}
-	else if (_policy == P_FIRSTFIT || _policy == P_BESTFIT)
-	{
-		for(; current != NULL; current = current->next)
-		{
-			if (current->free >= required)
-			{
-				return current;	
-			}
-		}
-		// if we reach the end of the list with first or best, we FAIL.
-		return 0;
-	}
-	
-	return 0;
+
+    free_node *current = _head;
+
+    for(; current != NULL; current = current->next)
+    {
+        if (current->free >= required)
+        {
+            return current;	
+        }
+    }
+    // if we reach the end of the list with first or best, we FAIL.
+    return 0;
 }
 
 // this function oddly has two repeated sections of code
