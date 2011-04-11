@@ -32,6 +32,8 @@ char update_input()
         if (c == '\r')
             c = '\n';
 
+        kputc(c);
+
         if (inputpos < INPUTBUFSIZE -2) { 
             input[inputpos++] = c;
             input[inputpos] = '\0';
@@ -60,7 +62,7 @@ void kmain(void)
     inputpos = 0;
 
     knew_proc(main, exit);
-    knew_proc(main2, exit);
+    //knew_proc(main2, exit);
     proc *p = ksched();
     restore_pcb(&p->pcb);
 }
@@ -76,8 +78,12 @@ int _ksyscall (int code, int r1, int r2, int r3)
                 if (c) break;
             }
             strlcpy((char*)r1, input, r2);
-            inputpos = 0;
-            return 0;
+            return 1;
+        case GETC:
+            for (;;) {
+                char c = update_input();
+                if (c) return c;
+            }
         case WRITE_STDOUT:
             kputs((char*)r1);
             return 0;

@@ -2,10 +2,9 @@
 
 // Implementation of the auto-expanding array data structure.
 
-#include <stdlib.h>
-#include <string.h>
-#include <ctype.h>
-#include <stdio.h>
+#include "stdlib.h"
+#include "stdio.h"
+#include "malloc.h"
 
 #include "vector.h"
 
@@ -74,8 +73,7 @@ void* vector_remove(vector* v, int i)
 		
 		
 	// copy stuff over
-	int j;
-	for(j = i+1; j < v->size; ++j)
+	for(int j = i+1; j < v->size; ++j)
 	{
 		v->data[j-1] = v->data[j];	
 	}
@@ -92,39 +90,66 @@ void* vector_remove(vector* v, int i)
 }
 
 
+bool is_sep(char c, char* seps)
+{
+    size_t len = strlen(seps);
+    for (size_t i = 0; i < len; ++i) {
+        if (c == seps[i])
+            return true;
+    }
+    return false;
+}
+
 vector* split_to_vector(char * str, char* seps)
 {
 	
 	if (!str || !seps)
 		return 0;
-	int i;
-	
-	
+  
   vector * v = make_vector(sizeof(char*), __SPLIT_TO_VECTOR);
   
-  v->__source = calloc(strlen(str)+1, 1);
-  strcpy(v->__source, str);
-  char * token = strtok(v->__source, seps);
-  while (token != 0)
-  {
-  	int size = strlen(token);
-  	for(i=0;i<size;++i)
-  	{
-  		// only add it if it contains a non-whitespace character.
-  		if (!isspace(token[i]))
-  		{
-    		vector_push(v, token);
-    		break;
-  		} 	
-  	}
-    token = strtok(NULL, seps);
+  size_t len = strlen(str);
+  v->__source = calloc(len+1, 1);
+  strlcpy(v->__source, str, len);
+
+  // for ease of use
+  char* src = v->__source;
+ 
+  size_t i = 0;
+  size_t beginning;
+
+  while (true) {
+      // skip beginning stuff
+      for(; i < len; ++i) {
+        if (!is_sep(src[i], seps)) {
+            break;
+        }
+      }
+
+      if (i >= len)
+        return v;
+
+    beginning = i;
+    for (; i < len; ++i) {
+        if (is_sep(src[i], seps)) {
+            src[i++] = '\0';
+            vector_push(v, src+beginning);
+            break;
+        }
+    }
+
+    if (i == len) {
+        if (i != beginning) {
+            src[i] = '\0';
+            vector_push(v, src+beginning);
+        }
+        return v;
+    }
   }
-  return v;
 }
 
 void print_vector(vector* v, char* format_string)
 {
-	int i;
-	for	(i = 0; i < v->size; ++i)
+	for	(int i = 0; i < v->size; ++i)
 		printf(format_string, v->data[i]);	
 }

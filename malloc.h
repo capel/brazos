@@ -9,7 +9,11 @@
 
 int mem_init(size_t pages);
 void* malloc(size_t size);
+void* calloc(size_t size, size_t obj_size);
+
 int free(void *ptr);
+void* realloc(void *ptr, size_t newsize);
+
 void Mem_Dump();
 
 

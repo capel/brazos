@@ -7,17 +7,20 @@
 #include "stdlib.h"
 #include "stdio.h"
 #include "malloc.h"
+#include "vector.h"
 
 void main()
 {
     mem_init(10);
     printf("!!!HelloA\n");
-    char* page = malloc(100);
-    
-    printf("Page %p\n", page);
+    char* page = calloc(100, 1);
+
     for (;;) {
-        gets(page, 100);
-        printf("%s", page);
+        getline(page, 100);
+        vector * v = split_to_vector(page, " ");
+        print_vector(v, "%s|");
+        println("");
+        cleanup_vector(v);
     }
 }
 
@@ -26,9 +29,7 @@ void main2()
     printf("!!!HelloB\n");
     char * page = get_pages(1); 
     printf("Page %p\n", page);
-    for (;;) {
-        printf("B");
-    }
+    for (;;) { printf("!"); }
 }
 
 void exit(void) {

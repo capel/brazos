@@ -1,6 +1,9 @@
 #include "malloc.h"
 #include "stdio.h"
 #include "user_syscalls.h"
+#include "stdlib.h"
+#include "vector.h"
+
 
 #define CAPEL_MAGIC_NUMBER 0xdeadbeef
 
@@ -35,7 +38,6 @@ void list_insert(free_node* node);
 void list_remove(free_node* node);
 
 static free_node* _head;
-static int _policy;
 static int _size;
 static void* _start;
 
@@ -95,6 +97,25 @@ void *malloc(size_t size)
 	return p;
 }
 
+void* realloc(void* ptr, size_t size) 
+{
+	allocated_node* a = ptr - sizeof(allocated_node);
+    size_t old_size = a->size;
+    void* new_space = malloc(size);
+    memcpy(new_space, ptr, old_size);
+
+    return new_space;
+}
+
+void* calloc(size_t size, size_t obj_size)
+{
+    size_t real_size = size*obj_size;
+    void* ptr = malloc(real_size);
+    memset(ptr, 0, real_size);
+    return ptr;
+}
+
+
 int free(void *ptr)
 {
 	if (!ptr)
@@ -114,7 +135,7 @@ int free(void *ptr)
 	free_node* node = free_allocated_space(a);
 	merge_adjacent_space(node);
 	
-	printf("Free at address %p\n");
+	//printf("Free at address %p\n");
 	
 	return 0;
 }
@@ -217,7 +238,7 @@ void list_insert(free_node* node)
 
 free_node* find_fit(int required)
 {
-	assert(required >= 16);
+//	assert(required >= 16);
 
     free_node *current = _head;
 
@@ -298,7 +319,7 @@ void merge_adjacent_space(free_node* node)
 
 free_node* merge_nodes(free_node* a, free_node* b)
 {
-	printf("Merge: %ld, %ld\n", (long unsigned int)a % (2 << 15), (long unsigned int)b % (2 << 15));
+//	printf("Merge: %p, %p\n", a, b); 
 	// a must be < b
 	if (a > b)
 	{
