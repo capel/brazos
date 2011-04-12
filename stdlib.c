@@ -1,5 +1,6 @@
 #include "stdlib.h"
 #include "user_syscalls.h"
+#include "stdio.h"
 
 char hexchars[] = {
     '0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
@@ -190,6 +191,9 @@ bool lock(lock_t* l)
 
 bool unlock(lock_t* l)
 {
+    if (*l == 0) {
+        debug("Attempting to unlock an unlocked lock.");
+    }
     *l = 0;
     return true;
 }
