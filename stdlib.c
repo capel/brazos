@@ -1,5 +1,5 @@
 #include "stdlib.h"
-
+#include "user_syscalls.h"
 
 char hexchars[] = {
     '0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
@@ -177,4 +177,19 @@ void utoa16(char* buf, size_t size, unsigned x)
     buf[pos++] = hexchars[x & 0xF]; // we always want at least 1 zero
     buf[pos] = '\0';
 
+}
+
+bool lock(lock_t* l)
+{
+    while(*l == 1) {
+        yield();
+    }
+    *l = 1;
+    return true;
+}
+
+bool unlock(lock_t* l)
+{
+    *l = 0;
+    return true;
 }

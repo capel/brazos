@@ -5,10 +5,11 @@
 #error __file__ " included from user code."
 #endif
 
-char kgetch();
+char kgetc();
 void khalt() __attribute__((noreturn));
 
 void kputs(const char *s);
+void kputc(char);
 int snprintf(char* buf, size_t size, const char* fmt, ...);
 
 int kprintf(const char* fmt, ...);

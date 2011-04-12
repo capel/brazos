@@ -19,30 +19,41 @@ const alloc_funcs user_alloc_funcs = {malloc, calloc, realloc, free, printf};
 
 int mem_init(size_t pages)
 {
-    (&user_md)->get_pages = get_pages;
+    user_md.get_pages = get_pages;
+    user_md.lock = LOCK_INIT;
+    lock(&user_md.lock);
     return _mem_init(pages, &user_md);
+    unlock(&user_md.lock);
 }
 
 // user versions of malloc
 void* malloc(size_t size)
 {
+    lock(&user_md.lock);
     return _malloc(size, &user_md);
+    unlock(&user_md.lock);
 }
 
 void* realloc(void* ptr, size_t newsize)
 {
+    lock(&user_md.lock);
     return _realloc(ptr, newsize, &user_md);
+    unlock(&user_md.lock);
 }
 
 
 void* calloc(size_t size, size_t objsize)
 {
+    lock(&user_md.lock);
     return _calloc(size, objsize, &user_md);
+    unlock(&user_md.lock);
 }
 
 int free(void* ptr)
 {
+    lock(&user_md.lock);
     return _free(ptr, &user_md);
+    unlock(&user_md.lock);
 }
 
 typedef struct allocated_node_t
@@ -108,12 +119,22 @@ void* _malloc(size_t size, malloc_data * md)
 	
 	free_node* node = find_fit(size,md);
 	
+
 	if (!node)
 	{
-		debug("No available space found for size %d", size);
-		Mem_Dump(md);
-		exit();
-		return NULL;
+		debug("No available space found for size %d. Getting more memory from the kernel", size);
+		get_space(md->size / PAGE_SIZE, md); // get as much new as we had before.
+        
+        // try again
+        node = find_fit(size, md);
+		
+		// it failed again, give up
+		if (!node)
+		{
+		    debug("No available space _again_. Giving up");
+		    exit();
+		    return NULL;
+		}
 	}
 	
 	void* p = allocate_free_space(node, size,md);
@@ -134,7 +155,8 @@ void* _realloc(void* ptr, size_t size, malloc_data * md)
 	if (a->magic_number != CAPEL_MAGIC_NUMBER)
 	{
 			debug("Bad pointer %p passed to Mem_Free.", ptr);
-			return -1;	
+			exit();
+			return NULL;	
 	}
     
     size_t old_size = a->size;
