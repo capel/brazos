@@ -16,7 +16,7 @@
 				DEV_CONS_ADDRESS + DEV_CONS_HALT)
 int vprintf(char* buf, size_t size, const char* fmt, va_list va, int newline);
 
-char kgetch(void)
+char kgetc(void)
 {
     char ch = *((volatile unsigned char *) PUTCHAR_ADDRESS) ;
 	return ch;

@@ -22,25 +22,16 @@ PCB* kirq (PCB* stacked_pcb) {
 
 char update_input()
 {
-    char lastc = 0;
     char c;
-    for (;;) {
-        c = kgetch();
-        if (!c)
-            return lastc;
+    c = kgetc();
+        
+    if (c == '\r')
+        c = '\n';
 
-        if (c == '\r')
-            c = '\n';
+    kputc(c);
+    
+    return c;
 
-        kputc(c);
-
-        if (inputpos < INPUTBUFSIZE -2) { 
-            input[inputpos++] = c;
-            input[inputpos] = '\0';
-        }
-     //   kputch(c);
-        lastc = c;
-    }
 }
 
 
@@ -72,13 +63,6 @@ void kmain(void)
 int _ksyscall (int code, int r1, int r2, int r3) 
 {
     switch (code) {
-        case READ_STDIN:
-            for (;;) {
-                char c = update_input();
-                if (c) break;
-            }
-            strlcpy((char*)r1, input, r2);
-            return 1;
         case GETC:
             for (;;) {
                 char c = update_input();
@@ -99,6 +83,9 @@ int _ksyscall (int code, int r1, int r2, int r3)
             printk("Proc %d exiting", cp()->pid);
             kfree_proc(cp());
             return -1;
+        case YIELD:
+            printk("Proc %d yielding", cp()->pid);
+            return 0;
         default:
             printk("Bad syscall code %d", code);
             return -1;

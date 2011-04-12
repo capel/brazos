@@ -38,6 +38,7 @@ typedef struct free_node_t
 typedef struct {
     free_node* head;
     size_t size;
+    lock_t lock;
     get_pages_func get_pages;
 } malloc_data;
 

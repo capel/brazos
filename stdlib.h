@@ -20,7 +20,7 @@ size_t strlcpy(char* dst, const char* src, size_t len);
 int strcmp(const char* a, const char* b, size_t len);
 
 // allocates a new string long enough to hold a + b + NULL.
-// this new string does not overlap with a or b in memory, it must
+// this new string does not overlap with a or b in memory, and it must
 // be freed seperately.
 char* strgcat(const char* a, const char* b, size_t alen, size_t blen);
 
@@ -38,6 +38,9 @@ bool isdigit(char c);
 void itoa(char* buf, size_t size, int s);
 void utoa(char* buf, size_t size, unsigned s);
 void utoa16(char* buf, size_t size, unsigned x);
+
+bool lock(lock_t* l);
+bool unlock(lock_t* l);
 
 
 #endif
