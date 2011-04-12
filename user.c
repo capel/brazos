@@ -11,8 +11,8 @@
 
 void main()
 {
-    mem_init(10);
-    printf("!!!HelloA\n");
+    mem_init(1);
+    printf("HelloA\n");
     char* page = calloc(100, 1);
 
     for (;;) {

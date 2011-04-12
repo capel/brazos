@@ -1,6 +1,8 @@
 #ifndef CAPEL_VECTOR_H
 #define CAPEL_VECTOR_H
 
+#include "malloc.h"
+
 
 // Pass one of the to make_vector.
 // If you want to manually manage memory, use UNMANAGED_POINTERS.
@@ -27,6 +29,7 @@ struct vector_t
         enum cleanup_type __type;
         int __allocated_size;
         int __data_type_size;
+        const alloc_funcs* __alloc_funcs;
 		// This is used for the split_to_vector function.
 		void* __source;
 };
@@ -40,6 +43,7 @@ void vector_push(vector* v, void* object);
 // the sizeof() what you want to store in the vector.
 // example: vector* v = make_vector(sizeof(whatever*));
 vector* make_vector(int data_type_size, enum cleanup_type type);
+vector* _make_vector(int data_type_size, enum cleanup_type type, const alloc_funcs* af);
 
 // Used to remove an item from a vector. It removes the item at i and returns 
 // it if cleanup_type is UNMANAGED_POINTERS; if it is anything else, it frees it
@@ -55,15 +59,15 @@ void cleanup_vector(vector* v);
 // Note: This function keeps an internal copy of the original string, so
 // it should be passed to cleanup_vector with the FreeItems flag set when
 // its lifespan has ended.
-// Note: Call vector_remove with the NO_FREE_ITEMS flag or mayhem will ensue.
 // The original string and seps are unmodified and can be safely freed.
-vector* split_to_vector(char * str, char* seps);
+vector* split_to_vector(const char * str, const char* seps);
+vector* _split_to_vector(const char * str, const char* seps, const alloc_funcs *af);
 
 // Prints out a vector
 // format_string will be passed once to printf() for each argument
 // therefore, make sure it only has one variable in the format and
 // that it is prepared for whatever datatype is in the vector. 
-void print_vector(vector* v, char* format_string);
+void print_vector(vector* v, const char* format_string);
 
 
 #endif
