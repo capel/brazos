@@ -16,7 +16,7 @@ void vector_push(vector* v, void* object)
         if (v->size >= v->__allocated_size-2)
         {
                 v->__allocated_size *= 2;
-                v->data = realloc(v->data, v->__allocated_size * v->__data_type_size);
+                v->data = v->__alloc_funcs->realloc(v->data, v->__allocated_size * v->__data_type_size);
         }
         
         v->data[v->size] = object;
@@ -25,10 +25,15 @@ void vector_push(vector* v, void* object)
 
 vector* make_vector(int data_type_size, enum cleanup_type type)
 {
-        vector* v = malloc(sizeof(vector));
+    return _make_vector(data_type_size, type, &user_alloc_funcs);
+}
+vector* _make_vector(int data_type_size, enum cleanup_type type, const alloc_funcs* funcs)
+{
+        vector* v = funcs->malloc(sizeof(vector));
+        v->__alloc_funcs = funcs;
         v->__allocated_size = 3;
         v->__data_type_size = data_type_size;
-        v->data = calloc(5, v->__data_type_size);
+        v->data = v->__alloc_funcs->calloc(3, v->__data_type_size);
         v->size = 0;
 		v->__source = 0;
 		v->__type = type;
@@ -41,8 +46,8 @@ void cleanup_vector(vector* v)
 	if (!v)
 		return;
 
-	if (v->__type == __SPLIT_TO_VECTOR)
-		free(v->__source);
+	if (v->__type == __SPLIT_TO_VECTOR) 
+	    v->__alloc_funcs->free(v->__source);
 	else
 	{
   		if (v->__type == MANAGED_POINTERS)
@@ -50,13 +55,13 @@ void cleanup_vector(vector* v)
     		int i;
     		for(i = 0; i < v->size; ++i)
     		{	
-      			free(v->data[i]);
+      			v->__alloc_funcs->free(v->data[i]);
     		}
   		}
 	}
   
-  	free(v->data);
-  	free(v);
+  	v->__alloc_funcs->free(v->data);
+  	v->__alloc_funcs->free(v);
 }
 
 void* vector_remove(vector* v, int i)
@@ -69,7 +74,7 @@ void* vector_remove(vector* v, int i)
 		
 	void* item = v->data[i];
 	if (v->__type == MANAGED_POINTERS)
-		free(item);
+		v->__alloc_funcs->free(item);
 		
 		
 	// copy stuff over
@@ -90,7 +95,7 @@ void* vector_remove(vector* v, int i)
 }
 
 
-bool is_sep(char c, char* seps)
+bool is_sep(const char c, const char* seps)
 {
     size_t len = strlen(seps);
     for (size_t i = 0; i < len; ++i) {
@@ -100,16 +105,24 @@ bool is_sep(char c, char* seps)
     return false;
 }
 
-vector* split_to_vector(char * str, char* seps)
+
+
+
+vector* split_to_vector(const char * str, const char* seps)
+{
+    return _split_to_vector(str, seps, &user_alloc_funcs);
+}
+
+vector* _split_to_vector(const char * str, const char* seps, const alloc_funcs* funcs)
 {
 	
 	if (!str || !seps)
 		return 0;
   
-  vector * v = make_vector(sizeof(char*), __SPLIT_TO_VECTOR);
+  vector * v = _make_vector(sizeof(char*), __SPLIT_TO_VECTOR, funcs);
   
   size_t len = strlen(str);
-  v->__source = calloc(len+1, 1);
+  v->__source = v->__alloc_funcs->calloc(len+1, 1);
   strlcpy(v->__source, str, len);
 
   // for ease of use
@@ -148,8 +161,8 @@ vector* split_to_vector(char * str, char* seps)
   }
 }
 
-void print_vector(vector* v, char* format_string)
+void print_vector(vector* v, const char* format_string)
 {
 	for	(int i = 0; i < v->size; ++i)
-		printf(format_string, v->data[i]);	
+		v->__alloc_funcs->printf(format_string, v->data[i]);	
 }

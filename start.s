@@ -1,4 +1,6 @@
-interrupt_vector_table:
+.text
+.global ivt
+ivt:
     b _start @ Reset
     b khalt @ bad instr
     b swi_handler 

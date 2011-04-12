@@ -13,11 +13,37 @@ void exit();
 
 #define MAX(A, B) (A) > (B) ? (A) : (B) 
 
-typedef struct free_node_t
+
+malloc_data user_md;
+const alloc_funcs user_alloc_funcs = {malloc, calloc, realloc, free, printf};
+
+int mem_init(size_t pages)
 {
-	int free;	
-	struct free_node_t * next;
-} free_node;
+    (&user_md)->get_pages = get_pages;
+    return _mem_init(pages, &user_md);
+}
+
+// user versions of malloc
+void* malloc(size_t size)
+{
+    return _malloc(size, &user_md);
+}
+
+void* realloc(void* ptr, size_t newsize)
+{
+    return _realloc(ptr, newsize, &user_md);
+}
+
+
+void* calloc(size_t size, size_t objsize)
+{
+    return _calloc(size, objsize, &user_md);
+}
+
+int free(void* ptr)
+{
+    return _free(ptr, &user_md);
+}
 
 typedef struct allocated_node_t
 {
@@ -25,51 +51,52 @@ typedef struct allocated_node_t
 	int size;
 } allocated_node;
 
-void* allocate_free_space(free_node * node, int size);
-free_node* make_free_node(void* address, int size);
-free_node* free_allocated_space(allocated_node* node);
-void merge_adjacent_space(free_node* node);
+void* allocate_free_space(free_node * node, int size, malloc_data* md);
+free_node* make_free_node(void* address, int size, malloc_data* md);
+free_node* free_allocated_space(allocated_node* node, malloc_data* md);
+void merge_adjacent_space(free_node* node, malloc_data* md);
 
-free_node* merge_nodes(free_node* a, free_node* b);
+free_node* merge_nodes(free_node* a, free_node* b, malloc_data* md);
 
-free_node* find_fit(int size);
+free_node* find_fit(int size, malloc_data* md);
 
-void list_insert(free_node* node);
-void list_remove(free_node* node);
-
-static free_node* _head;
-static int _size;
-static void* _start;
-
+void list_insert(free_node* node, malloc_data* md);
+void list_remove(free_node* node, malloc_data *md);
 
 #define PAGE_SIZE 4096
 
-#define assert(x) do { if (!(x)) { printf("Assert (%s) in %s at " __FILE__ ":%d failed.", #x, __func__, __LINE__); exit(); } } while(0)
+#define assert(x) do { if (!(x)) { debug("Assert (%s) in %s at " __FILE__ ":%d failed.", #x, __func__, __LINE__); exit(); } } while(0)
 
-int mem_init(size_t pages)
+void get_space(size_t pages, malloc_data * md) {
+    void * start = md->get_pages(pages);
+
+	free_node* node = make_free_node(start, md->size, md);
+	node->next = md->head;
+	md->head = node;
+//	debug(" Head: %p", md->head);
+	
+
+//	debug("Sizeof(free_node): %d Sizeof(allocated_node): %d", sizeof(free_node), sizeof(allocated_node));
+}
+
+int _mem_init(size_t pages, malloc_data * md)
 {
 	
-	_size = pages * PAGE_SIZE;
-	
-	//printf("Init: size: %d, Policy: %d ", _size, _policy);
-
-    _start = get_pages(pages);
-
-	_head = make_free_node(_start, _size);
-	//printf(" Head: %p\n", _head);
-	
-
-	//printf("Sizeof(free_node): %d Sizeof(allocated_node): %d\n", sizeof(free_node), sizeof(allocated_node));
-
-	return 0;
+	md->size = pages * PAGE_SIZE;
+    get_space(pages, md);
+    return 0;
 }
 
 
-void *malloc(size_t size)
+
+
+void* _malloc(size_t size, malloc_data * md)
 {
 	if (size <= 0)
 		return NULL;
-	
+
+ //   debug("Alloc of %d", size);
+
 	size += sizeof(allocated_node); // we need to store our info there, too
 	if (size % 4 != 0)
 		size += 4 - (size % 4);
@@ -79,45 +106,68 @@ void *malloc(size_t size)
 	size = MAX(size, sizeof(free_node));
 	
 	
-	free_node* node = find_fit(size);
+	free_node* node = find_fit(size,md);
 	
 	if (!node)
 	{
-		printf("No available space found for size %d\n", size);
-		Mem_Dump();
+		debug("No available space found for size %d", size);
+		Mem_Dump(md);
+		exit();
 		return NULL;
 	}
 	
-	void* p = allocate_free_space(node, size);
+	void* p = allocate_free_space(node, size,md);
 	
-	//printf("Alloc of size %d at address %p\n", size, p);
-	
+//	debug("End malloc");
+
+//    Mem_Dump(md);
 	
 	assert(p);
 	return p;
 }
 
-void* realloc(void* ptr, size_t size) 
+void* _realloc(void* ptr, size_t size, malloc_data * md) 
 {
+//	debug("Realloc of size %d" , size);
 	allocated_node* a = ptr - sizeof(allocated_node);
+	
+	if (a->magic_number != CAPEL_MAGIC_NUMBER)
+	{
+			debug("Bad pointer %p passed to Mem_Free.", ptr);
+			return -1;	
+	}
+    
     size_t old_size = a->size;
-    void* new_space = malloc(size);
+
+    if (old_size >= size)
+    {
+        debug("Attempting to realloc to a smaller space %d -> %d. Wtf?", old_size, size);
+        return ptr;
+    }
+
+//    debug("Old size: %d", old_size);
+    void* new_space = _malloc(size,md);
     memcpy(new_space, ptr, old_size);
+    _free(ptr, md);
+
 
     return new_space;
 }
 
-void* calloc(size_t size, size_t obj_size)
+void* _calloc(size_t size, size_t obj_size, malloc_data * md)
 {
     size_t real_size = size*obj_size;
-    void* ptr = malloc(real_size);
+//	debug("Calloc of size %d" , real_size);
+
+    void* ptr = _malloc(real_size,md);
     memset(ptr, 0, real_size);
     return ptr;
 }
 
 
-int free(void *ptr)
+int _free(void *ptr, malloc_data * md)
 {
+ //   debug("Start free");
 	if (!ptr)
 	{
 		return -1;
@@ -126,41 +176,44 @@ int free(void *ptr)
 	allocated_node* a = ptr - sizeof(allocated_node);
 	if (a->magic_number != CAPEL_MAGIC_NUMBER)
 	{
-			printf("Bad pointer %p passed to Mem_Free.\n", ptr);
+			debug("Bad pointer %p passed to Mem_Free.", ptr);
 			return -1;	
 	}
 
-	//Mem_Dump();
+//	Mem_Dump(md);
 
-	free_node* node = free_allocated_space(a);
-	merge_adjacent_space(node);
+	free_node* node = free_allocated_space(a,md);
+	merge_adjacent_space(node,md);
 	
-	//printf("Free at address %p\n");
+//	debug("Post free");
+  //  Mem_Dump(md);
+
+//	debug("Free at address %p", ptr);
 	
 	return 0;
 }
-void Mem_Dump()
+void Mem_Dump(malloc_data* md)
 {
-	printf("=======FREE MEMORY DUMP=====\n");
-	printf("Total size : %d\n", _size);
-	printf("Address    : Free\n");
+	debug("=======FREE MEMORY DUMP=====");
+	debug("Total size : %d", md->size);
+	debug("Address    : Free");
 	int i =0; 
-	free_node* current = _head;
+	free_node* current = md->head;
 	for(; current; current = current->next)
 	{
 		i += current->free;
-		printf("%-10p : %d \n", current, current->free);
+		debug("%p : %d ", current, current->free);
 	}
-	printf("Allocated: %d\n", _size - i);
-	printf("============================\n");
+	debug("Allocated: %d", md->size - i);
+	debug("============================");
 }
 
 
 
-free_node* make_free_node(void* address, int size)
+free_node* make_free_node(void* address, int size, malloc_data *md)
 {
-	//printf("addr: %p, size: %d", address, size); 
-	assert(address < _start + _size);
+//	debug("addr: %p, size: %d", address, size); 
+	//assert(address < _start + md->size);
 	free_node* node = address;
 	node->next = NULL;
 	node->free = size;
@@ -168,30 +221,30 @@ free_node* make_free_node(void* address, int size)
 	return node;
 }
 
-free_node* free_allocated_space(allocated_node* node)
+free_node* free_allocated_space(allocated_node* node, malloc_data * md)
 {
-	free_node* new_node = make_free_node(node, node->size);
-	list_insert(new_node);
+	free_node* new_node = make_free_node(node, node->size,md);
+	list_insert(new_node,md);
 	return new_node;
 }
 
-void* allocate_free_space(free_node * node, int required)
+void* allocate_free_space(free_node * node, int required, malloc_data*md)
 {	
-	//printf("\nNode->free: %d, Required: %d, diff: %d\n", node->free, required, node->free - required);
+//	debug("Node->free: %d, Required: %d, diff: %d", node->free, required, node->free - required);
 	assert(node->free >= required);
 
 	void* node_addr = (void*) node;
 	node_addr += required;
 	
-	//printf("Pointers: %lx - %lx = %ld ?= %d\n", i_node_addr, i_node, i_node_addr - i_node, required); 
+//	debug("Pointers: %p - %p = %d ?= %d", node_addr, node, node_addr - (void*)node, required); 
 
 	if (node->free - required > 0) // if we have space left over
 	{
-		free_node* new_node = make_free_node(node_addr, node->free - required);
-		list_insert(new_node);
+		free_node* new_node = make_free_node(node_addr, node->free - required,md);
+		list_insert(new_node,md);
 	}
 	
-	list_remove(node);
+	list_remove(node,md);
 	
 	// node is now out of the list and we can replace it
 	allocated_node* a = (void*)node;
@@ -201,19 +254,19 @@ void* allocate_free_space(free_node * node, int required)
 	return (void*)a + sizeof(allocated_node); // point them to the space, not the node
 }
 
-void list_remove(free_node* node)
+void list_remove(free_node* node, malloc_data * md)
 {
 	assert(node);
-	assert(_head);
-	//printf("remove node: %p\n", node); 
+	assert(md->head);
+	//debug("remove node: %p", node); 
 	
-	if (node == _head)
+	if (node == md->head)
 	{
-		_head = node->next;
+		md->head = node->next;
 		return;
 	}
 	
-	free_node* current = _head;
+	free_node* current = md->head;
 	
 	while(current->next != node)
 	{
@@ -223,29 +276,27 @@ void list_remove(free_node* node)
 	current->next = node->next;
 }
 
-void list_insert(free_node* node)
+void list_insert(free_node* node, malloc_data* md)
 {
 	assert(node);
-	//printf("insert node: %p\n", node); 
+	//debug("insert node: %p", node); 
 	
 	node->next = NULL;
 	
-    node->next = _head;
-    _head = node;
+    node->next = md->head;
+    md->head = node;
     return;
 	
 }
 
-free_node* find_fit(int required)
+free_node* find_fit(int required, malloc_data* md)
 {
 //	assert(required >= 16);
 
-    free_node *current = _head;
+    free_node *current = md->head;
 
-    for(; current != NULL; current = current->next)
-    {
-        if (current->free >= required)
-        {
+    for(; current != NULL; current = current->next) {
+        if (current->free >= required) {
             return current;	
         }
     }
@@ -260,66 +311,54 @@ free_node* find_fit(int required)
 //
 // a preassumption of this function is that the free_node list is fully merged already 
 // (sans the new node)
-void merge_adjacent_space(free_node* node)
+void merge_adjacent_space(free_node* node, malloc_data * md)
 {
 	assert(node);
-	assert(_head);
+	assert(md->head);
 	
-	free_node* current = _head;
+	free_node* current = md->head;
 	void* temp;
-	for(; current; current = current->next)
-	{
-		if (current == node)
+	for(; current; current = current->next) {
+		if (current == node) {
 			continue;
-		else if (current < node)
-		{
+		} else if (current < node) {
 			temp = (void*) current;
-			if (temp + current->free == node)
-			{
-				node = merge_nodes(current, node);
+			if (temp + current->free == node) {
+				node = merge_nodes(current, node,md);
 				break;	
 			}	
-		}
-		else
-		{
+		} else {
 			temp = (void*) node;
-			if (temp + node->free == current)
-			{
-				node = merge_nodes(node, current);
+			if (temp + node->free == current) {
+				node = merge_nodes(node, current,md);
 				break;
 			}
 		}
 	}
 	
-	current = _head;
-	for(; current; current = current->next)
-	{
-		if (current == node)
+	current = md->head;
+	for(; current; current = current->next) {
+		if (current == node) {
 			continue;
-		else if (current < node)
-		{
+		} else if (current < node) {
 			temp = (void*) current;
-			if (temp + current->free == node)
-			{
-				node = merge_nodes(current, node);
+			if (temp + current->free == node) {
+				node = merge_nodes(current, node,md);
 				break;	
 			}	
-		}
-		else
-		{
+		} else {
 			temp = (void*) node;
-			if (temp + node->free == current)
-			{
-				node = merge_nodes(node, current);
+			if (temp + node->free == current) {
+				node = merge_nodes(node, current,md);
 				break;
 			}
 		}
 	}
 }
 
-free_node* merge_nodes(free_node* a, free_node* b)
+free_node* merge_nodes(free_node* a, free_node* b, malloc_data * md)
 {
-//	printf("Merge: %p, %p\n", a, b); 
+//	debug("Merge: %p, %p", a, b); 
 	// a must be < b
 	if (a > b)
 	{
@@ -328,8 +367,8 @@ free_node* merge_nodes(free_node* a, free_node* b)
 		a = temp;	
 	}
 	
-	list_remove(b);
-	list_remove(a);
+	list_remove(b,md);
+	list_remove(a,md);
 	
 	a->free += b->free;
 	a->next = NULL;
@@ -337,6 +376,6 @@ free_node* merge_nodes(free_node* a, free_node* b)
 	b->free = 4345345;
 	b->next = (void*)0xdeadbeef; // just to make sure
 	
-	list_insert(a);
+	list_insert(a,md);
 	return a; // b in INVALID now
 }
