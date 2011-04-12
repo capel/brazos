@@ -19,41 +19,51 @@ const alloc_funcs user_alloc_funcs = {malloc, calloc, realloc, free, printf};
 
 int mem_init(size_t pages)
 {
+    int r;
     user_md.get_pages = get_pages;
     user_md.lock = LOCK_INIT;
     lock(&user_md.lock);
-    return _mem_init(pages, &user_md);
+    r = _mem_init(pages, &user_md);
     unlock(&user_md.lock);
+    return r;
 }
 
 // user versions of malloc
 void* malloc(size_t size)
 {
+    void* r;
     lock(&user_md.lock);
-    return _malloc(size, &user_md);
+    r = _malloc(size, &user_md);
     unlock(&user_md.lock);
+    return r;
 }
 
 void* realloc(void* ptr, size_t newsize)
 {
+    void* r;
     lock(&user_md.lock);
-    return _realloc(ptr, newsize, &user_md);
+    r = _realloc(ptr, newsize, &user_md);
     unlock(&user_md.lock);
+    return r;
 }
 
 
 void* calloc(size_t size, size_t objsize)
 {
+    void *r;
     lock(&user_md.lock);
-    return _calloc(size, objsize, &user_md);
+    r = _calloc(size, objsize, &user_md);
     unlock(&user_md.lock);
+    return r;
 }
 
 int free(void* ptr)
 {
+    int r;
     lock(&user_md.lock);
-    return _free(ptr, &user_md);
+    r = _free(ptr, &user_md);
     unlock(&user_md.lock);
+    return r;
 }
 
 typedef struct allocated_node_t

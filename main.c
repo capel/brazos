@@ -84,7 +84,6 @@ int _ksyscall (int code, int r1, int r2, int r3)
             kfree_proc(cp());
             return -1;
         case YIELD:
-            printk("Proc %d yielding", cp()->pid);
             return 0;
         default:
             printk("Bad syscall code %d", code);
