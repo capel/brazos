@@ -42,7 +42,8 @@ proc * knew_proc(void* main, void* exit)
     p->pcb.spsr |= 0x10;
     p->pcb.pc = main;
     p->pcb.lr = exit;
-    p->pcb.sp = kget_pages(USER_STACK_SIZE) + USER_STACK_SIZE * PAGE_SIZE;
+    p->stack = kget_pages(USER_STACK_SIZE) + USER_STACK_SIZE * PAGE_SIZE;
+    p->pcb.sp = p->stack;
 
     // look for table gaps
     // we know there is enough space
@@ -59,6 +60,23 @@ proc * knew_proc(void* main, void* exit)
     panic("No free procs after initial check said there were");
 }
 
+void kexec_proc(proc* p, void* main, void* exit) {
+    p->pcb.sp = p->stack;
+    p->pcb.lr = exit;
+    p->pcb.pc = main;
+
+    // free mem they can't access anymore. 
+    for(proc_pages* mem = p->mem; mem; ) {
+        proc_pages* tmp;
+        kfree_pages(mem->pages, mem->num_pages);
+        tmp = mem;
+        mem = mem->next;
+        kfree(tmp);
+
+        p->mem = 0;
+    }
+}
+
 void kfree_proc(proc *p)
 {
     for (size_t i = 0; i < PROC_TABLE_SIZE; i++) {
@@ -73,8 +91,8 @@ void kfree_proc(proc *p)
                 mem = mem->next;
                 kfree(tmp);
             }
-            
-            kfree_pages(p->pcb.sp, USER_STACK_SIZE);
+           
+            kfree_pages(p->stack, USER_STACK_SIZE);
             kfree(p);
         }
     }

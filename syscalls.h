@@ -8,6 +8,7 @@
 #define EXIT 6
 #define GETC 7
 #define YIELD 8
+#define EXEC 9
 
 int syscall(int r0, int r1, int r2, int r3);
 

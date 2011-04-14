@@ -28,6 +28,10 @@ static inline void _exit() {
     syscall(EXIT, 0, 0, 0);
 }
 
+static inline void exec(char* name) {
+    syscall(EXEC, (int)name, 0, 0);
+}
+
 static inline void yield() {
     syscall(YIELD, 0, 0, 0);
 }

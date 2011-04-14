@@ -38,6 +38,7 @@ typedef struct _proc {
     size_t stride;
     int pid;
     proc_pages * mem;
+    void* stack;
 } proc;
 
 void restore_pcb(PCB* pcb);
@@ -48,8 +49,12 @@ void kinit_sched(void);
 proc * knew_proc(void* main, void* exit);
 void kfree_proc(proc* p);
 
+void kexec_proc(proc *p, void* main, void* exit);
+
 // implicitly the current proc
 void kcopy_pcb(PCB * pcb);
+
+void* kget_pages_for_user(proc* p, size_t num);
 
 proc * ksched(void);
 
