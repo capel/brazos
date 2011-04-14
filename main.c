@@ -8,7 +8,7 @@
 #include "mach.h"
 #include "mem.h"
 #include "sched.h"
-
+#include "kexec.h"
 
 #define INPUTBUFSIZE 500
 volatile bool newchar;
@@ -37,26 +37,16 @@ int update_input()
         case 27:
             c = kgetc();
             if (c == 91) {
-                    switch (kgetc()) {
-                        case 'D':
-                            c = ARROW_LEFT;
-                            break;
-                        case 'C':
-                            c = ARROW_RIGHT;
-                            break;
-                        case 'A':
-                            c = ARROW_UP;
-                            break;
-                        case 'B':
-                            c = ARROW_DOWN;
-                            break;
-                        default:
-                            c = BAD_CODE;
-                            break;
-                    }
-                    return c;
+                switch (kgetc()) {
+                    case 'D': return ARROW_LEFT;
+                    case 'C': return ARROW_RIGHT;
+                    case 'A': return ARROW_UP;
+                    case 'B': return ARROW_DOWN;
+                    default : return BAD_CODE;
+                }
+            } else {
+                return BAD_CODE;
             }
-            break;
         default:
             break;
     }
@@ -89,7 +79,7 @@ void kmain(void)
     memset(input, 0, 500);
     inputpos = 0;
 
-    knew_proc(main, exit);
+    knew_proc(sh_main, exit);
     //knew_proc(main2, exit);
     proc *p = ksched();
     restore_pcb(&p->pcb);
@@ -99,6 +89,7 @@ void kmain(void)
 
 int _ksyscall (int code, int r1, int r2, int r3) 
 {
+    void* prog_addr;
     switch (code) {
         case PUTC:
             kputc(r1);
@@ -115,13 +106,21 @@ int _ksyscall (int code, int r1, int r2, int r3)
             khalt();
             return 0;
         case GET_PAGES:
-            return (int)kget_pages_for_user(r1);
+            return (int)kget_pages_for_user(cp(), r1);
         case EXIT:
             printk("Proc %d exiting", cp()->pid);
             kfree_proc(cp());
             return -1;
         case YIELD:
             return 0;
+        case EXEC:
+            prog_addr = program_lookup((char*)r1);
+            if (!prog_addr) {
+                return 0;
+            } else {
+                kexec_proc(cp(), prog_addr, exit);
+                return 0;
+            }
         default:
             printk("Bad syscall code %d", code);
             return -1;

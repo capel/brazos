@@ -92,6 +92,21 @@ size_t strlcpy(char* dst, const char* src, size_t len)
     return len;
 }
 
+int strcmp(const char* a, const char* b)
+{
+    int r;
+    for (;;) {
+        r = (byte) *a - (byte)*b;
+        if (r)
+            return r;
+        if (*a == '\0') // clearly b is also nul
+            return 0;
+        a++;
+        b++;
+    }
+    return 0;
+}
+
 int strncmp(const char* a, const char* b, size_t len)
 {
     int r;
