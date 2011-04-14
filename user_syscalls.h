@@ -8,16 +8,16 @@
 #include "types.h"
 #include "syscalls.h"
 
-static inline char getc() {
-    return (char) syscall(GETC, 0, 0, 0);
+static inline int getc() {
+    return syscall(GETC, 0, 0, 0);
+}
+
+static inline int putc(int c) {
+    return syscall(PUTC, c, 0, 0);
 }
 
 static inline void* get_pages(size_t num) {
     return (void*)syscall(GET_PAGES, num, 0, 0);
-}
-
-static inline void free_pages(void* page) {
-    syscall(FREE_PAGES, (int)page, 0, 0);
 }
 
 static inline void halt() {

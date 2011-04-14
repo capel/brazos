@@ -32,9 +32,10 @@ proc * knew_proc(void* main, void* exit)
         return 0;
     }
 
-    proc *p = kget_page();
+    proc *p = kmalloc(sizeof(*p));
     p->pid = cur_pid++;
     p->stride = 0;
+    p->mem = 0;
 
     unsigned spsr = __get_CPSR();
     p->pcb.spsr = spsr & (~0x1f);
@@ -64,8 +65,17 @@ void kfree_proc(proc *p)
         if (p == proc_table[i]) {
             proc_table[i] = 0;
             num_procs--;
+            
+            for(proc_pages* mem = p->mem; mem; ) {
+                proc_pages* tmp;
+                kfree_pages(mem->pages, mem->num_pages);
+                tmp = mem;
+                mem = mem->next;
+                kfree(tmp);
+            }
+            
             kfree_pages(p->pcb.sp, USER_STACK_SIZE);
-            kfree_page(p);
+            kfree(p);
         }
     }
 }
@@ -106,6 +116,17 @@ proc* ksched(void)
     // because num_procs says there is one to run
     // and we just enabled every proc
     goto select;
+}
+
+void* kget_pages_for_user(proc* p, size_t num)
+{
+    void* pages = kget_pages(num);
+    proc_pages * pp = kmalloc(sizeof(*pp));
+    pp->pages = pages;
+    pp->num_pages = num;
+    pp->next = p->mem;
+    p->mem = pp;
+    return pages;
 }
 
 proc * cp(void) {

@@ -27,11 +27,17 @@ typedef struct _PCB {
     void* pc;
 } PCB;
 
+typedef struct _proc_pages {
+    void* pages;
+    size_t num_pages;
+    struct _proc_pages * next;
+} proc_pages;
 
 typedef struct _proc {
     PCB pcb;
     size_t stride;
     int pid;
+    proc_pages * mem;
 } proc;
 
 void restore_pcb(PCB* pcb);

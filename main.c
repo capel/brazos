@@ -20,15 +20,52 @@ PCB* kirq (PCB* stacked_pcb) {
     return stacked_pcb;
 }
 
-char update_input()
+int update_input()
 {
-    char c;
-    c = kgetc();
-        
-    if (c == '\r')
-        c = '\n';
+    int c = kgetc();
+    switch(c) {
+        case '\r':
+            c = '\n';
+            kputc(c);
+            return c;
+            break;
+        case '\b':
+            kputc('\b');
+            kputc(' ');
+            kputc('\b');
+            return '\b';
+        case 27:
+            c = kgetc();
+            if (c == 91) {
+                    switch (kgetc()) {
+                        case 'D':
+                            c = ARROW_LEFT;
+                            break;
+                        case 'C':
+                            c = ARROW_RIGHT;
+                            break;
+                        case 'A':
+                            c = ARROW_UP;
+                            break;
+                        case 'B':
+                            c = ARROW_DOWN;
+                            break;
+                        default:
+                            c = BAD_CODE;
+                            break;
+                    }
+                    return c;
+            }
+            break;
+        default:
+            break;
+    }
 
     kputc(c);
+
+    /*if (!isalpha(c) && !isdigit(c)) {
+        printk("<%d>", c);
+    }*/
     
     return c;
 
@@ -63,9 +100,12 @@ void kmain(void)
 int _ksyscall (int code, int r1, int r2, int r3) 
 {
     switch (code) {
+        case PUTC:
+            kputc(r1);
+            return 0;
         case GETC:
             for (;;) {
-                char c = update_input();
+                int c = update_input();
                 if (c) return c;
             }
         case WRITE_STDOUT:
@@ -75,10 +115,7 @@ int _ksyscall (int code, int r1, int r2, int r3)
             khalt();
             return 0;
         case GET_PAGES:
-            return (int)kget_pages(r1);
-        case FREE_PAGES:
-            kfree_page((void*)r1);
-            return 0;
+            return (int)kget_pages_for_user(r1);
         case EXIT:
             printk("Proc %d exiting", cp()->pid);
             kfree_proc(cp());
