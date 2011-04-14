@@ -37,12 +37,16 @@ bool islower(char c);
 bool isalpha(char c);
 bool isdigit(char c);
 
-
+bool isdigits(const char* c);
 
 
 void itoa(char* buf, size_t size, int s);
 void utoa(char* buf, size_t size, unsigned s);
 void utoa16(char* buf, size_t size, unsigned x);
+
+int atoi(const char* buf);
+
+int power(int a, int b);
 
 bool lock(lock_t* l);
 bool unlock(lock_t* l);

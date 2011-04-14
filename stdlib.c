@@ -6,6 +6,13 @@ char hexchars[] = {
     '0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
     'a', 'b', 'c', 'd', 'e', 'f' };
 
+int char_to_digit(char c) {
+    if (c < 0x30 || c > 0x39)
+        return -1;
+
+    return c - 0x30;
+}
+
 void memset(char* start, char fill, size_t bytes)
 {
     for( ; bytes ; bytes--) {
@@ -193,6 +200,55 @@ void utoa16(char* buf, size_t size, unsigned x)
     buf[pos++] = hexchars[x & 0xF]; // we always want at least 1 zero
     buf[pos] = '\0';
 
+}
+
+bool isdigits(const char* c) {
+    if (*c != '-' && !isdigit(*c))
+        return false;
+
+    c++;
+
+    for(;;) {
+        if (!*c)
+            return true;
+        if (!isdigit(*c))
+            return false;
+        c++;
+    }
+}
+
+int power(int a, int b) {
+    int res = 1;
+    for(; b > 0; b--) {
+        res *= a;
+    }
+    return res;
+}
+
+int atoi(const char* buf) {
+    if (!isdigits(buf))
+        return 0;
+    
+    size_t len = strlen(buf);
+    bool negative = false;
+    int i = 0;
+    
+    if (buf[0] == '-') {
+        negative = true;
+        buf++;
+        len--;
+    }
+
+    size_t pow = 0;
+    for(int pos = len-1; pos >= 0; pos--, pow++) {
+        int digit = char_to_digit(buf[pos]);
+        i += digit * power(10, pow);
+    }
+
+    if (negative)
+        i = -i;
+    
+    return i;
 }
 
 bool lock(lock_t* l)
