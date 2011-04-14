@@ -15,6 +15,8 @@ void exit(void) {
 
 typedef bool (*readline_func)(char*);
 
+void readline_lib(const char* prompt, readline_func func);
+
 
 void erase_chars(size_t num) {
     for(; num > 0; num--) {
@@ -145,12 +147,54 @@ void readline_lib(const char * prompt, readline_func func) {
     }
 }
 
-bool bc_parse(char* line) {
-    //vector * v = split_to_vector(line, " ");
-    //if (v->size == 1) {
-    printf("=%s", line);           
 
-    return true;
+bool bc_parse(char* line) {
+    vector * v = split_to_vector(line, " ");
+    if (v->size == 1) {
+        if (strcmp(v->data[0], "exit") == 0) {
+            println("Goodbye.");
+            exit();
+        }
+        println("%d", atoi(v->data[0]));
+    } else if (v->size == 2) {
+        println("Parse error: 1 or 3 arguments required.");
+        goto cleanup;
+    } else if (v->size == 3) {
+        if (strlen(v->data[1]) != 1 || !isdigits(v->data[0]) || !isdigits(v->data[2])) {
+            println("Parse error: Badly formatted numbers or bad operand.");
+            goto cleanup;
+        }
+
+        switch (((char*)v->data[1])[0]) {
+            case '+':
+                println("= %d", atoi(v->data[0]) + atoi(v->data[2]));
+                goto cleanup;
+            case '*':
+                println("= %d", atoi(v->data[0]) * atoi(v->data[2]));
+                goto cleanup;
+            case '-':
+                println("= %d", atoi(v->data[0]) - atoi(v->data[2]));
+                goto cleanup;
+            case '/':
+                println("Division not supported");
+                //println("= %d", atoi(v->data[0]) / atoi(v->data[2]));
+                goto cleanup;
+            case '^':
+                println("= %d", power(atoi(v->data[0]), atoi(v->data[2])));
+                goto cleanup;
+            default:
+                println("Parse error: Unknown operand %s", v->data[1]);
+                goto cleanup;
+        }   
+    }
+    else {
+        println("Parse error: Too many arguments");
+        goto cleanup;
+    }
+
+    cleanup:
+        cleanup_vector(v);
+        return true;
 }
 
 
