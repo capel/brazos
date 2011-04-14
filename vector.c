@@ -48,25 +48,21 @@ void cleanup_vector(vector* v)
 
 	if (v->__type == __SPLIT_TO_VECTOR) 
 	    v->__alloc_funcs->free(v->__source);
-	else
-	{
-  		if (v->__type == MANAGED_POINTERS)
-  		{
-    		int i;
-    		for(i = 0; i < v->size; ++i)
-    		{	
-      			v->__alloc_funcs->free(v->data[i]);
-    		}
-  		}
+	else if (v->__type == MANAGED_POINTERS) {
+        size_t i;
+        for(i = 0; i < v->size; ++i)
+        {	
+            v->__alloc_funcs->free(v->data[i]);
+        }
 	}
   
   	v->__alloc_funcs->free(v->data);
   	v->__alloc_funcs->free(v);
 }
 
-void* vector_remove(vector* v, int i)
+void* vector_remove(vector* v, size_t i)
 {
-	if (i >= v->size || i < 0)
+	if (i >= v->size)
 		return 0;
 	
 	if (!v)
@@ -78,7 +74,7 @@ void* vector_remove(vector* v, int i)
 		
 		
 	// copy stuff over
-	for(int j = i+1; j < v->size; ++j)
+	for(size_t j = i+1; j < v->size; ++j)
 	{
 		v->data[j-1] = v->data[j];	
 	}
@@ -161,8 +157,8 @@ vector* _split_to_vector(const char * str, const char* seps, const alloc_funcs* 
   }
 }
 
-void print_vector(vector* v, const char* format_string)
+void print_vector(vector* v, const char* format_string, size_t start)
 {
-	for	(int i = 0; i < v->size; ++i)
+	for	(size_t i = start; i < v->size; ++i)
 		v->__alloc_funcs->printf(format_string, v->data[i]);	
 }

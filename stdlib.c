@@ -92,7 +92,7 @@ size_t strlcpy(char* dst, const char* src, size_t len)
     return len;
 }
 
-int strcmp(const char* a, const char* b, size_t len)
+int strncmp(const char* a, const char* b, size_t len)
 {
     int r;
     for (; len; --len) {

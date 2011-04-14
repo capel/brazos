@@ -1,6 +1,8 @@
 #include "mem.h"
 #include "stdlib.h"
 #include "kio.h"
+#include "malloc.h"
+
 
 void* mstart;
 size_t msize;
@@ -8,8 +10,20 @@ size_t mpages;
 char *bitmap;
 size_t mcurrent;
 
+malloc_data kmalloc_data;
 
-
+void* kmalloc(size_t size) {
+    return _malloc(size, &kmalloc_data);
+}
+void* kcalloc(size_t size, size_t obj_size) {
+    return _calloc(size, obj_size, &kmalloc_data);
+}
+void* krealloc(void *ptr, size_t newsize) {
+    return _realloc(ptr, newsize, &kmalloc_data);
+}
+int kfree(void *ptr) {
+    return _free(ptr, &kmalloc_data);
+}
 static void setup_mem_bounds(void)
 {
     size_t kend = (size_t) &_kend;
@@ -17,11 +31,6 @@ static void setup_mem_bounds(void)
     mstart = (void*) ( (kend / PAGE_SIZE)*PAGE_SIZE + PAGE_SIZE);
     msize = get_mem_size() - (size_t)&mstart;
     mpages = msize / PAGE_SIZE;    
-
-
-    printk("Kernel %p - %p\n Memory %p for %u (%u pages, %u bytes total)", 
-            &_kstart, &_kend, mstart, msize, mpages, get_mem_size());
-
 }
 
 static void* get_addr_from_page(size_t page)
@@ -32,7 +41,8 @@ static void* get_addr_from_page(size_t page)
 void ksetup_memory(void)
 {
     setup_mem_bounds();
-    
+    kmalloc_data.get_pages = kget_pages;
+    _mem_init(10, &kmalloc_data); 
     mcurrent = 0;
 }
 

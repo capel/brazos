@@ -1,7 +1,7 @@
 #include "stdlib.h"
 #include "kio.h"
 #include "syscalls.h"
-
+#include "chars.h"
 
 #define DEV_CONS_ADDRESS        0x0000000010000000
 #define DEV_CONS_LENGTH         0x0000000000000020
@@ -16,7 +16,7 @@
 				DEV_CONS_ADDRESS + DEV_CONS_HALT)
 int vprintf(char* buf, size_t size, const char* fmt, va_list va, int newline);
 
-char kgetc(void)
+int kgetc(void)
 {
     char ch = *((volatile unsigned char *) PUTCHAR_ADDRESS) ;
 	return ch;
@@ -27,8 +27,30 @@ void khalt(void)
 	*((volatile unsigned char *) HALT_ADDRESS) = 0;
 }
 
-void kputc(char c) {
-	    *((volatile unsigned char *) PUTCHAR_ADDRESS) = c;
+void kputc(int c) {
+    if (isspecial(c)) {
+        kputc(27);
+        kputc(91);
+        switch (c) {
+            case ARROW_LEFT:
+                kputc('D');
+                break;
+            case ARROW_RIGHT:
+                kputc('C');
+                break;
+            case ARROW_UP:
+                kputc('A');
+                break;
+            case ARROW_DOWN:
+                kputc('B');
+                break;
+            default:
+                printk("Invalid special char %d sent to kputc.", c);
+                break;
+        }
+        return;
+    }
+    *((volatile unsigned char *) PUTCHAR_ADDRESS) = c;
 }
 
 void kputs(const char *s)

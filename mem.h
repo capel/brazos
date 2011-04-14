@@ -16,4 +16,9 @@ void* kget_pages(size_t num);
 void kfree_page(void* pageaddr);
 void kfree_pages(void* pageaddr, size_t num);
 
+void* kmalloc(size_t size);
+void* kcalloc(size_t size, size_t obj_size);
+void* krealloc(void *ptr, size_t newsize);
+int kfree(void *ptr);
+
 #endif

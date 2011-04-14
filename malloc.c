@@ -86,7 +86,6 @@ void list_remove(free_node* node, malloc_data *md);
 
 #define PAGE_SIZE 4096
 
-#define assert(x) do { if (!(x)) { debug("Assert (%s) in %s at " __FILE__ ":%d failed.", #x, __func__, __LINE__); exit(); } } while(0)
 
 void get_space(size_t pages, malloc_data * md) {
     void * start = md->get_pages(pages);
