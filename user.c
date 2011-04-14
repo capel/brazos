@@ -37,8 +37,13 @@ bool parse_line(char* line) {
                 print_vector(v, "%s ", 1);
                 println("");
                 return true;
+            } else if (strncmp(v->data[0], "exit", strlen(v->data[0])) == 0) {
+                println("Goodbye.");
+                exit();
+                return true;
             }
             goto unknown;
+            
         case 'y':
             if (strncmp(v->data[0], "yield", strlen(v->data[0])) == 0) {
                 yield();
@@ -47,7 +52,7 @@ bool parse_line(char* line) {
             goto unknown;
         default:
         unknown:
-            println("Unknown commmand %s", v->data[0]);
+            println("Unknown commmand '%s'", v->data[0]);
             return false;
     }
     cleanup_vector(v);
@@ -72,7 +77,8 @@ void main()
         }
 
         int reason = getline(line + line_offset, 100);
-        
+       
+
         switch (reason) {
             case ARROW_LEFT:
               //  debug("left");
@@ -96,7 +102,6 @@ void main()
                     len = strlen(line);
                     erase_chars(len);
                     history_pos--;
-                    free(line);
                     line = history->data[history_pos];
                     printf("%s", line);
                     fresh_line = false;
@@ -105,12 +110,25 @@ void main()
                 break;
             case ARROW_DOWN:
                 //debug("down");
-                len = strlen(line);
+                if (history_pos == history->size -1) {
+                    fresh_line = false;
+                    line_offset = strlen(line);
+                } else {
+                    len = strlen(line);
+                    erase_chars(len);
+                    history_pos++;
+                    line = history->data[history_pos];
+                    printf("%s", line);
+                    fresh_line = false;
+                    line_offset = strlen(line);
+                }
                 break;
             case NEWLINE:
+                len = strlen(line);
                 vector_push(history, line);
                 history_pos++;
                 parse_line(line);
+                line[len-1] = '\0';
                 fresh_line = true;
             default:
                 break;

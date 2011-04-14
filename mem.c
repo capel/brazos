@@ -55,8 +55,8 @@ void* kget_pages(size_t num)
 {
     size_t start_page = mcurrent;
     mcurrent += num;
-    printk("Allocing %u pages at %p (page %u)", 
-        num, get_addr_from_page(start_page), start_page);
+  //  printk("Allocing %u pages at %p (page %u)", 
+  //      num, get_addr_from_page(start_page), start_page);
     
     return get_addr_from_page(start_page);
 }
@@ -74,6 +74,6 @@ void kfree_page(void* pageaddr)
 
 void kfree_pages(void* pageaddr, size_t num)
 {
-    printk("Free %u pages at %p (page %u)", 
-        num, pageaddr, get_page_from_addr(pageaddr));
+  //  printk("Free %u pages at %p (page %u)", 
+  //      num, pageaddr, get_page_from_addr(pageaddr));
 }
