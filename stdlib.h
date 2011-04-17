@@ -12,9 +12,9 @@ typedef __builtin_va_list va_list;
 #define va_end __builtin_va_end
 #define va_arg __builtin_va_arg
 
-void memset(char* start, char fill, size_t bytes);
-void memcpy(char* dst, const char * src, size_t len);
-int memcmp(const char* a, const char* b, size_t bytes);
+void memset(void* start, char fill, size_t bytes);
+void memcpy(void* dst, const void * src, size_t len);
+int memcmp(const void* a, const void* b, size_t bytes);
 
 size_t strlen(const char* str);
 size_t strlcpy(char* dst, const char* src, size_t len);
