@@ -13,27 +13,30 @@ int char_to_digit(char c) {
     return c - 0x30;
 }
 
-void memset(char* start, char fill, size_t bytes)
+void memset(void* start, char fill, size_t bytes)
 {
+    char* _start = start;
     for( ; bytes ; bytes--) {
-        *start++ = fill;
+        *_start++ = fill;
     }
 }
 
-void memcpy(char* dst,const char * src, size_t len)
+void memcpy(void* dst,const void * src, size_t len)
 {
     if (dst == src)
         return;
+    char *_dst, *_src;
     for ( ; len; len--) {
-        *dst++ = *src++;
+        *_dst++ = *_src++;
     }
 }
 
-int memcmp(const char* a, const char* b, size_t bytes) 
+int memcmp(const void* a, const void* b, size_t bytes) 
 {
     byte r;
+    char *_a, *_b;
     for (size_t i = 0; i < bytes; i++) {
-        r = (byte) *a++ - (byte) *b++;
+        r = (byte) *_a++ - (byte) *_b++;
         if (r)
             return r;
     }
