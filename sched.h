@@ -20,7 +20,7 @@ typedef struct _PCB {
     int r8;
     int r9;
     int r10;
-    int r11;
+    int fp;
     int r12;
     void* sp;
     void* lr;
@@ -36,7 +36,9 @@ typedef struct _proc_pages {
 typedef struct _proc {
     PCB pcb;
     size_t stride;
+    bool runnable;
     int pid;
+    int wait_pid;
     proc_pages * mem;
     void* stack;
 } proc;
@@ -49,7 +51,11 @@ void kinit_sched(void);
 proc * knew_proc(void* main, void* exit);
 void kfree_proc(proc* p);
 
+proc* kfork_proc(proc* p);
 void kexec_proc(proc *p, void* main, void* exit);
+
+void ksleep_proc(proc *p);
+void kwake_proc(proc *p);
 
 // implicitly the current proc
 void kcopy_pcb(PCB * pcb);
@@ -58,6 +64,9 @@ void* kget_pages_for_user(proc* p, size_t num);
 
 proc * ksched(void);
 
+
+
+proc * proc_by_pid(int pid);
 proc * cp(void);
 
 #endif

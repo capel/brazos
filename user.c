@@ -3,6 +3,7 @@
 
 #define USER
 
+#include "user.h"
 #include "user_syscalls.h"
 #include "stdlib.h"
 #include "stdio.h"
@@ -13,9 +14,6 @@ void exit(void) {
     _exit();
 }
 
-typedef bool (*readline_func)(char*);
-
-void readline_lib(const char* prompt, readline_func func);
 
 
 void erase_chars(size_t num) {
@@ -29,12 +27,6 @@ bool parse_line(char* line) {
     switch (((char*)v->data[0])[0]) {
         case '\0':
             break;
-        case 'b':
-            if (strncmp(v->data[0], "bc", strlen(v->data[0])) == 0) {
-                println("Starting bc");
-                exec("bc");
-                goto cleanup;
-            }
         case 'q':
             if (strncmp(v->data[0], "quit", strlen(v->data[0])) == 0) {
                 println("Goodbye.");
@@ -51,6 +43,17 @@ bool parse_line(char* line) {
                 exit();
             }
             goto unknown;
+        case 'b':
+            if (strncmp(v->data[0], "bc", strlen(v->data[0])) == 0) {
+                int pid = forkexec("bc");
+                wait(pid);
+                goto cleanup;
+            } else if (strncmp(v->data[0], "exit", strlen(v->data[0])) == 0) {
+                println("Goodbye.");
+                exit();
+            }
+            goto unknown;
+            
             
         case 'y':
             if (strncmp(v->data[0], "yield", strlen(v->data[0])) == 0) {
@@ -67,11 +70,12 @@ bool parse_line(char* line) {
     cleanup_vector(v);
     return true;
 }
-void sh_main()
+int sh_main()
 {
     mem_init(100);
     printf("Hello\n");
     readline_lib("brazos> ", parse_line);
+    return 0;
 }
     
 
@@ -198,10 +202,11 @@ bool bc_parse(char* line) {
 }
 
 
-void bc_main()
+int bc_main()
 {
     mem_init(10);
 
     readline_lib("BC> ", bc_parse);
+    return 0;
 }
 #endif

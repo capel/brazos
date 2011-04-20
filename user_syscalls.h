@@ -36,4 +36,12 @@ static inline void yield() {
     syscall(YIELD, 0, 0, 0);
 }
 
+static inline int forkexec(char* name) {
+    return syscall(FORKEXEC, (int)name, 0, 0);
+}
+
+static inline void wait(int pid) {
+    syscall(WAIT, pid, 0, 0);
+}
+
 #endif

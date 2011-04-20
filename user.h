@@ -1,12 +1,13 @@
+#ifndef USER_H_H
+#define USER_H_H
 
+#include "types.h"
 
-#ifndef USER_H
-#define USER_H
-
-int sh_main();
-int bc_main();
+int sh_main(void);
+int bc_main(void);
 
 void exit();
+typedef bool (*readline_func)(char*);
 void readline_lib(const char * prompt, readline_func func); 
 
 #endif
