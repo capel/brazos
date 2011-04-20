@@ -9,6 +9,8 @@
 #define GETC 7
 #define YIELD 8
 #define EXEC 9
+#define FORKEXEC 10
+#define WAIT 11
 
 int syscall(int r0, int r1, int r2, int r3);
 

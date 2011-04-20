@@ -90,6 +90,7 @@ void kmain(void)
 int _ksyscall (int code, int r1, int r2, int r3) 
 {
     void* prog_addr;
+    proc* new_proc;
     switch (code) {
         case PUTC:
             kputc(r1);
@@ -115,12 +116,29 @@ int _ksyscall (int code, int r1, int r2, int r3)
             return 0;
         case EXEC:
             prog_addr = program_lookup((char*)r1);
+            printk("Proc %d execing %s (%p)", cp()->pid, r1, prog_addr);
             if (!prog_addr) {
                 return 0;
             } else {
                 kexec_proc(cp(), prog_addr, exit);
                 return 0;
             }
+        case FORKEXEC:
+            prog_addr = program_lookup((char*)r1);
+            printk("Proc %d execing %s (%p)", cp()->pid, r1, prog_addr);
+            if (!prog_addr) {
+                return -1;
+            } else {
+                new_proc = knew_proc(prog_addr, exit);
+                new_proc->pcb.r0 = 0;
+                return new_proc->pid;
+                return 0;
+            }
+        case WAIT:
+            printk("Proc %d waiting for proc %d", cp()->pid, r1);
+            cp()->wait_pid = r1;
+            ksleep_proc(cp());
+            return 0;
         default:
             printk("Bad syscall code %d", code);
             return -1;
