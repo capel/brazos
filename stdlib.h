@@ -6,6 +6,9 @@
 
 #define PAGE_SIZE 4096
 
+#define MAX(a, b) ((a) > (b)) ? (a) : (b)
+#define MIN(a, b) ((a) > (b)) ? (b) : (a)
+
 // Vararg handling, stdarg.h style, let GCC handle the nastiness..
 typedef __builtin_va_list va_list;
 #define va_start __builtin_va_start

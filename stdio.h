@@ -16,5 +16,7 @@ int printf(const char* fmt, ...);
 int println(const char* fmt, ...);
 
 int getline(char* buf, size_t size);
+typedef bool (*readline_func)(char*);
+void readline_lib(const char * prompt, readline_func func); 
 
 #endif

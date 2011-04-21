@@ -40,6 +40,7 @@ typedef struct {
     size_t size;
     lock_t lock;
     get_pages_func get_pages;
+    printf_func db;
 } malloc_data;
 
 

@@ -116,16 +116,18 @@ vector* _split_to_vector(const char * str, const char* seps, const alloc_funcs* 
 		return 0;
   
   vector * v = _make_vector(sizeof(char*), __SPLIT_TO_VECTOR, funcs);
-  
+ 
+
   size_t len = strlen(str);
   v->__source = v->__alloc_funcs->calloc(len+1, 1);
-  strlcpy(v->__source, str, len);
+  strlcpy(v->__source, str, len+1);
 
   // for ease of use
   char* src = v->__source;
  
   size_t i = 0;
   size_t beginning;
+
 
   while (true) {
       // skip beginning stuff
@@ -147,9 +149,10 @@ vector* _split_to_vector(const char * str, const char* seps, const alloc_funcs* 
         }
     }
 
+
     if (i == len) {
         if (i != beginning) {
-            src[i] = '\0';
+            src[++i] = '\0';
             vector_push(v, src+beginning);
         }
         return v;

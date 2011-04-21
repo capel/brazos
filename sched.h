@@ -6,6 +6,10 @@
 #endif
 
 #include "types.h"
+#include "kfs.h"
+
+#define NUM_FDS 4
+
 
 typedef struct _PCB {
     int spsr;
@@ -33,6 +37,11 @@ typedef struct _proc_pages {
     struct _proc_pages * next;
 } proc_pages;
 
+typedef struct _proc_file {
+    kfile* file;
+    size_t pos;
+} proc_file;
+
 typedef struct _proc {
     PCB pcb;
     size_t stride;
@@ -41,6 +50,8 @@ typedef struct _proc {
     int wait_pid;
     proc_pages * mem;
     void* stack;
+    kfile* cwd;
+    proc_file files[NUM_FDS];
 } proc;
 
 void restore_pcb(PCB* pcb);
@@ -59,6 +70,9 @@ void kwake_proc(proc *p);
 
 // implicitly the current proc
 void kcopy_pcb(PCB * pcb);
+
+int kadd_file_proc(proc * p, kfile * f);
+int kclose_file_proc(proc *p, int fd);
 
 void* kget_pages_for_user(proc* p, size_t num);
 

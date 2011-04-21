@@ -12,4 +12,6 @@ typedef int bool;
 typedef size_t lock_t;
 #define LOCK_INIT 0
 
+#define NULL 0
+
 #endif
