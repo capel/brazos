@@ -23,41 +23,130 @@ void erase_chars(size_t num) {
 }
 
 bool parse_line(char* line) {
+    if (strlen(line) == 0)
+        return false;
+
     vector * v = split_to_vector(line, " ");
     switch (((char*)v->data[0])[0]) {
         case '\0':
             break;
         case 'q':
-            if (strncmp(v->data[0], "quit", strlen(v->data[0])) == 0) {
+            if (strcmp(v->data[0], "quit") == 0) {
                 println("Goodbye.");
                 exit();
             }
             goto unknown;
         case 'e':
-            if (strncmp(v->data[0], "echo", strlen(v->data[0])) == 0) {
+            if (strcmp(v->data[0], "echo") == 0) {
                 print_vector(v, "%s ", 1);
                 println("");
                 goto cleanup;
-            } else if (strncmp(v->data[0], "exit", strlen(v->data[0])) == 0) {
+            } else if (strcmp(v->data[0], "exit") == 0) {
                 println("Goodbye.");
                 exit();
             }
             goto unknown;
         case 'b':
-            if (strncmp(v->data[0], "bc", strlen(v->data[0])) == 0) {
+            if (strcmp(v->data[0], "bc") == 0) {
                 int pid = forkexec("bc");
                 wait(pid);
                 goto cleanup;
-            } else if (strncmp(v->data[0], "exit", strlen(v->data[0])) == 0) {
-                println("Goodbye.");
-                exit();
+            }
+            goto unknown;
+        case 'y':
+            if (strcmp(v->data[0], "yield") == 0) {
+                yield();
+                goto cleanup;
+            }
+            goto unknown;
+        case 'w':
+            if (strcmp(v->data[0], "write") == 0) {
+                if (v->size < 4) {
+                    println("write: write <file> <pos> <data>");
+                    goto cleanup;
+                }
+                int fd = open(v->data[1]);
+                if (fd < 0) {
+                    println("bad filename");
+                    goto cleanup;
+                }
+                seek(fd, atoi(v->data[2]), SEEK_ABS);
+                write(fd, v->data[3], strlen(v->data[3]));
+                close(fd);
+                goto cleanup;
+            }
+            goto unknown;
+        case 'p':
+            if (strcmp(v->data[0], "pwd") == 0) {
+                char * name = malloc(FILENAME_LEN);
+                get_cwd(name, FILENAME_LEN);
+                println("%s", name);
+                
+                free(name);
+                goto cleanup;
+            }
+            goto unknown;
+        case 't':
+            if (strcmp(v->data[0], "touch") == 0) {
+                if (v->size < 2) {
+                    println("touch: touch <file>");
+                    goto cleanup;
+                }
+
+                int fd = create(v->data[1], CREATE_FILE);
+                goto cleanup;
+            }
+            goto unknown;
+        case 'c':
+            if (strcmp(v->data[0], "cd") == 0) {
+                if (v->size < 2) {
+                    println("cd: cd <dir>");
+                    goto cleanup;
+                }
+
+                if (set_cwd(v->data[1]) < 0) {
+                    println("bad directory");
+                }
+                goto cleanup;
+            } else if (strcmp(v->data[0], "cat") == 0) {
+                if (v->size < 2) {
+                    println("cat: cat <file>");
+                    goto cleanup;
+                }
+                int fd = open(v->data[1]);
+                if (fd < 0) {
+                    println("bad filename");
+                    goto cleanup;
+                }
+                char* buf = malloc(1024);
+                read(fd, buf, 1024);
+                close(fd);
+                println("%s", buf);
+                free(buf);
+                goto cleanup;
             }
             goto unknown;
             
-            
-        case 'y':
-            if (strncmp(v->data[0], "yield", strlen(v->data[0])) == 0) {
-                yield();
+        case 'm':
+            if (strcmp(v->data[0], "mkdir") == 0) {
+                if (v->size < 2) {
+                    println("mkdir: mkdir <file>");
+                    goto cleanup;
+                }
+
+                int fd = create(v->data[1], CREATE_DIR);
+                goto cleanup;
+            }
+            goto unknown;
+        case 'l':
+            if (strcmp(v->data[0], "ls") == 0) {
+                user_dir_entry* space = malloc(GET_DIR_ENTRIES_SPACE);
+                get_dir_entries(space, GET_DIR_ENTRIES_SPACE);
+                for(int i = 0; i < FILES_PER_DIR; i++) {
+                    if (strlen(space[i].name) > 0)
+                        println(space[i].name);
+                }
+                free(space);
                 goto cleanup;
             }
             goto unknown;
@@ -70,86 +159,17 @@ bool parse_line(char* line) {
     cleanup_vector(v);
     return true;
 }
+
 int sh_main()
 {
     mem_init(100);
     printf("Hello\n");
+    create("ll", CREATE_FILE);
+    create("woot", CREATE_FILE);
     readline_lib("brazos> ", parse_line);
     return 0;
 }
     
-
-void readline_lib(const char * prompt, readline_func func) {
-    vector * history = make_vector(sizeof(char*), MANAGED_POINTERS);
-    size_t history_pos = 0;
-    size_t len;
-    char * line;
-
-    bool fresh_line = true;
-    int line_offset = 0;
-
-    for(;;) {
-        if (fresh_line) {
-            line = calloc(100, 1);
-            printf("%s", prompt);
-            line_offset = 0;
-        }
-
-        int reason = getline(line + line_offset, 100);
-       
-
-        switch (reason) {
-            case ARROW_LEFT:
-                putc(ARROW_LEFT);
-                fresh_line = false;
-                line_offset = strlen(line)-1;
-                break;
-            case ARROW_RIGHT:
-                putc(ARROW_RIGHT);
-                fresh_line = false;
-                line_offset = strlen(line)+1;
-                break;
-            case ARROW_UP:
-                
-                if (history_pos == 0) {
-                    fresh_line = false;
-                    line_offset = strlen(line);
-                } else {
-                    len = strlen(line);
-                    erase_chars(len);
-                    history_pos--;
-                    line = history->data[history_pos];
-                    printf("%s", line);
-                    fresh_line = false;
-                    line_offset = strlen(line);
-                }
-                break;
-            case ARROW_DOWN:
-                if (history_pos == history->size -1) {
-                    fresh_line = false;
-                    line_offset = strlen(line);
-                } else {
-                    len = strlen(line);
-                    erase_chars(len);
-                    history_pos++;
-                    line = history->data[history_pos];
-                    printf("%s", line);
-                    fresh_line = false;
-                    line_offset = strlen(line);
-                }
-                break;
-            case NEWLINE:
-                len = strlen(line);
-                vector_push(history, line);
-                history_pos++;
-                func(line);
-                line[len-1] = '\0';
-                fresh_line = true;
-            default:
-                break;
-        }
-    }
-}
 
 
 bool bc_parse(char* line) {

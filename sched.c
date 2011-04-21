@@ -37,11 +37,14 @@ proc * knew_proc(void* main, void* exit)
     }
 
     proc *p = kmalloc(sizeof(*p));
+    assert(p);
+    printk("%p", p);
     p->pid = cur_pid++;
     p->stride = 0;
     p->mem = 0;
     p->runnable = 1;
     p->wait_pid = 0;
+    p->cwd = kf_get_root();
 
     unsigned spsr = __get_CPSR();
     p->pcb.spsr = spsr & (~0x1f);
@@ -66,12 +69,12 @@ proc * knew_proc(void* main, void* exit)
     // bad!
     panic("No free procs after initial check said there were");
 }
-
+/*
 proc* kfork_proc(proc* p) {
     //printk("%x %x %x %x %x %x %x %x %x %x", p->pcb.sp,
  //       p->pcb.r12, p->pcb.fp, p->pcb.r10, p->pcb.r9, p->pcb.r8, p->pcb.r7, p->pcb.r6, p->pcb.r5, p->pcb.r4);
     proc *p2 = knew_proc(p->pcb.pc, exit);
-    memcpy(&p2->pcb, &p->pcb, sizeof(PCB));
+    memcpy((char*)&p2->pcb, (char*)&p->pcb, sizeof(PCB));
     p2->pcb.pc = p->pcb.pc;
     p2->mem = p->mem;
     memcpy(p2->stack, p->stack, USER_STACK_SIZE * PAGE_SIZE);
@@ -83,7 +86,7 @@ proc* kfork_proc(proc* p) {
     //printk("p2 %p : diff %d : pc %p, sp %p", p2, diff, p2->pcb.pc, p2->pcb.sp);
     return p2;
 }
-
+*/
 void kexec_proc(proc* p, void* main, void* exit) {
     p->pcb.sp = p->stack;
     p->pcb.lr = exit;
@@ -110,6 +113,23 @@ void kwake_procs(int pid) {
     }
 }
 
+int kadd_file_proc(proc * p, kfile * f) {
+    for(size_t i = 0; i < NUM_FDS; i++) {
+        if (p->files[i].file == 0) {
+            p->files[i].file = f;
+            p->files[i].pos = 0;
+            return i;
+        }
+    }
+    return -1;
+}
+
+int kclose_file_proc(proc *p, int fd) {
+    p->files[fd].file = 0;
+    p->files[fd].pos = 0;
+    return 0;
+}
+
 void kfree_proc(proc *p)
 {
     for (size_t i = 0; i < PROC_TABLE_SIZE; i++) {
@@ -117,6 +137,8 @@ void kfree_proc(proc *p)
             proc_table[i] = 0;
             num_procs--;
             kwake_procs(p->pid);
+            
+            // file cleanup code, eventually
 /*           
             for(proc_pages* mem = p->mem; mem; ) {
                 proc_pages* tmp;

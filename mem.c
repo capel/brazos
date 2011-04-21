@@ -11,6 +11,7 @@ char *bitmap;
 size_t mcurrent;
 
 malloc_data kmalloc_data;
+alloc_funcs kernel_alloc_funcs = {kmalloc, kcalloc, krealloc, kfree, _printk};
 
 void* kmalloc(size_t size) {
     return _malloc(size, &kmalloc_data);
@@ -42,6 +43,7 @@ void ksetup_memory(void)
 {
     setup_mem_bounds();
     kmalloc_data.get_pages = kget_pages;
+    kmalloc_data.db = _printk;
     _mem_init(10, &kmalloc_data); 
     mcurrent = 0;
 }

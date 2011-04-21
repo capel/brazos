@@ -1,35 +1,11 @@
-0=====
-
-#* malloc / page malloc
-#** real malloc
-#* lib funcs
-## tested!
-# * test syscalls from kspace
-
-1=====
-#* user mode
-** permissions
-#** syscalls
-#* processes / threads
-#PCB
-MMU
-#stacks
-
-2======
-* shell
-#** history
-
-3======
-* graphics
-
-4======
-
-5======
-* memory management
-
-6=======
-* protection
-
-7======
-* fs
-
+** shell
+preemption
+graphics
+memory management
+** fs
+#    write/read
+#    open / close
+#    lookup
+#    directories
+    permissions
+    disk/stable storage
