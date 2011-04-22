@@ -1,5 +1,5 @@
 TARGET  := kernel
-SRCS    := kfs.c main.c kio.c stdlib.c mem.c sched.c user.c malloc.c vector.c stdio.c kexec.c 
+SRCS    := hashmap.c kfs.c main.c kio.c stdlib.c mem.c sched.c user.c malloc.c vector.c stdio.c kexec.c 
 ASRCS   := start.s
 OBJS    := ${SRCS:.c=.o} 
 AOBJS   := ${ASRCS:.s=.o}
