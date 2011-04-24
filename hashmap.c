@@ -1,34 +1,34 @@
 #include "hashmap.h"
-#include "malloc.h"
+//#include "malloc.h"
+#include <stdlib.h>
+#include <stdio.h>
 
-
-unsigned hash(unsigned key) { return key };
 
 hashmap* make_hashmap(size_t num_buckets) {
-    hashmap* map = malloc(sizeof(hashmap));
+    hashmap* map = (hashmap*) malloc(sizeof(hashmap));
     map->num_buckets = num_buckets;
     map->filled = 0;
-    map->buckets = calloc(sizeof(bucket) * num_buckets);
+    map->buckets = (bucket**) calloc(sizeof(bucket), num_buckets);
 
     return map;
 }
 
 void hm_insert(hashmap* map, unsigned key, void* val) {
-    unsigned b = hash(key) % num_buckets;
+    unsigned b = key % map->num_buckets;
 
-    bucket buck = malloc(sizeof(bucket));
+    bucket * buck = (bucket*)malloc(sizeof(bucket));
     buck->key = key;
-    buck->data = val;
+    buck->val = val;
     buck->next = map->buckets[b];
-    map->buckets[b] = buck->next;
+    map->buckets[b] = buck;
 }
 
 void* hm_lookup(hashmap* map, unsigned key) {
-    unsigned b = hash(key) % num_buckets;
+    unsigned b = key % map->num_buckets;
     
     for(bucket * buck = map->buckets[b]; buck; buck = buck->next) {
         if (buck->key == key) {
-            return val;
+            return buck->val;
         }
     }
 
@@ -36,9 +36,9 @@ void* hm_lookup(hashmap* map, unsigned key) {
 }
 
 void hm_delete(hashmap* map, unsigned key) {
-    unsigned b = hash(key) % num_buckets;
+    unsigned b = hash(key) % map->num_buckets;
 
-    buck * prev = 0;
+    bucket * prev = 0;
     for(bucket * buck = map->buckets[b]; buck; buck = buck->next) {
         if (buck->key == key) {
             if (prev) {
