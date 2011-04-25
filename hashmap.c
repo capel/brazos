@@ -1,22 +1,21 @@
 #include "hashmap.h"
-//#include "malloc.h"
-#include <stdlib.h>
-#include <stdio.h>
+#include "rand.h"
 
+hashmap* make_hashmap(size_t power2_num_buckets, const alloc_funcs * funcs) {
+    if (power2_num_buckets > 31) return 0;
 
-hashmap* make_hashmap(size_t num_buckets) {
-    hashmap* map = (hashmap*) malloc(sizeof(hashmap));
-    map->num_buckets = num_buckets;
-    map->filled = 0;
-    map->buckets = (bucket**) calloc(sizeof(bucket), num_buckets);
+    hashmap* map = (hashmap*) funcs->malloc(sizeof(hashmap));
+    map->funcs = funcs;
+    map->bucket_mask = (1 << power2_num_buckets) - 1;
+    map->buckets = (bucket**) map->funcs->calloc(sizeof(bucket), 1 << power2_num_buckets);
 
     return map;
 }
 
 void hm_insert(hashmap* map, unsigned key, void* val) {
-    unsigned b = key % map->num_buckets;
+    unsigned b = key & map->bucket_mask;
 
-    bucket * buck = (bucket*)malloc(sizeof(bucket));
+    bucket * buck = (bucket*)map->funcs->malloc(sizeof(bucket));
     buck->key = key;
     buck->val = val;
     buck->next = map->buckets[b];
@@ -24,7 +23,7 @@ void hm_insert(hashmap* map, unsigned key, void* val) {
 }
 
 void* hm_lookup(hashmap* map, unsigned key) {
-    unsigned b = key % map->num_buckets;
+    unsigned b = key & map->bucket_mask;
     
     for(bucket * buck = map->buckets[b]; buck; buck = buck->next) {
         if (buck->key == key) {
@@ -35,8 +34,17 @@ void* hm_lookup(hashmap* map, unsigned key) {
     return 0;
 }
 
-void hm_delete(hashmap* map, unsigned key) {
-    unsigned b = hash(key) % map->num_buckets;
+void* hm_delete_random(hashmap * map) {
+    unsigned b = rand() & map->bucket_mask;
+    bucket * buck = map->buckets[b];
+    map->buckets[b] = buck->next;
+    void* data = buck->val;
+    map->funcs->free(buck);
+    return data;
+}
+
+void* hm_delete(hashmap* map, unsigned key) {
+    unsigned b = key & map->bucket_mask;
 
     bucket * prev = 0;
     for(bucket * buck = map->buckets[b]; buck; buck = buck->next) {
@@ -46,7 +54,10 @@ void hm_delete(hashmap* map, unsigned key) {
             } else {
                 map->buckets[b] = buck->next;
             }
-            free(buck);
+            void * data = buck->val;
+            map->funcs->free(buck);
+            return data;
         }
     }
+    return 0;
 }

@@ -76,6 +76,6 @@ void kfree_page(void* pageaddr)
 
 void kfree_pages(void* pageaddr, size_t num)
 {
-  //  printk("Free %u pages at %p (page %u)", 
-  //      num, pageaddr, get_page_from_addr(pageaddr));
+    // make it obvious we have free this.
+    memset(pageaddr, 0xff, PAGE_SIZE * num);
 }
