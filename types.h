@@ -3,7 +3,10 @@
 
 typedef unsigned char byte;
 
+
 typedef unsigned size_t;
+typedef size_t disk_addr;
+typedef size_t inode_t;
 
 typedef int bool;
 #define true 1

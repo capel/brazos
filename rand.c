@@ -41,7 +41,7 @@
    Vol. 8, No. 1, January 1998, pp 3--30.
 */
 
-#include "mtrand.h"
+#include "rand.h"
 
 /* Period parameters */
 #define N 624
@@ -50,10 +50,12 @@
 #define UPPER_MASK 0x80000000UL /* most significant w-r bits */
 #define LOWER_MASK 0x7fffffffUL /* least significant r bits */
 
+#define MT_RAND_MAX 0xffffffffUL
+
 static unsigned long x[N];      /* the array for the state vector  */
 static unsigned long *p0, *p1, *pm;
 
-void mt_srand( unsigned long s )
+void srand( unsigned long s )
 {
         int i;
 
@@ -68,13 +70,13 @@ void mt_srand( unsigned long s )
 }
 
 /* generates a random number on the interval [0,0xffffffff] */
-unsigned long mt_rand( void )
+unsigned long rand( void )
 {
         unsigned long y;
 
         if (!p0) {
                 /* Default seed */
-                mt_srand(5489UL);
+                srand(5489UL);
         }
         /* Twisted feedback */
         y = *p0 = *pm++ ^ (((*p0 & UPPER_MASK) | (*p1 & LOWER_MASK)) >> 1) ^ (-(*p1 & 1) & MATRIX_A);
@@ -92,7 +94,7 @@ unsigned long mt_rand( void )
         y ^= y >> 18;
         return y;
 }
-
+#if 0
 /* generates a random number on the interval [0,1]. */
 float mt_rand_1( void )
 {
@@ -104,4 +106,5 @@ float mt_rand_lt1( void )
 {
         /* MT_RAND_MAX must be a float before adding one to it! */
         return ((float)mt_rand() / ((float)MT_RAND_MAX + 1.0f));
-}
+} 
+#endif
