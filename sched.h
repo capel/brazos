@@ -57,7 +57,7 @@ typedef struct _proc {
 void restore_pcb(PCB* pcb);
 
 
-void kinit_sched(void);
+void ksetup_sched(void);
 
 proc * knew_proc(void* main, void* exit);
 void kfree_proc(proc* p);

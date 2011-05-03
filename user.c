@@ -144,7 +144,8 @@ bool parse_line(char* line) {
                 get_dir_entries(space, GET_DIR_ENTRIES_SPACE);
                 for(int i = 0; i < FILES_PER_DIR; i++) {
                     if (strlen(space[i].name) > 0)
-                        println(space[i].name);
+                        println("%s %d %s", space[i].name, space[i].inode, 
+                                space[i].type == CREATE_DIR ? "DIR" : "FILE");
                 }
                 free(space);
                 goto cleanup;
@@ -164,8 +165,6 @@ int sh_main()
 {
     mem_init(100);
     printf("Hello\n");
-    create("ll", CREATE_FILE);
-    create("woot", CREATE_FILE);
     readline_lib("brazos> ", parse_line);
     return 0;
 }

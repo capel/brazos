@@ -9,6 +9,7 @@
 #include "mem.h"
 #include "sched.h"
 #include "kexec.h"
+#include "bcache.h"
 
 #define INPUTBUFSIZE 500
 volatile bool newchar;
@@ -63,6 +64,13 @@ int update_input()
 
 }
 
+void setup(void) {
+    ksetup_bcache();
+    ksetup_disk();
+    ksetup_fs();
+    ksetup_sched();
+
+}
 
 void kmain(void)
 {
@@ -71,17 +79,15 @@ void kmain(void)
     enable_cons_irq();
    
     //enable_mmu();
+
     ksetup_memory();
-    ksetup_fs();
 
     printk("setup mem done");
 
     char* swi_stack = kget_pages(10);
     set_swi_stack(swi_stack+10*PAGE_SIZE, 0,0,0);
    
-    kinit_sched();
-    
-    printk("init sched done");
+    setup();
 
     memset(input, 0, 500);
     inputpos = 0;
@@ -89,6 +95,8 @@ void kmain(void)
     knew_proc(sh_main, exit);
     //knew_proc(main2, exit);
     proc *p = ksched();
+
+   // kflush_file(root());
     restore_pcb(&p->pcb);
 }
 
@@ -155,6 +163,14 @@ int _ksyscall (int code, int r1, int r2, int r3)
             if (!f)
                 return -1;
 
+
+            printk("creating");
+            if (f->type == KFS_DIR) {
+                char* name = kmalloc(strlen((char*)r1) + 1);
+                strlcpy(name, (char*)r1, strlen((char*)r1) + 1);
+                f->dir_name = name;
+            }
+
             kf_add_to_dir((char*)r1, f, cp()->cwd);
 
             if (f->type == KFS_DIR) {
@@ -212,6 +228,7 @@ int _ksyscall (int code, int r1, int r2, int r3)
 
         case SET_CWD:
             f = kf_lookup((char*)r1, cp()->cwd);
+            printk("%p", f); 
             if (!f || f->type != KFS_DIR) {
                 return -1;
             }

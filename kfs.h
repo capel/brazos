@@ -12,8 +12,6 @@
 #define KFS_DIR 1
 #define KFS_FILE 2
 
-#define ROOT_INODE 1
-
 typedef struct _kfile {
     inode_t inode;
     int type;
@@ -28,6 +26,8 @@ void ksetup_fs(void);
 
 // NULL if filename already exists.
 kfile* kf_create(int type);
+
+void print_dir(kfile* dir);
 
 kfile* kf_lookup(const char* name, kfile* start);
 size_t kf_write(kfile* f, const char* buf, size_t len, size_t pos);
@@ -50,7 +50,7 @@ int kflush_file(kfile* f);
 kinode* kget_inode(inode_t inode);
 void kput_inode(const kinode* inode, bool dirty);
 
-
+kfile* root(void);
 
 
 
