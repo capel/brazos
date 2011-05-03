@@ -11,7 +11,7 @@ static size_t max_pages;
 
 extern alloc_funcs kernel_alloc_funcs;
 
-void kbcache_init() {
+void ksetup_bcache() {
     cache = make_hashmap(KBCACHE_SIZE, &kernel_alloc_funcs);
     active_pages = 0;
     max_pages = 1 << KBCACHE_SIZE;
@@ -20,7 +20,9 @@ void kbcache_init() {
 
 // if 0, evict something random
 static void evict_block() {
+ //   printk("evicting block");
     kblock* b = hm_delete_random(cache);
+
 
     if (b->dirty) {
         kwrite_block(b->daddr, b->maddr);   
@@ -30,6 +32,7 @@ static void evict_block() {
 }
 
 static kblock* make_block(disk_addr block) {
+  //  printk("making block %d", block);
     kblock* b = kmalloc(sizeof(*b));
     b->maddr = kget_page();
     b->daddr = block;
@@ -40,6 +43,7 @@ static kblock* make_block(disk_addr block) {
 }
 
 static void add_block(kblock* b) {
+  //  printk("adding block %d", b->daddr);
     active_pages++;
     if (active_pages >= max_pages) {
         evict_block(0);
@@ -50,6 +54,8 @@ static void add_block(kblock* b) {
 void* kget_block(disk_addr block) {
     assert(block != 0);
 
+  //  printk("Getting block %d", block);
+
     kblock * b = hm_lookup(cache, block);
     if (b) {
         b->ref_count++;
@@ -58,15 +64,20 @@ void* kget_block(disk_addr block) {
         kblock * b = make_block(block);
         add_block(b);
         b->ref_count++;
-        return b;
+        return b->maddr;
     }
 }
 
 void kflush_block(disk_addr block) {
     assert(block != 0);
 
+    printk("Flushing block %d", block);
+
     kblock * b = hm_lookup(cache, block);
+    assert(b->daddr == block);
+    printk("b %p", b);
     if (b && b->dirty) {
+        printk("About to write block %d (%p)", b->daddr, b->maddr);
         kwrite_block(b->daddr, b->maddr);   
         b->dirty = false;
     }
@@ -78,6 +89,7 @@ void kput_block(disk_addr block, bool dirty) {
     kblock * b = hm_lookup(cache, block);
     assert(b);
     b->dirty = true ? dirty || b->dirty == true : false;
+    kflush_block(block);
     b->ref_count--;
 }
 

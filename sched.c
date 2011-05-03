@@ -16,7 +16,7 @@ proc * current;
 
 extern void exit(void);
 
-void kinit_sched()
+void ksetup_sched()
 {
     for (int i = 0; i < PROC_TABLE_SIZE; i++) {
         proc_table[i] = 0;
@@ -44,7 +44,9 @@ proc * knew_proc(void* main, void* exit)
     p->mem = 0;
     p->runnable = 1;
     p->wait_pid = 0;
-    p->cwd = kf_get_root();
+    p->cwd = root();
+    printk("cwd --v");
+    print_dir(root());
 
     unsigned spsr = __get_CPSR();
     p->pcb.spsr = spsr & (~0x1f);
@@ -69,24 +71,7 @@ proc * knew_proc(void* main, void* exit)
     // bad!
     panic("No free procs after initial check said there were");
 }
-/*
-proc* kfork_proc(proc* p) {
-    //printk("%x %x %x %x %x %x %x %x %x %x", p->pcb.sp,
- //       p->pcb.r12, p->pcb.fp, p->pcb.r10, p->pcb.r9, p->pcb.r8, p->pcb.r7, p->pcb.r6, p->pcb.r5, p->pcb.r4);
-    proc *p2 = knew_proc(p->pcb.pc, exit);
-    memcpy((char*)&p2->pcb, (char*)&p->pcb, sizeof(PCB));
-    p2->pcb.pc = p->pcb.pc;
-    p2->mem = p->mem;
-    memcpy(p2->stack, p->stack, USER_STACK_SIZE * PAGE_SIZE);
 
-    size_t diff = p->stack - p->pcb.sp;
-    size_t diff2 = (void*)p->pcb.fp - p->pcb.sp;
-    p2->pcb.sp = p2->stack + diff;
-    p2->pcb.fp = p2->pcb.sp + diff2;
-    //printk("p2 %p : diff %d : pc %p, sp %p", p2, diff, p2->pcb.pc, p2->pcb.sp);
-    return p2;
-}
-*/
 void kexec_proc(proc* p, void* main, void* exit) {
     p->pcb.sp = p->stack;
     p->pcb.lr = exit;
@@ -125,10 +110,22 @@ int kadd_file_proc(proc * p, kfile * f) {
 }
 
 int kclose_file_proc(proc *p, int fd) {
+    kput_file(p->files[fd].file);
     p->files[fd].file = 0;
     p->files[fd].pos = 0;
     return 0;
 }
+
+
+
+void kclose_all_files_proc(proc *p) {
+    for(size_t i = 0; i < NUM_FDS; i++) {
+        if (p->files[i].file != 0) {
+            kclose_file_proc(p, i);
+        }
+    }
+}
+
 
 void kfree_proc(proc *p)
 {
@@ -149,6 +146,7 @@ void kfree_proc(proc *p)
             }
 */         
             kfree_pages(p->stack, USER_STACK_SIZE);
+            kclose_all_files_proc(p);
             kfree(p);
         }
     }

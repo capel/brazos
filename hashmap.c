@@ -12,7 +12,13 @@ hashmap* make_hashmap(size_t power2_num_buckets, const alloc_funcs * funcs) {
     return map;
 }
 
-void hm_insert(hashmap* map, unsigned key, void* val) {
+bool hm_insert(hashmap* map, unsigned key, void* val) {
+    if (hm_lookup(map, key)) {
+        map->funcs->printf("hm_insert: Double insert on key %u\n");
+        return false;
+    }
+    
+    
     unsigned b = key & map->bucket_mask;
 
     bucket * buck = (bucket*)map->funcs->malloc(sizeof(bucket));
@@ -20,6 +26,8 @@ void hm_insert(hashmap* map, unsigned key, void* val) {
     buck->val = val;
     buck->next = map->buckets[b];
     map->buckets[b] = buck;
+
+    return true;
 }
 
 void* hm_lookup(hashmap* map, unsigned key) {

@@ -7,21 +7,31 @@
 #include "malloc.h"
 
 #define NUM_FILES_PW2 4
+#define ROOT_INODE 1
 
-kfile* root;
+#define TYPE_ROOT (1 << 8)
 
 static hashmap* file_map;
+static kfile* _root;
 
 void ksetup_fs() {
     file_map = make_hashmap(NUM_FILES_PW2, &kernel_alloc_funcs);
-    root = kget_file(ROOT_INODE); // root
-    root->dir_name = "/";
+    _root = kget_file(ROOT_INODE);
+    _root->dir_name = "/";
 }
 
+kfile* root() {
+    return _root;
+}
+
+
 kfile* kget_file(inode_t inum) {
-    assert(inum != 0);
+    if (inum == 0)
+        return 0;
+    
     kfile* f = hm_lookup(file_map, inum);
     if (!f) {
+        printk("file %d not found, loading", inum);
         f = kmalloc(sizeof(kfile));
         f->inode = inum;
         f->ref_count = 0;
@@ -35,6 +45,8 @@ kfile* kget_file(inode_t inum) {
             f->dblocks[i] = inode->dblocks[i];
         }
         kput_inode(inode, false);
+        hm_insert(file_map, inum, f);
+        assert(hm_lookup(file_map, inum));
     }
 
     f->ref_count++;
@@ -43,7 +55,9 @@ kfile* kget_file(inode_t inum) {
 
 kfile* kf_create(int type) {
     kfile* f = kmalloc(sizeof(kfile));
-    f->inode = kdisk_get_free_inode();
+    f->inode = kalloc_inode();
+    printk("inode %d", f->inode);
+
     f->size = 0;
     f->type = type;
     f->dir_name = "ERROR: dir_parent on FILE";
@@ -52,12 +66,14 @@ kfile* kf_create(int type) {
     if (type == KFS_DIR) {
         kf_mkdir(f);
     }
+
+    hm_insert(file_map, f->inode, f);
+
+    assert(hm_lookup(file_map, f->inode) == f);
+
     return f;
 }
 
-kfile* kf_get_root() {
-    return root;
-}
 
 void kf_delete(kfile* f) {
     // TODO
@@ -65,7 +81,7 @@ void kf_delete(kfile* f) {
 }
 
 void kput_file(kfile* f) {
-    kflush_file(f);
+ //   kflush_file(f);
 
     f->ref_count--;
     if (f->ref_count == 0) {
@@ -77,7 +93,7 @@ void kput_file(kfile* f) {
 }
 
 static inline disk_addr find_inode_block(size_t inode) {
-    return INODE_BLOCK + inode / INODES_PER_BLOCK;
+    return INODE_START + inode / INODES_PER_BLOCK;
 }
 
 static inline size_t find_inode_offset(size_t inode) {
@@ -88,9 +104,13 @@ kinode* kget_inode(size_t inode) {
     disk_addr block = find_inode_block(inode);
     size_t offset = find_inode_offset(inode);
 
+    printk("block %d offset %d sizeof %d", block, offset, sizeof(kinode));
+
     kinode *inodes = kget_block(block);
-    kinode* i = malloc(sizeof(*i));
+    kinode* i = kmalloc(sizeof(*i));
     memcpy((void*)i, (void*)&inodes[offset], sizeof(*i));
+    printk("inode %d size %d flags %d lc %d dblocks[0] %d", i->inode,
+        i->size, i->flags, i->link_count, i->dblocks[0]);
     kput_block(block, false);
     return i;
 }
@@ -105,10 +125,16 @@ void kput_inode(const kinode* i, bool dirty) {
     disk_addr block = find_inode_block(i->inode);
     size_t offset = find_inode_offset(i->inode);
 
+    printk("Inode info: block %d offset %d", block, offset);
+
     kinode * inodes = kget_block(block);
+    printk("inodes %p");
     memcpy((void*) &inodes[offset], (void*)i, sizeof(*i));
+    printk("About to put block");
     kput_block(block, true);
+    printk("About to free");
     kfree((void*)i);
+    printk("Freeing");
 }
 
 
@@ -117,7 +143,7 @@ static inline size_t write_block(kfile * f, char* buf, size_t len, size_t pos) {
     disk_addr baddr = f->dblocks[pos / BLOCK_SIZE];
     void * block;
     if (baddr == 0) {
-        baddr = f->dblocks[pos / BLOCK_SIZE] = kfind_free_block();
+        baddr = f->dblocks[pos / BLOCK_SIZE] = kalloc_block();
         assert(baddr);
         block = kget_block(baddr);
         memset(block, 0, BLOCK_SIZE);
@@ -210,5 +236,7 @@ int kflush_file(kfile *f) {
     }
 
     kput_inode(i, true);
+
+    printk("Done with flush");
     return 0;
 }

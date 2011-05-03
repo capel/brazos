@@ -36,19 +36,20 @@
 #define CREATE_DIR 1
 #define CREATE_FILE 2
 
-
+#ifndef EXTERNAL
 int syscall(int r0, int r1, int r2, int r3);
+#endif
 
 extern size_t kdir_entries_space;
 
 #define FILES_PER_DIR 8
 #define FILENAME_LEN 32
 
-typedef struct {
+typedef struct  {
     char name[FILENAME_LEN];
-    void* file;
+    inode_t inode;
+    size_t type;
 } user_dir_entry;
-
 #define GET_DIR_ENTRIES_SPACE FILES_PER_DIR * sizeof(user_dir_entry)
 
 #endif

@@ -41,7 +41,8 @@ typedef struct _hashmap {
 hashmap* make_hashmap(size_t power2_num_buckets, const alloc_funcs * func);
 
 // The key is assumed to already be hashed.
-void hm_insert(hashmap* map, unsigned key, void* val);
+// True on insert, false on failure (the key already exists)
+bool hm_insert(hashmap* map, unsigned key, void* val);
 
 // Returns 0 if the key is not found. Store 0 at your own risk.
 void* hm_lookup(hashmap* map, unsigned key);

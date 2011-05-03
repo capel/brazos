@@ -18,6 +18,6 @@ void* kget_block(disk_addr block);
 void kput_block(disk_addr block, bool dirty);
 void kflush_block(disk_addr block);
 
-void kbcache_init(void);
+void ksetup_bcache(void);
 
 #endif
