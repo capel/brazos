@@ -9,6 +9,7 @@
 #include "kfs.h"
 
 #define NUM_FDS 4
+#define PROC_TABLE_SIZE 4
 
 
 typedef struct _PCB {
@@ -51,6 +52,8 @@ typedef struct _proc {
     proc_pages * mem;
     void* stack;
     kfile* cwd;
+    // Inode for procfs
+    inode_t inode;
     proc_file files[NUM_FDS];
 } proc;
 
@@ -78,6 +81,7 @@ void* kget_pages_for_user(proc* p, size_t num);
 
 proc * ksched(void);
 
+proc * proc_by_pos(size_t pos);
 
 
 proc * proc_by_pid(int pid);

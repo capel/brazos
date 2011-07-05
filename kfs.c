@@ -5,6 +5,7 @@
 #include "bcache.h"
 #include "hashmap.h"
 #include "malloc.h"
+#include "procfs.h"
 
 #define NUM_FILES_PW2 4
 #define ROOT_INODE 1
@@ -14,14 +15,45 @@
 static hashmap* file_map;
 static kfile* _root;
 
+void kfs_register_file(kfile* f) {
+    hm_insert(file_map, f->inode, f);
+}
+
+void vfs_bad_func() {
+    panic("Bad vfs func called.");
+}
+
+
 void ksetup_fs() {
     file_map = make_hashmap(NUM_FILES_PW2, &kernel_alloc_funcs);
     _root = kget_file(ROOT_INODE);
     _root->dir_name = "/";
+    // TODO not hardcode stuff here.
+    kf_setup_new_dir(_root);
+    _root->add_file(_root, ".", _root);
+    printk("Added .");
+    _root->add_file(_root, "..", _root);
+
+    kfile* proc = setup_procfs();
+    printk("proc type %d", proc->type);
+    _root->add_file(_root, "proc", proc);
 }
 
 kfile* root() {
     return _root;
+}
+
+void kf_copy_from_inode(kfile * f, const kinode* inode) {
+    f->inode = inode->inode;
+    f->ref_count = 0;
+    f->size = inode->size;
+    f->type = inode->flags;
+    f->link_count = inode->link_count;
+    for(size_t i = 0; i < NUM_DBLOCKS; i++) {
+        f->dblocks[i] = inode->dblocks[i];
+    }
+
+    f->private_data = NULL;
 }
 
 
@@ -33,19 +65,17 @@ kfile* kget_file(inode_t inum) {
     if (!f) {
         printk("file %d not found, loading", inum);
         f = kmalloc(sizeof(kfile));
-        f->inode = inum;
-        f->ref_count = 0;
         kinode * inode = kget_inode(inum);
         assert(inode);
 
-        f->size = inode->size;
-        f->type = inode->flags;
-        f->link_count = inode->link_count;
-        for(size_t i = 0; i < NUM_DBLOCKS; i++) {
-            f->dblocks[i] = inode->dblocks[i];
+        kf_copy_from_inode(f, inode);
+        if (f->type == KFS_DIR) {
+            kf_setup_dir(f);
+        } else {
+            kf_setup_normal_file(f);
         }
         kput_inode(inode, false);
-        hm_insert(file_map, inum, f);
+        kfs_register_file(f);
         assert(hm_lookup(file_map, inum));
     }
 
@@ -57,27 +87,35 @@ kfile* kf_create(int type) {
     kfile* f = kmalloc(sizeof(kfile));
     f->inode = kalloc_inode();
     printk("inode %d", f->inode);
+    
+    // setup empty inode
+    kinode* inode = kget_inode(f->inode);
+    inode->inode = f->inode;
+    inode->size = 0;
+    inode->flags = type;
+    inode->link_count = 0;
+    memset((void*)inode->dblocks, 0, sizeof(disk_addr) * NUM_DBLOCKS);
 
-    f->size = 0;
-    f->type = type;
-    f->dir_name = "ERROR: dir_parent on FILE";
-    f->ref_count = 1;
+    kf_copy_from_inode(f, inode);
 
     if (type == KFS_DIR) {
-        kf_mkdir(f);
+        kf_setup_new_dir(f);
+    } else if (type == KFS_NORMAL_FILE) {
+        kf_setup_new_normal_file(f);
     }
+    
+    kput_inode(inode, true);
+    f->ref_count++;
 
-    hm_insert(file_map, f->inode, f);
-
+    kfs_register_file(f);
     assert(hm_lookup(file_map, f->inode) == f);
 
     return f;
 }
 
 
-void kf_delete(kfile* f) {
+void _basic_delete_self(kfile* f) {
     // TODO
-    f = 0;
 }
 
 void kput_file(kfile* f) {
@@ -85,8 +123,10 @@ void kput_file(kfile* f) {
 
     f->ref_count--;
     if (f->ref_count == 0) {
+        printk("Ref count is zero");
         if (f->link_count == 0) {
-            kf_delete(f);
+            printk("About to delete self");
+            f->delete_self(f);
         }
         kfree(f);
     }
@@ -118,28 +158,25 @@ kinode* kget_inode(size_t inode) {
 
 void kput_inode(const kinode* i, bool dirty) {
     if (!dirty) {
-        kfree((void*)i);
+        printk("Not diry, just freeing %p", i);
+        //kfree((void*)i);
         return;
     }
 
     disk_addr block = find_inode_block(i->inode);
     size_t offset = find_inode_offset(i->inode);
 
-    printk("Inode info: block %d offset %d", block, offset);
+   // printk("Inode info: block %d offset %d", block, offset);
 
     kinode * inodes = kget_block(block);
-    printk("inodes %p");
     memcpy((void*) &inodes[offset], (void*)i, sizeof(*i));
-    printk("About to put block");
     kput_block(block, true);
-    printk("About to free");
     kfree((void*)i);
-    printk("Freeing");
 }
 
 
 
-static inline size_t write_block(kfile * f, char* buf, size_t len, size_t pos) {
+static inline size_t write_block(kfile *f, const char* buf, size_t len, size_t pos) {
     disk_addr baddr = f->dblocks[pos / BLOCK_SIZE];
     void * block;
     if (baddr == 0) {
@@ -152,6 +189,7 @@ static inline size_t write_block(kfile * f, char* buf, size_t len, size_t pos) {
     }
     
     size_t to_write = MIN(len, BLOCK_SIZE - (pos %  4096));
+    printk("to_write %d, len %d, other %d", to_write, len, BLOCK_SIZE - (pos%4096));
 
     memcpy(block + (pos % 4096), buf, to_write);
 
@@ -181,8 +219,7 @@ static inline size_t read_block(kfile * f, char* buf, size_t len, size_t pos) {
     return to_read;
 }
 
-size_t kf_write(kfile* f, const char* buf, size_t len, size_t pos) {
-    assert(f);
+size_t _file_write(kfile* f, const char* buf, size_t len, size_t pos) {
     assert(buf);
     
     if (pos + len > f->size) {
@@ -191,8 +228,9 @@ size_t kf_write(kfile* f, const char* buf, size_t len, size_t pos) {
    
     size_t old_len = len;
 
-    while(len) {
-        size_t written = write_block(f, buf, pos, len); 
+    while(len > 0) {
+        printk("len %d", len);
+        size_t written = write_block(f, buf, len, pos); 
         pos += written;
         buf += written;
         len -= written;
@@ -201,8 +239,7 @@ size_t kf_write(kfile* f, const char* buf, size_t len, size_t pos) {
     return old_len;
 }
 
-size_t kf_read(kfile* f, char* buf, size_t len, size_t pos) {
-    assert(f);
+size_t _file_read(kfile* f, char* buf, size_t len, size_t pos) {
     assert(buf);
    
     // read only as much as exists.
@@ -213,7 +250,7 @@ size_t kf_read(kfile* f, char* buf, size_t len, size_t pos) {
     size_t old_len = len;
 
     while(len) {
-        size_t written = read_block(f, buf, pos, len); 
+        size_t written = read_block(f, buf, len, pos); 
         pos += written;
         buf += written;
         len -= written;
@@ -222,7 +259,8 @@ size_t kf_read(kfile* f, char* buf, size_t len, size_t pos) {
     return old_len;
 }
 
-int kflush_file(kfile *f) {
+int _basic_flush(kfile *f) {
+    printk("In basic flush");
     kinode* i = kget_inode(f->inode);
     i->size = f->size;
     i->flags = f->type;
@@ -240,3 +278,24 @@ int kflush_file(kfile *f) {
     printk("Done with flush");
     return 0;
 }
+
+void kf_setup_new_normal_file(kfile * f) {
+    kf_setup_normal_file(f);
+}
+void kf_setup_normal_file(kfile * f) {
+    f->dir_name = "ERROR: dir_parent on FILE";
+    f->private_data = NULL;
+    
+    f->flush = _basic_flush;
+    f->delete_self = _basic_delete_self;
+
+    // file funcs
+    f->write = _file_write;
+    f->read = _file_read;
+    
+    // directory funcs -- shouldn't be called
+    f->get_entries = (void*) vfs_bad_func;
+    f->add_file = (void*) vfs_bad_func;
+    f->rm_file = (void*) vfs_bad_func;
+}
+

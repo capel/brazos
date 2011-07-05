@@ -18,7 +18,6 @@ void ksetup_bcache() {
 }
 
 
-// if 0, evict something random
 static void evict_block() {
  //   printk("evicting block");
     kblock* b = hm_delete_random(cache);
@@ -71,11 +70,9 @@ void* kget_block(disk_addr block) {
 void kflush_block(disk_addr block) {
     assert(block != 0);
 
-    printk("Flushing block %d", block);
 
     kblock * b = hm_lookup(cache, block);
     assert(b->daddr == block);
-    printk("b %p", b);
     if (b && b->dirty) {
         printk("About to write block %d (%p)", b->daddr, b->maddr);
         kwrite_block(b->daddr, b->maddr);   
@@ -88,7 +85,7 @@ void kput_block(disk_addr block, bool dirty) {
 
     kblock * b = hm_lookup(cache, block);
     assert(b);
-    b->dirty = true ? dirty || b->dirty == true : false;
+    b->dirty = dirty || b->dirty == true;
     kflush_block(block);
     b->ref_count--;
 }

@@ -1,6 +1,8 @@
 .text
 .global ivt
 ivt:
+    .global null_addr
+    null_addr:
     b _start @ Reset
     b khalt @ bad instr
     b swi_handler 
@@ -14,6 +16,9 @@ ivt:
 
 _start:
     .globl _start
+    ldr r1, =null_ptr_func
+    ldr r0, =0
+    str r1, [r0]
     
     ldr sp, =stack+0x10000 @ Set up the stack
     bl kmain @ Jump to the main function

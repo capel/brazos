@@ -3,7 +3,6 @@
 #include "mem.h"
 #include "mach.h"
 
-#define PROC_TABLE_SIZE 4
 
 
 proc *proc_table[PROC_TABLE_SIZE];
@@ -13,6 +12,10 @@ size_t num_procs;
 size_t num_runnable_procs;
 
 proc * current;
+
+proc * proc_by_pos(size_t pos) {
+    return proc_table[pos];
+}
 
 extern void exit(void);
 
@@ -27,7 +30,6 @@ void ksetup_sched()
     num_procs = 0;
     num_runnable_procs = 0;
 }
-
 
 proc * knew_proc(void* main, void* exit)
 {
@@ -45,7 +47,9 @@ proc * knew_proc(void* main, void* exit)
     p->runnable = 1;
     p->wait_pid = 0;
     p->cwd = root();
+    p->inode = kalloc_inode();
     printk("cwd --v");
+    printk("root: %p", root());
     print_dir(root());
 
     unsigned spsr = __get_CPSR();
@@ -133,6 +137,7 @@ void kfree_proc(proc *p)
         if (p == proc_table[i]) {
             proc_table[i] = 0;
             num_procs--;
+            num_runnable_procs--;
             kwake_procs(p->pid);
             
             // file cleanup code, eventually
@@ -172,7 +177,7 @@ void kcopy_pcb(PCB *pcb) {
 proc* ksched(void)
 {
     if (num_runnable_procs == 0) {
-        panic("Sched with no runnable procs!!!!");
+        panic("No procs. Goodbye world!");
     }
 
     select:

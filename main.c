@@ -21,6 +21,10 @@ PCB* kirq (PCB* stacked_pcb) {
     return stacked_pcb;
 }
 
+void null_ptr_func() {
+    panic("NULL PTR FUNC HIT.");
+}
+
 int update_input()
 {
     int c = kgetc();
@@ -171,11 +175,14 @@ int _ksyscall (int code, int r1, int r2, int r3)
                 f->dir_name = name;
             }
 
-            kf_add_to_dir((char*)r1, f, cp()->cwd);
+            bool success = cp()->cwd->add_file(cp()->cwd, (char*)r1, f);
+            if (!success) {
+                return -2;
+            }
 
             if (f->type == KFS_DIR) {
-                kf_add_to_dir(".", f, f);
-                kf_add_to_dir("..", cp()->cwd, f);
+                f->add_file(f, ".", f);
+                f->add_file(f, "..", cp()->cwd);
                 return 0;
             } else {
                 return kadd_file_proc(cp(), f);
@@ -183,9 +190,11 @@ int _ksyscall (int code, int r1, int r2, int r3)
         case OPEN:
             f = kf_lookup((char*)r1, cp()->cwd);
             if (!f) {
+                printk("No file");
                 return -1;
             }
             if (f->type == KFS_DIR) {
+                printk("Dir");
                 return -1;
             }
 
@@ -199,10 +208,10 @@ int _ksyscall (int code, int r1, int r2, int r3)
                 return -1;
 
             f = cp()->files[r1].file;
-            if (!f)
+            if (!f || f->type != KFS_NORMAL_FILE)
                 return -1;
 
-            ret = kf_write(f, (char*)r2, r3, cp()->files[r1].pos);
+            ret = f->write(f, (const char*)r2, r3, cp()->files[r1].pos);
             if (ret > 0)
                 cp()->files[r1].pos += ret;
             return ret;
@@ -211,16 +220,16 @@ int _ksyscall (int code, int r1, int r2, int r3)
                 return -1;
 
             f = cp()->files[r1].file;
-            if (!f)
+            if (!f || f->type != KFS_NORMAL_FILE)
                 return -1;
 
-            ret = kf_read(f, (char*)r2, r3, cp()->files[r1].pos);
+            ret = f->read(f, (char*)r2, r3, cp()->files[r1].pos);
             if (ret > 0)
                 cp()->files[r1].pos += ret;
             return ret;
 
         case GET_DIR_ENTRIES:
-            return kf_get_dir_entries(cp()->cwd, (void*)r1, r2);
+            return kf_copy_dir_entries(cp()->cwd, (void*)r1, r2);
 
         case GET_CWD:
             strlcpy((char*)r1, cp()->cwd->dir_name, r2);
@@ -228,8 +237,9 @@ int _ksyscall (int code, int r1, int r2, int r3)
 
         case SET_CWD:
             f = kf_lookup((char*)r1, cp()->cwd);
-            printk("%p", f); 
+            printk("%p :: inode %d", f, f->inode); 
             if (!f || f->type != KFS_DIR) {
+                printk("type: %d", f->type);
                 return -1;
             }
             cp()->cwd = f;

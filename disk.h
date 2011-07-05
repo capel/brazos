@@ -22,6 +22,8 @@
 
 #define PAGE_SIZE 4096
 
+#define VIRTUAL_BLOCK 0xBADF000D
+
 typedef struct _kinode {
     inode_t inode;
     SIZE_T size;
