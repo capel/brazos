@@ -164,7 +164,7 @@ bool parse_line(char* line) {
 int sh_main()
 {
     mem_init(100);
-    printf("Hello\n");
+    printf("Hello world!\n");
     readline_lib("brazos> ", parse_line);
     return 0;
 }

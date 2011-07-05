@@ -61,8 +61,8 @@ static bool rw_internal_block(size_t intern_addr, char* buf, int op) {
 void print_dblock(char *buf) {
     for (int i = 0; i < DEV_DISK_BUFFER_LEN / sizeof(unsigned); i += 8) {
         unsigned* ib = (unsigned*)buf;
-        printk("%d : %u %u %u %u %u %u %u %u", i*sizeof(unsigned), ib[i+0], ib[i+1], ib[i+2], 
-                ib[i+3], ib[i+4], ib[i+5], ib[i+6], ib[i+7]); 
+        printk("%d : %u %u %u %u %u %u %u %u", i*sizeof(unsigned), ib[i+0], 
+                ib[i+1], ib[i+2], ib[i+3], ib[i+4], ib[i+5], ib[i+6], ib[i+7]); 
     }
 }
 
