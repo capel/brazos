@@ -91,6 +91,7 @@ bool kf_copy_dir_entries(kfile *dir, void* space, size_t size) {
     assert(size >= dir->size);
 
     dir_entry* de = dir->get_entries(dir); 
+    printk("first: ", de[0].name);
 
     memcpy(space, (char*) de, dir->size);
     dir->put_entries(dir, false);
