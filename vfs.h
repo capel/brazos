@@ -27,7 +27,6 @@ static kfile* LOOKUP_FUNC_FACTORY_NAME(_name_) \
     kfile* next = NULL; \
 \
     for(size_t i = 0; i < (_struct_size_); i++) { \
-        printk("Entry i for " #_name_ " is %s", entries[i].name); \
         if (entries[i].name == DEFAULT_LOOKUP_FUNC) { \
             default_lookup = entries[i].func; \
         } else if (0 == strcmp(name, entries[i].name)) { \
