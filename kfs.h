@@ -111,4 +111,7 @@ void vfs_bad_func();
 
 void kfs_register_file(kfile* f);
 
+const char* kitoa(int i);
+const char* kstrclone(const char* s);
+
 #endif

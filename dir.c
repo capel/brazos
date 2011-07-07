@@ -7,50 +7,21 @@
 int _basic_flush(kfile* f);
 void _basic_delete_self(kfile * f);
 
-
-void print_dir(kfile* dir) {
-    assert(dir);
-    assert(dir->type = KFS_DIR);
-    printk("About to get entries");
-   // printk("f: %p :: get_entries %p", dir->get_entries(dir), _dir_get_dir_entries)
-    dir_entry* de = dir->get_entries(dir);
-    printk("DIR: %s (%d:%p)", dir->dir_name, dir->inode, dir);
-    printk("dir block %d", dir->dblocks[0]);
-    if (de) {
-        printk("dir block addr %p", de);
-        for (size_t i = 0; i < FILES_PER_DIR; i++) {
-            if (de[i].inode) {
-                printk("* %s (%d) : %d", de[i].name, de[i].inode, de[i].type);
-            }
-        }
-        dir->put_entries(dir, false);
-    } else {
-        printk("UNALLOCED dir_block. WTF?!");
-    }
-
-}
-
-
 bool _dir_add_file(kfile* dir, const char * name, kfile* f) {
     dir_entry* de = dir->get_entries(dir); 
     assert(de);
-    printk("f name %s", f->dir_name);
 
     for(size_t i = 0; i < FILES_PER_DIR; i++) {
         if (de[i].inode == 0) {
             strlcpy(de[i].name, name, FILENAME_LEN);
             de[i].inode = f->inode;
             de[i].type = f->type;
-            printk("Type %d", de[i].type);
             // prevent infinite loops
             if (dir != f) {
                 f->link_count++;
             }
-            printk("Adding %s (%d) to %s (%d)", name, 
-                f->inode, dir->dir_name, dir->inode);
             if (f->type == KFS_DIR && f->dir_name == 0) {
-                printk("setting inode %d to name %s", dir->inode, de[i].name);
-                f->dir_name = de[i].name;
+                f->dir_name = kstrclone(de[i].name);
             }
 
             //dir->flush(dir);
@@ -59,7 +30,6 @@ bool _dir_add_file(kfile* dir, const char * name, kfile* f) {
         }
     }
     printk("No space left in dir %s (%d)", f->dir_name, f->inode);
-    print_dir(f);
     dir->put_entries(dir, false);
     return false;
 }

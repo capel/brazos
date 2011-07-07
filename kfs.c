@@ -36,7 +36,6 @@ void ksetup_fs() {
 
     kfile* proc = setup_procfs();
     _root->add_file(_root, "proc", proc);
-    proc->add_file(proc, "..", _root);
 }
 
 kfile* root() {
@@ -115,7 +114,8 @@ kfile* kf_create(int type) {
 
 
 void _basic_delete_self(kfile* f) {
-    // TODO
+    kfree((void*)f->dir_name);
+    kfree(f);
 }
 
 void kput_file(kfile* f) {
@@ -125,10 +125,9 @@ void kput_file(kfile* f) {
     if (f->ref_count == 0) {
         printk("Ref count is zero");
         if (f->link_count == 0) {
-            printk("About to delete self");
-            f->delete_self(f);
+            // Do some kind of persistant cleanup.
         }
-        kfree(f);
+        f->delete_self(f);
     }
 }
 
@@ -158,8 +157,7 @@ kinode* kget_inode(size_t inode) {
 
 void kput_inode(const kinode* i, bool dirty) {
     if (!dirty) {
-        printk("Not diry, just freeing %p", i);
-        //kfree((void*)i);
+        kfree((void*)i);
         return;
     }
 
@@ -283,7 +281,7 @@ void kf_setup_new_normal_file(kfile * f) {
     kf_setup_normal_file(f);
 }
 void kf_setup_normal_file(kfile * f) {
-    f->dir_name = "ERROR: dir_parent on FILE";
+    f->dir_name = 0;
     f->private_data = NULL;
     
     f->flush = _basic_flush;
@@ -294,9 +292,22 @@ void kf_setup_normal_file(kfile * f) {
     f->read = _file_read;
     
     // directory funcs -- shouldn't be called
-    f->get_entries = (void*) vfs_bad_func;
-    f->add_file = (void*) vfs_bad_func;
-    f->rm_file = (void*) vfs_bad_func;
-    f->lookup_file = (void*) vfs_bad_func;
+    f->get_entries = 0;
+    f->add_file = 0;
+    f->rm_file = 0;
+    f->lookup_file = 0;
+}
+
+const char* kitoa(int i) {
+    char* buf = kmalloc(12); // known to be big enough
+    snprintf(buf, 12, "%d", i);
+    return buf;
+}
+
+const char* kstrclone(const char* s) {
+    size_t len = strlen(s)+1;
+    char* tmp = kmalloc(len);
+    strlcpy(tmp, s, len);
+    return tmp;
 }
 

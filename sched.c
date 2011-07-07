@@ -101,10 +101,11 @@ void kwake_procs(int pid) {
 }
 
 int kadd_file_proc(proc * p, kfile * f) {
-    for(size_t i = 0; i < NUM_FDS; i++) {
+    for(size_t i = 1; i < NUM_FDS; i++) {
         if (p->files[i].file == 0) {
             p->files[i].file = f;
             p->files[i].pos = 0;
+            f->ref_count++;
             return i;
         }
     }
@@ -138,16 +139,6 @@ void kfree_proc(proc *p)
             num_runnable_procs--;
             kwake_procs(p->pid);
             
-            // file cleanup code, eventually
-/*           
-            for(proc_pages* mem = p->mem; mem; ) {
-                proc_pages* tmp;
-                kfree_pages(mem->pages, mem->num_pages);
-                tmp = mem;
-                mem = mem->next;
-                kfree(tmp);
-            }
-*/         
             kfree_pages(p->stack, USER_STACK_SIZE);
             kclose_all_files_proc(p);
             kput_file(p->file);

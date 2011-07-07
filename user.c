@@ -193,6 +193,7 @@ bool parse_line(char* line) {
                     goto cleanup;
                 }
                 int fd = open(v->data[1]);
+                debug("fd %d", fd);
                 if (fd < 0) {
                     perror(fd);
                     goto cleanup;
@@ -200,6 +201,7 @@ bool parse_line(char* line) {
                 char* buf = malloc(1024);
                 int ret = read(fd, buf, 1024);
                 if (ret < 0) {
+                    free(buf);
                     perror(ret);
                     goto cleanup;
                 }

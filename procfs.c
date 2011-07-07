@@ -4,14 +4,9 @@
 #include "stdlib.h"
 #include "vfs.h"
 
-static inline const char* kitoa(int i) {
-    char* buf = kmalloc(12); // known to be big enough
-    snprintf(buf, 12, "%d", i);
-    return buf;
-}
+void _basic_delete_self(kfile * f);
+kfile* setup_messagefile(const char* msg);
 
-
-static bool disable() { return false; }
 static int noop() { return 0; }
 
 static kfile * procfs_dir;
@@ -19,7 +14,9 @@ static kfile * procfs_dir;
 LOOKUP_FUNC(get_current_dir) { return kget_file_raw(f); }
 LOOKUP_FUNC(get_procfs_dir) { return procfs_dir; }
 LOOKUP_FUNC(get_parent) {return NULL; }
-LOOKUP_FUNC(get_pid) { return NULL; }
+LOOKUP_FUNC(get_pid) { 
+    return setup_messagefile(kitoa(((proc*)(f->private_data))->pid));
+}
 LOOKUP_FUNC(not_found) { return NULL; }
 LOOKUP_FUNC(get_root) { return root(); }
 LOOKUP_FUNC(get_current_proc_dir) { return kget_procfile(cp()); }
@@ -28,7 +25,6 @@ LOOKUP_FUNC(get_proc_dir) {
     proc* p = proc_by_pid(atoi(name));
     return p ? kget_procfile(p) : NULL;
 }
-
 
 static dir_entry proc_dir_entries[] = {
     {".", VIRTUAL_INODE, KFS_DIR},
@@ -123,11 +119,11 @@ kfile* setup_procfs() {
     f->get_entries = procfs_get_entries;
     f->put_entries = procfs_put_entries;
     f->lookup_file = LOOKUP_FUNC_FACTORY_NAME(procfs);
-    f->add_file = (void*)disable;
+    f->add_file = 0;
     f->rm_file = rm;
 
-    f->write = (void*) vfs_bad_func;
-    f->read = (void*) vfs_bad_func;
+    f->write = 0;
+    f->read = 0;
     
     kfs_register_file(f);
     procfs_dir = f;
@@ -145,16 +141,51 @@ kfile * setup_procfile(proc* p) {
     f->private_data = p;
 
     f->flush = (void*)noop;
-    f->delete_self = (void*)noop;
+    f->delete_self = _basic_delete_self;
     f->get_entries = proc_get_entries;
     f->put_entries = (void*)noop;
     f->lookup_file = LOOKUP_FUNC_FACTORY_NAME(proc);
 
-    f->add_file = disable;
-    f->rm_file = disable;
+    f->add_file = 0;
+    f->rm_file = 0;
 
-    f->write = (void*) vfs_bad_func;
-    f->read = (void*) vfs_bad_func;
+    f->write = 0;
+    f->read = 0;
+    
+    return f;
+}
+
+size_t message_read(kfile* f, char* buf, size_t len, size_t pos) {
+    size_t to_read = MIN(len, strlen(f->private_data) + 1 - pos);
+    strlcpy(buf, f->private_data+pos, to_read);
+    return to_read;
+}
+
+void delete_self_message(kfile* f) {
+    kfree(f->private_data);
+    kfree(f);
+}
+
+kfile* setup_messagefile(const char* message) {
+    printk("New message file for %s", message);
+    kfile * f = kmalloc(sizeof(kfile));
+    f->inode = VIRTUAL_INODE;
+    f->ref_count = 1;
+    f->dir_name = 0;
+    f->type = KFS_NORMAL_FILE;
+    f->private_data = (void*) message;
+
+    f->flush = (void*)noop;
+    f->delete_self = delete_self_message;
+    f->get_entries = 0;
+    f->put_entries = 0;
+    f->lookup_file = 0;
+
+    f->add_file = 0;
+    f->rm_file = 0;
+
+    f->write = (void*)noop;
+    f->read = message_read;
     
     return f;
 }
