@@ -2,47 +2,112 @@
 #include "kfs.h"
 #include "mem.h"
 #include "stdlib.h"
+#include "vfs.h"
 
-bool _procfs_add(kfile* f, const char * name, struct _kfile* add) {
-    return false;
+static inline const char* kitoa(int i) {
+    char* buf = kmalloc(12); // known to be big enough
+    snprintf(buf, 12, "%d", i);
+    return buf;
 }
 
-bool _procfs_rm(kfile* f, kfile* rm) {
-    return false;
+
+static bool disable() { return false; }
+static int noop() { return 0; }
+
+static kfile * procfs_dir;
+
+LOOKUP_FUNC(get_current_dir) { return kget_file_raw(f); }
+LOOKUP_FUNC(get_procfs_dir) { return procfs_dir; }
+LOOKUP_FUNC(get_parent) {return NULL; }
+LOOKUP_FUNC(get_pid) { return NULL; }
+LOOKUP_FUNC(not_found) { return NULL; }
+LOOKUP_FUNC(get_root) { return root(); }
+LOOKUP_FUNC(get_current_proc_dir) { return kget_procfile(cp()); }
+
+LOOKUP_FUNC(get_proc_dir) {
+    proc* p = proc_by_pid(atoi(name));
+    return p ? kget_procfile(p) : NULL;
 }
 
-int _procfs_flush(kfile* f) {
-    return 0;
+
+static dir_entry proc_dir_entries[] = {
+    {".", VIRTUAL_INODE, KFS_DIR},
+    {"..", VIRTUAL_INODE, KFS_DIR},
+    {"parent", VIRTUAL_INODE, KFS_NORMAL_FILE},
+    {"pid", VIRTUAL_INODE, KFS_NORMAL_FILE},
+    EMPTY_DE,
+    EMPTY_DE,
+    EMPTY_DE,
+    EMPTY_DE
+};
+
+static lookup_entry proc_lookup_entries[] = {
+    {".", get_current_dir},
+    {"..", get_procfs_dir},
+    {"parent", get_parent},
+    {"pid", get_pid},
+    {DEFAULT_LOOKUP_FUNC, not_found},
+};
+
+static lookup_entry procfs_lookup_entries[] = {
+    {".", get_current_dir},
+    {"..", get_root},
+    {"me", get_current_proc_dir},
+    {DEFAULT_LOOKUP_FUNC, get_proc_dir}
+};
+
+static bool rm(kfile* f, kfile* rm) {
+    proc * p = rm->private_data;
+    if (!p) {
+        return false;
+    }
+    kfree_proc(p);
+    return true;;
 }
 
-void _procfs_delete_self(kfile * f) {
-    return;
-}
-
-void _procfs_put_entries(kfile* f, bool dirty) {
+static void procfs_put_entries(kfile* f, bool dirty) {
     assert(!dirty);
     kfree(f->private_data);
 }
 
-dir_entry* _procfs_get_entries(kfile* f) {
-    f->private_data = kmalloc(sizeof(dir_entry) * FILES_PER_DIR);
+LOOKUP_FUNC_FACTORY(procfs, procfs_lookup_entries,
+        SIZEOF_ARRAY(procfs_lookup_entries));
+LOOKUP_FUNC_FACTORY(proc, proc_lookup_entries, 
+        SIZEOF_ARRAY(proc_lookup_entries));
+
+static dir_entry* procfs_get_entries(kfile* f) {
+    f->private_data = kmalloc(DIR_ENTRIES_SIZE);
     dir_entry* entries = f->private_data;
-    size_t dir_pos = 0;
+
+    // Make . and ..
+    strlcpy(entries[0].name, ".", FILENAME_LEN);
+    entries[0].inode = VIRTUAL_INODE;
+    entries[0].type = KFS_DIR;
+
+    strlcpy(entries[1].name, "..", FILENAME_LEN);
+    entries[1].inode = VIRTUAL_INODE;
+    entries[1].type = KFS_DIR;
+
+    size_t dir_pos = 2;
     size_t proc_pos = 0;
     for(; dir_pos < FILES_PER_DIR && proc_pos < PROC_TABLE_SIZE; proc_pos++) {
         proc * p = proc_by_pos(proc_pos);
         if (!p) {
             continue;
         }
-        printk("adding %p [%d]", p, proc_pos);
-        entries[dir_pos].inode = p->inode;
-        entries[dir_pos].type = KFS_NORMAL_FILE;
-        snprintf(entries[dir_pos].name, FILENAME_LEN, "proc_%d", p->pid);
-        printk("name: %s", entries[dir_pos].name);
+        entries[dir_pos].inode = VIRTUAL_INODE;
+        entries[dir_pos].type = KFS_DIR;
+        snprintf(entries[dir_pos].name, FILENAME_LEN, "%d", p->pid);
+        dir_pos++;
     }
 
     return entries;
 }
+
+static dir_entry* proc_get_entries(kfile* f) {
+    return proc_dir_entries;    
+}
+
 
 kfile* setup_procfs() { 
     kfile * f = kmalloc(sizeof(kfile));
@@ -53,16 +118,43 @@ kfile* setup_procfs() {
     f->type = KFS_DIR;
     f->private_data = NULL;
 
-    f->flush = _procfs_flush;
-    f->delete_self = _procfs_delete_self;
-    f->get_entries = _procfs_get_entries;
-    f->put_entries = _procfs_put_entries;
-    f->add_file = _procfs_add;
-    f->rm_file = _procfs_rm;
+    f->flush = (void*)noop;
+    f->delete_self = (void*)noop;
+    f->get_entries = procfs_get_entries;
+    f->put_entries = procfs_put_entries;
+    f->lookup_file = LOOKUP_FUNC_FACTORY_NAME(procfs);
+    f->add_file = (void*)disable;
+    f->rm_file = rm;
 
     f->write = (void*) vfs_bad_func;
     f->read = (void*) vfs_bad_func;
     
     kfs_register_file(f);
+    procfs_dir = f;
+    return f;
+}
+
+kfile * setup_procfile(proc* p) {
+    printk("New procfile for pid %d at %p", p->pid, p);
+    kfile * f = kmalloc(sizeof(kfile));
+    f->inode = VIRTUAL_INODE;
+    f->ref_count = 1;
+    f->dir_name = kitoa(p->pid); 
+    printk("Dir name: %s", f->dir_name);
+    f->type = KFS_DIR;
+    f->private_data = p;
+
+    f->flush = (void*)noop;
+    f->delete_self = (void*)noop;
+    f->get_entries = proc_get_entries;
+    f->put_entries = (void*)noop;
+    f->lookup_file = LOOKUP_FUNC_FACTORY_NAME(proc);
+
+    f->add_file = disable;
+    f->rm_file = disable;
+
+    f->write = (void*) vfs_bad_func;
+    f->read = (void*) vfs_bad_func;
+    
     return f;
 }

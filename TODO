@@ -10,5 +10,7 @@ memory management
 #    open / close
 #    lookup
 #    directories
+#    vfs
+    magic files (proc/parent, etc);
     permissions
     disk/stable storage

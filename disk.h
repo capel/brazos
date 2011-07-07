@@ -23,6 +23,7 @@
 #define PAGE_SIZE 4096
 
 #define VIRTUAL_BLOCK 0xBADF000D
+#define VIRTUAL_INODE 0
 
 typedef struct _kinode {
     inode_t inode;

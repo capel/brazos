@@ -14,7 +14,39 @@ void exit(void) {
     _exit();
 }
 
-
+void perror(int error) {
+    switch (error) {
+        case E_ERROR:
+            println("Error: Generic error.");
+            break;
+        case E_NOT_SUPPORTED:
+            println("Error: Operation not supported here.");
+            break;
+        case E_BAD_FILENAME:
+            println("Error: Bad filename.");
+            break;
+        case E_BAD_PROGRAM:
+            println("Error: Bad program name.");
+            break;
+        case E_IS_DIR:
+            println("Error: Is directory.");
+            break;
+        case E_BAD_FD:
+            println("Error: Bad FD.");
+            break;
+        case E_ISNT_DIR:
+            println("Error: Isn't directory.");
+            break;
+        case E_BAD_ARG:
+            println("Error: Bad syscall argument.");
+            break;
+        case E_BAD_SYSCALL:
+            println("Error: Bad syscall number.");
+            break;
+        default:
+            break;
+    }
+}
 
 void erase_chars(size_t num) {
     for(; num > 0; num--) {
@@ -49,7 +81,21 @@ bool parse_line(char* line) {
         case 'b':
             if (strcmp(v->data[0], "bc") == 0) {
                 int pid = forkexec("bc");
+                if (pid < 0) {
+                    perror(pid);
+                    goto cleanup;
+                }
                 wait(pid);
+                goto cleanup;
+            }
+            goto unknown;
+        case 'd':
+            if (strcmp(v->data[0], "dummy") == 0) {
+                int pid = forkexec("dummy");
+                if (pid < 0) {
+                    perror(pid);
+                    goto cleanup;
+                }
                 goto cleanup;
             }
             goto unknown;
@@ -67,19 +113,31 @@ bool parse_line(char* line) {
                 }
                 int fd = open(v->data[1]);
                 if (fd < 0) {
-                    println("bad filename");
+                    perror(fd);
                     goto cleanup;
                 }
-                seek(fd, atoi(v->data[2]), SEEK_ABS);
-                write(fd, v->data[3], strlen(v->data[3]));
-                close(fd);
+                int ret = seek(fd, atoi(v->data[2]), SEEK_ABS);
+                if (ret < 0) {
+                    perror(ret);
+                    goto cleanup;
+                }
+                ret = write(fd, v->data[3], strlen(v->data[3]));
+                if (ret < 0) {
+                    perror(ret);
+                    goto cleanup;
+                }
+              close(fd);
                 goto cleanup;
             }
             goto unknown;
         case 'p':
             if (strcmp(v->data[0], "pwd") == 0) {
                 char * name = malloc(FILENAME_LEN);
-                get_cwd(name, FILENAME_LEN);
+                int ret = get_cwd(name, FILENAME_LEN);
+                if (ret < 0) {
+                    perror(ret);
+                    goto cleanup;
+                }
                 println("%s", name);
                 
                 free(name);
@@ -94,18 +152,39 @@ bool parse_line(char* line) {
                 }
 
                 int fd = create(v->data[1], CREATE_FILE);
+                if (fd < 0) {
+                    perror(fd);
+                    goto cleanup;
+                }
                 goto cleanup;
             }
             goto unknown;
-        case 'c':
+        case 'r':
+            if (strcmp(v->data[0], "rm") == 0) {
+                if (v->size < 2) {
+                    println("rm: rm <file>");
+                    goto cleanup;
+                }
+
+                int ret = unlink(v->data[1]);
+                if (ret < 0) {
+                    perror(ret);
+                    goto cleanup;
+                }
+                goto cleanup;
+            }
+            goto unknown;
+       case 'c':
             if (strcmp(v->data[0], "cd") == 0) {
                 if (v->size < 2) {
                     println("cd: cd <dir>");
                     goto cleanup;
                 }
 
-                if (set_cwd(v->data[1]) < 0) {
-                    println("bad directory");
+                int ret = set_cwd(v->data[1]);
+                if (ret < 0) {
+                    perror(ret);
+                    goto cleanup;
                 }
                 goto cleanup;
             } else if (strcmp(v->data[0], "cat") == 0) {
@@ -115,12 +194,20 @@ bool parse_line(char* line) {
                 }
                 int fd = open(v->data[1]);
                 if (fd < 0) {
-                    println("bad filename");
+                    perror(fd);
                     goto cleanup;
                 }
                 char* buf = malloc(1024);
-                read(fd, buf, 1024);
-                close(fd);
+                int ret = read(fd, buf, 1024);
+                if (ret < 0) {
+                    perror(ret);
+                    goto cleanup;
+                }
+                ret = close(fd);
+                if (ret < 0) {
+                    perror(ret);
+                    goto cleanup;
+                }
                 println("%s", buf);
                 free(buf);
                 goto cleanup;
@@ -135,6 +222,10 @@ bool parse_line(char* line) {
                 }
 
                 int fd = create(v->data[1], CREATE_DIR);
+                if (fd < 0) {
+                    perror(fd);
+                    goto cleanup;
+                }
                 goto cleanup;
             }
             goto unknown;
@@ -143,7 +234,7 @@ bool parse_line(char* line) {
                 user_dir_entry* space = malloc(GET_DIR_ENTRIES_SPACE);
                 get_dir_entries(space, GET_DIR_ENTRIES_SPACE);
                 for(int i = 0; i < FILES_PER_DIR; i++) {
-                    if (strlen(space[i].name) > 0)
+                    if (strlen(space[i].name) > 0 && space[i].name[0] != '.')
                         println("%s %d %s", space[i].name, space[i].inode, 
                                 space[i].type == CREATE_DIR ? "DIR" : "FILE");
                 }
@@ -227,5 +318,11 @@ int bc_main()
 
     readline_lib("BC> ", bc_parse);
     return 0;
+}
+
+int dummy_main() {
+    for(;;) {
+        yield();
+    }
 }
 #endif

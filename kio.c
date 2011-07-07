@@ -181,6 +181,7 @@ int vprintf(char* buf, size_t size, const char* fmt, va_list va, int newline)
                 case 'p': // we assume sizeof(void*) = sizeof(unsigned)
                 case 'x':
                     u = va_arg(va, unsigned);
+
                     utoa16(tmpbuf, BUFSIZE, u);
                     //bufpos += strlcpy(buf+bufpos, GREEN, strlen(GREEN));
                     //bufpos--;
@@ -191,6 +192,11 @@ int vprintf(char* buf, size_t size, const char* fmt, va_list va, int newline)
                     break;
                 case 's':
                     s = va_arg(va, char*);
+                    if (!s) {
+                        bufpos += strlcpy(buf + bufpos, "<NULL>", strlen("<NULL>")+1);
+                        bufpos--;
+                        break;
+                    }
                     chars = strlcpy(buf + bufpos, s, size - bufpos);
                     bufpos += chars -1; // remove null
                     break;
