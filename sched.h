@@ -47,13 +47,14 @@ typedef struct _proc {
     PCB pcb;
     size_t stride;
     bool runnable;
+    int parent_pid;
     int pid;
     int wait_pid;
     proc_pages * mem;
     void* stack;
     kfile* cwd;
-    // Inode for procfs
-    inode_t inode;
+    // file for procfs
+    kfile * file;
     proc_file files[NUM_FDS];
 } proc;
 
@@ -82,6 +83,8 @@ void* kget_pages_for_user(proc* p, size_t num);
 proc * ksched(void);
 
 proc * proc_by_pos(size_t pos);
+
+kfile* kget_procfile(proc *p);
 
 
 proc * proc_by_pid(int pid);

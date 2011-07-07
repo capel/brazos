@@ -2,7 +2,8 @@
 #include "stdlib.h"
 #include "mem.h"
 #include "mach.h"
-
+#include "kfs.h"
+#include "procfs.h"
 
 
 proc *proc_table[PROC_TABLE_SIZE];
@@ -47,10 +48,7 @@ proc * knew_proc(void* main, void* exit)
     p->runnable = 1;
     p->wait_pid = 0;
     p->cwd = root();
-    p->inode = kalloc_inode();
-    printk("cwd --v");
-    printk("root: %p", root());
-    print_dir(root());
+    p->file = setup_procfile(p);
 
     unsigned spsr = __get_CPSR();
     p->pcb.spsr = spsr & (~0x1f);
@@ -152,6 +150,7 @@ void kfree_proc(proc *p)
 */         
             kfree_pages(p->stack, USER_STACK_SIZE);
             kclose_all_files_proc(p);
+            kput_file(p->file);
             kfree(p);
         }
     }
@@ -165,6 +164,11 @@ void ksleep_proc(proc* p) {
 void kwake_proc(proc* p) {
     num_runnable_procs++;
     p->runnable = 1;
+}
+
+kfile* kget_procfile(proc *p) {
+    p->file->ref_count++;
+    return p->file;
 }
 
 void kcopy_pcb(PCB *pcb) {

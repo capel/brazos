@@ -27,16 +27,16 @@ void vfs_bad_func() {
 void ksetup_fs() {
     file_map = make_hashmap(NUM_FILES_PW2, &kernel_alloc_funcs);
     _root = kget_file(ROOT_INODE);
-    _root->dir_name = "/";
+    _root->ref_count = 1337;
+    printk("_root name %s", _root->dir_name);
     // TODO not hardcode stuff here.
     kf_setup_new_dir(_root);
-    _root->add_file(_root, ".", _root);
-    printk("Added .");
     _root->add_file(_root, "..", _root);
+    _root->dir_name = "/";
 
     kfile* proc = setup_procfs();
-    printk("proc type %d", proc->type);
     _root->add_file(_root, "proc", proc);
+    proc->add_file(proc, "..", _root);
 }
 
 kfile* root() {
@@ -86,7 +86,7 @@ kfile* kget_file(inode_t inum) {
 kfile* kf_create(int type) {
     kfile* f = kmalloc(sizeof(kfile));
     f->inode = kalloc_inode();
-    printk("inode %d", f->inode);
+    //printk("inode %d", f->inode);
     
     // setup empty inode
     kinode* inode = kget_inode(f->inode);
@@ -105,7 +105,7 @@ kfile* kf_create(int type) {
     }
     
     kput_inode(inode, true);
-    f->ref_count++;
+    f->ref_count = 1;
 
     kfs_register_file(f);
     assert(hm_lookup(file_map, f->inode) == f);
@@ -144,13 +144,13 @@ kinode* kget_inode(size_t inode) {
     disk_addr block = find_inode_block(inode);
     size_t offset = find_inode_offset(inode);
 
-    printk("block %d offset %d sizeof %d", block, offset, sizeof(kinode));
+  //  printk("block %d offset %d sizeof %d", block, offset, sizeof(kinode));
 
     kinode *inodes = kget_block(block);
     kinode* i = kmalloc(sizeof(*i));
     memcpy((void*)i, (void*)&inodes[offset], sizeof(*i));
-    printk("inode %d size %d flags %d lc %d dblocks[0] %d", i->inode,
-        i->size, i->flags, i->link_count, i->dblocks[0]);
+  //  printk("inode %d size %d flags %d lc %d dblocks[0] %d", i->inode,
+  //      i->size, i->flags, i->link_count, i->dblocks[0]);
     kput_block(block, false);
     return i;
 }
@@ -297,5 +297,6 @@ void kf_setup_normal_file(kfile * f) {
     f->get_entries = (void*) vfs_bad_func;
     f->add_file = (void*) vfs_bad_func;
     f->rm_file = (void*) vfs_bad_func;
+    f->lookup_file = (void*) vfs_bad_func;
 }
 

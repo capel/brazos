@@ -4,15 +4,18 @@
 
 extern void sh_main(void);
 extern void bc_main(void);
+extern void dummy_main(void);
 
 char* names[] = {
     "sh",
-    "bc"
+    "bc",
+    "dummy"
 };
 
 void* addrs[] = {
     sh_main,
-    bc_main
+    bc_main,
+    dummy_main,
 };
 
 void* program_lookup(char* name) {

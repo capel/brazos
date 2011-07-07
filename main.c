@@ -104,7 +104,30 @@ void kmain(void)
     restore_pcb(&p->pcb);
 }
 
+char* parent_path(char* path) {
+    size_t size = strlen(path)+1;
+    char* newpath;
+    for(size_t i = 0; i < size; i++) {
+        if (path[i] == '/') {
+            goto complex_path;
+        }
+    }
+    // the path isn't complex (read: is just the filename)
+    // so we just return "." for the current directory.
+    return ".";
 
+    complex_path:
+
+    newpath = kmalloc(size);
+    strlcpy(newpath, path, size);
+    for(int i = size; i >= 0; i--) {
+        if (newpath[i] == '/') {
+            newpath[i] = '\0'; // null it out to end the path
+            return newpath;
+        }
+    }
+    return newpath;
+}
 
 int _ksyscall (int code, int r1, int r2, int r3) 
 {
@@ -140,7 +163,7 @@ int _ksyscall (int code, int r1, int r2, int r3)
             prog_addr = program_lookup((char*)r1);
             printk("Proc %d execing %s (%p)", cp()->pid, r1, prog_addr);
             if (!prog_addr) {
-                return 0;
+                return E_BAD_PROGRAM;
             } else {
                 kexec_proc(cp(), prog_addr, exit);
                 return 0;
@@ -149,7 +172,7 @@ int _ksyscall (int code, int r1, int r2, int r3)
             prog_addr = program_lookup((char*)r1);
             printk("Proc %d execing %s (%p)", cp()->pid, r1, prog_addr);
             if (!prog_addr) {
-                return -1;
+                return E_BAD_PROGRAM;
             } else {
                 new_proc = knew_proc(prog_addr, exit);
                 new_proc->pcb.r0 = 0;
@@ -165,7 +188,7 @@ int _ksyscall (int code, int r1, int r2, int r3)
         case CREATE:
             f = kf_create(r2);
             if (!f)
-                return -1;
+                return E_ERROR;
 
 
             printk("creating");
@@ -177,12 +200,14 @@ int _ksyscall (int code, int r1, int r2, int r3)
 
             bool success = cp()->cwd->add_file(cp()->cwd, (char*)r1, f);
             if (!success) {
-                return -2;
+                kput_file(f);
+                return E_NOT_SUPPORTED;
             }
 
             if (f->type == KFS_DIR) {
-                f->add_file(f, ".", f);
+                // If a complex path is used this is screwed.
                 f->add_file(f, "..", cp()->cwd);
+                kput_file(f);
                 return 0;
             } else {
                 return kadd_file_proc(cp(), f);
@@ -191,25 +216,24 @@ int _ksyscall (int code, int r1, int r2, int r3)
             f = kf_lookup((char*)r1, cp()->cwd);
             if (!f) {
                 printk("No file");
-                return -1;
+                return E_BAD_FILENAME;
             }
             if (f->type == KFS_DIR) {
-                printk("Dir");
-                return -1;
+                return E_IS_DIR;
             }
 
             return kadd_file_proc(cp(), f);
         case CLOSE:
             if (r1 == 0 || r1 >= NUM_FDS)
-                return -1;
+                return E_BAD_FD;
             return kclose_file_proc(cp(), r1);
         case WRITE:
             if (r1 == 0 || r1 >= NUM_FDS)
-                return -1;
+                return E_BAD_FD;
 
             f = cp()->files[r1].file;
             if (!f || f->type != KFS_NORMAL_FILE)
-                return -1;
+                return E_BAD_FD;
 
             ret = f->write(f, (const char*)r2, r3, cp()->files[r1].pos);
             if (ret > 0)
@@ -217,11 +241,11 @@ int _ksyscall (int code, int r1, int r2, int r3)
             return ret;
         case READ:
             if (r1 == 0 || r1 >= NUM_FDS)
-                return -1;
+                return E_BAD_FD;
 
             f = cp()->files[r1].file;
             if (!f || f->type != KFS_NORMAL_FILE)
-                return -1;
+                return E_BAD_FD;
 
             ret = f->read(f, (char*)r2, r3, cp()->files[r1].pos);
             if (ret > 0)
@@ -237,17 +261,39 @@ int _ksyscall (int code, int r1, int r2, int r3)
 
         case SET_CWD:
             f = kf_lookup((char*)r1, cp()->cwd);
-            printk("%p :: inode %d", f, f->inode); 
-            if (!f || f->type != KFS_DIR) {
+            if (!f) {
+                return E_BAD_FILENAME;
+            }
+            if (f->type != KFS_DIR) {
+                kput_file(f);
                 printk("type: %d", f->type);
-                return -1;
+                return E_ISNT_DIR;
             }
             cp()->cwd = f;
             return 0;
-
+        case UNLINK:
+            f = kf_lookup((char*)r1, cp()->cwd);
+            char* ppath = parent_path((char*)r1);
+            kfile* parent = kf_lookup(ppath, cp()->cwd);
+            if (!f) {
+                return E_BAD_FILENAME;
+            }
+            if (!parent) {
+                kput_file(f);
+                return E_ERROR;
+            }
+            success = parent->rm_file(parent, f);
+            if (!success) {
+                kput_file(f);
+                kput_file(parent);
+                return E_NOT_SUPPORTED;
+            }
+            kput_file(f);
+            kput_file(parent);
+            return 0;
         case SEEK:
             if (r1 == 0 || r1 >= NUM_FDS)
-                return -1;
+                return E_BAD_FD;
 
             switch (r3) {
                 case SEEK_ABS:
@@ -257,11 +303,11 @@ int _ksyscall (int code, int r1, int r2, int r3)
                     cp()->files[r1].pos += r2;
                     return 0;
                 default:
-                    return -1;
+                    return E_BAD_ARG;
             }
         default:
             printk("Bad syscall code %d", code);
-            return -1;
+            return E_BAD_SYSCALL;
     }
 }
 

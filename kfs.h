@@ -8,12 +8,15 @@
 
 #include "types.h"
 #include "disk.h"
+#include "kvector.h"
 
 #define KFS_DIR 1
 #define KFS_NORMAL_FILE 2
 
 #define FILES_PER_DIR 8
 #define FILENAME_LEN 32
+
+#define DIR_ENTRIES_SIZE (FILES_PER_DIR * sizeof(dir_entry))
 
 
 struct _kfile;
@@ -36,7 +39,9 @@ typedef void (*put_dir_entries_func)(struct _kfile* dir, bool dirty);
 typedef bool (*add_to_dir_func)(struct _kfile *dir, 
         const char * name, struct _kfile* add);
 typedef bool (*rm_from_dir_func)(struct _kfile* dir, struct _kfile *rm);
-
+typedef struct _kfile* (*lookup_file_func)(struct _kfile* dir, 
+        vector * v, size_t level);
+typedef bool (*set_parent_dir_func)(struct _kfile* f, struct _kfile* parent);
 
 typedef struct _kfile {
     inode_t inode;
@@ -60,6 +65,7 @@ typedef struct _kfile {
     put_dir_entries_func put_entries;
     add_to_dir_func add_file;
     rm_from_dir_func rm_file;
+    lookup_file_func lookup_file;
     
     disk_addr dblocks[NUM_DBLOCKS];
 } kfile;
@@ -85,6 +91,7 @@ const char* kf_get_name(kfile* f, kfile *dir);
 bool kf_copy_dir_entries(kfile* dir, void* space, size_t size);
 
 kfile* kget_file(inode_t inode);
+static inline kfile* kget_file_raw(kfile* f) { f->ref_count++; return f; }
 void kput_file(kfile* f);
 
 void kf_setup_dir(kfile* f);

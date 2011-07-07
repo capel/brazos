@@ -105,8 +105,8 @@ static inline int close(int fd) {
     return ret;
 }
 
-static inline int unlink(int fd) {
-    int ret = syscall(UNLINK, fd, 0, 0);
+static inline int unlink(const char* path) {
+    int ret = syscall(UNLINK, (int) path, 0, 0);
     if (ret < 0) {
         debug("Error code: %d", ret);
     }   

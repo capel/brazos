@@ -86,7 +86,6 @@ bool kread_block(disk_addr addr, char* buf) {
         return r;
 }
 bool kwrite_block(disk_addr addr, char* buf) {
-    printk("About to write %d", addr);
     return rw_block(addr, buf, DEV_DISK_OPERATION_WRITE);
 }
 

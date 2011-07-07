@@ -74,7 +74,7 @@ void kflush_block(disk_addr block) {
     kblock * b = hm_lookup(cache, block);
     assert(b->daddr == block);
     if (b && b->dirty) {
-        printk("About to write block %d (%p)", b->daddr, b->maddr);
+     //   printk("About to write block %d (%p)", b->daddr, b->maddr);
         kwrite_block(b->daddr, b->maddr);   
         b->dirty = false;
     }
@@ -86,7 +86,9 @@ void kput_block(disk_addr block, bool dirty) {
     kblock * b = hm_lookup(cache, block);
     assert(b);
     b->dirty = dirty || b->dirty == true;
-    kflush_block(block);
+    if (b->dirty) {
+        kflush_block(block);
+    }
     b->ref_count--;
 }
 
