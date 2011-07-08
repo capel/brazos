@@ -32,7 +32,7 @@ typedef size_t (*write_func)(struct _kfile* f, const char* buf,
         size_t len, size_t pos);
 typedef size_t (*read_func)(struct _kfile* f, char* buf, 
         size_t len, size_t pos);
-typedef void (*delete_func)(struct _kfile* f);
+typedef void (*cleanup_func)(struct _kfile* f);
 typedef int (*flush_func)(struct _kfile* f);
 typedef dir_entry* (*get_dir_entries_func)(struct _kfile* dir);
 typedef void (*put_dir_entries_func)(struct _kfile* dir, bool dirty);
@@ -42,24 +42,10 @@ typedef bool (*rm_from_dir_func)(struct _kfile* dir, struct _kfile *rm);
 typedef struct _kfile* (*lookup_file_func)(struct _kfile* dir, 
         vector * v, size_t level);
 typedef bool (*set_parent_dir_func)(struct _kfile* f, struct _kfile* parent);
+typedef int (*added_to_dir_func)(struct _kfile* f, struct _kfile* dir);
+typedef int (*removed_from_dir_func)(struct _kfile* f, struct _kfile* dir);
 
-typedef struct _kfile {
-    inode_t inode;
-    int type;
-    size_t size;
-    size_t ref_count;
-    size_t link_count;
-    const char* dir_name; // dir only!
-    void* private_data;
-
-    // all files
-    flush_func flush;
-    delete_func delete_self;
-    
-    // Normal file funcs
-    write_func write;
-    read_func read;
-
+typedef struct _file_funcs {
     // Directory funcs
     get_dir_entries_func get_entries;
     put_dir_entries_func put_entries;
@@ -67,47 +53,62 @@ typedef struct _kfile {
     rm_from_dir_func rm_file;
     lookup_file_func lookup_file;
     
-    disk_addr dblocks[NUM_DBLOCKS];
+    // Status change callbacks
+    added_to_dir_func added;
+    removed_from_dir_func removed;
+
+    // flush
+    flush_func flush;
+    cleaup_func cleanup;
+
+    // read/write
+    write_func write;
+    read_func read;
+} file_funcs;
+
+typedef struct _kfile {
+    size_t ref_count;
+    void* d;
+    void* f;
 } kfile;
+
+typedef struct _normal_file_data {
+    inode_t inode;
+    size_t size;
+    size_t link_count;
+    disk_addr dblocks[NUM_DBLOCKS];
+} normal_file_data;
+
+typedef _normal_dir_data {
+    inode_t inode;
+    size_t link_count;
+    const char* name;
+    disk_addr data;
+} noramL_dir_data;
+
+#define kfile_get(f) ((f)->ref_count++)
+void kfile_put(kfile* f);
+
 void ksetup_fs(void);
 
-// NULL if filename already exists.
-kfile* kf_create(int type);
+kfile* kf_create_normal_file(void);
+kfile* kf_create_normal_dir(void);
 
-void print_dir(kfile* dir);
-
-kfile* kf_lookup(const char* name, kfile* start);
-
-/*
-size_t kf_write(kfile* f, const char* buf, size_t len, size_t pos);
-size_t kf_read(kfile* f, char* buf, size_t len, size_t pos);
-void kf_delete(kfile* f);
-
-bool kf_add_to_dir(const char * name, kfile* f, kfile *dir);
-bool kf_rm_from_dir(kfile* file, kfile *dir);
-*/
+kfile* kf_lookup_name(const char* name, kfile* start);
+kfile* kf_lookup_inode(inode_t inode);
 
 const char* kf_get_name(kfile* f, kfile *dir);
 bool kf_copy_dir_entries(kfile* dir, void* space, size_t size);
 
-kfile* kget_file(inode_t inode);
-static inline kfile* kget_file_raw(kfile* f) { f->ref_count++; return f; }
-void kput_file(kfile* f);
-
 void kf_setup_dir(kfile* f);
 void kf_setup_new_dir(kfile* f);
-void kf_setup_normal_file(kfile *f);
 void kf_setup_new_normal_file(kfile *f);
-
 
 kinode* kget_inode(inode_t inode);
 void kput_inode(const kinode* inode, bool dirty);
 
 kfile* root(void);
-
-// This can always be called from any function
-// pointer type because it immediately panics.
-void vfs_bad_func();
+kfile* kalloc_file(void);
 
 void kfs_register_file(kfile* f);
 

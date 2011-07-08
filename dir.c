@@ -3,6 +3,9 @@
 #include "mem.h"
 #include "kvector.h"
 #include "bcache.h"
+#include "vfs.h"
+
+#define KDIR_DATA(x) ((normal_dir_data*)(x)->d)
 
 int _basic_flush(kfile* f);
 void _basic_delete_self(kfile * f);
@@ -24,6 +27,7 @@ bool _dir_add_file(kfile* dir, const char * name, kfile* f) {
                 f->dir_name = kstrclone(de[i].name);
             }
 
+#define KDIR_DATA(x) ((normal_dir_data*)(x)->d)
             //dir->flush(dir);
             dir->put_entries(dir, true);
             return true;
@@ -51,12 +55,12 @@ bool _dir_rm_file(kfile* dir, kfile* f) {
     return false;
 }
 
-dir_entry* _dir_get_dir_entries(kfile * dir) {
+dir_entry* dir_get_entries(kfile * dir) {
     assert(dir->dblocks[0] != 0);
     return kget_block(dir->dblocks[0]);
 }
 
-void _dir_put_dir_entries(kfile* dir, bool dirty) {
+void dir_put_entries(kfile* dir, bool dirty) {
     kput_block(dir->dblocks[0], dirty);
 }
 
@@ -70,6 +74,13 @@ bool kf_copy_dir_entries(kfile *dir, void* space, size_t size) {
     dir->put_entries(dir, false);
     return true;
 }
+
+static lookup_entry dir_lookup_entries[] = {
+    {".", vfs_self},
+    {"..", get_parent_dir},
+    {DEFAULT_LOOKUP_FUNC, dir_lookup}
+};
+
 
 kfile* kf_lookup(const char* name, kfile *start) {
     assert(start);
@@ -128,7 +139,6 @@ kfile * _dir_lookup_file(kfile* dir, vector* v, size_t level) {
 void kf_setup_new_dir(kfile* f) {
     kf_setup_dir(f);
     printk("Setup dir inode: %d", f->inode);
-    f->size = FILES_PER_DIR * sizeof(dir_entry);
     f->dir_name = NULL;
     f->dblocks[0] = kalloc_block();
     void * b = kget_block(f->dblocks[0]);
@@ -137,21 +147,34 @@ void kf_setup_new_dir(kfile* f) {
     f->add_file(f, ".", f);
     printk("Out of setup");
 }
-    
-void kf_setup_dir(kfile * f) {
-    f->private_data = NULL;
 
-    f->delete_self = _basic_delete_self;
-    f->flush= _basic_flush;
-    // directory funcs
-    f->get_entries = _dir_get_dir_entries;
-    f->put_entries = _dir_put_dir_entries;
-    f->add_file = _dir_add_file;
-    f->rm_file = _dir_rm_file;
-    f->lookup_file = _dir_lookup_file;
-    
-    // file funcs -- shouldn't be called.
-    f->write = (void*)vfs_bad_func;
-    f->read = (void*)vfs_bad_func;
+static file_funcs normal_dir_funcs = {
+    .get_entries = dir_get_entries,
+    .put_entries = dir_put_entries,
+    .add = dir_add,
+    .remove = dir_remove,
+    .lookup = dir_lookup,
+
+    .added = dir_added,
+    .removed = dir_removed,
+    .flush = dir_flush,
+    .write = 0,
+    .read = 0,
+    .cleanup = dir_cleanup,
+};
+
+void kf_setup_dir(kfile * f) {
+    f->private_data = kmalloc(sizeof(normal_dir_data));
+    f->f = normal_dir_funcs;
+    f->ref_count = 1;
+}
+
+kfile* kf_create_normal_dir() {
+    kfile* f = kalloc_file();
+    kf_setup_dir(f);
+    KDIR_DATA(f)->data = kalloc_block();
+    KDIR_DATA(f)->name = 0;
+    KDIR_DATA(f)->inode = kalloc_inode();
+    KDIR_DATA(f)->link_count = 0;
 }
 

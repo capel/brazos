@@ -11,6 +11,6 @@ memory management
 #    lookup
 #    directories
 #    vfs
-    magic files (proc/parent, etc);
+*    magic files (proc/parent, etc);
     permissions
     disk/stable storage

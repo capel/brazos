@@ -18,15 +18,15 @@ typedef struct _lookup_entry {
 
 #define LOOKUP_FUNC_FACTORY_NAME(_name_) _gen_lookup_func_##_name_
 
-#define LOOKUP_FUNC_FACTORY(_name_, _entry_struct_, _struct_size_) \
+#define LOOKUP_FUNC_FACTORY(_name_, _entries_) \
 static kfile* LOOKUP_FUNC_FACTORY_NAME(_name_) \
             (kfile* f, vector * v, size_t level) { \
-    lookup_entry *entries = _entry_struct_; \
+    lookup_entry *entries = _entries_; \
     const char* name = v->data[level]; \
     lookup_func default_lookup = NULL; \
     kfile* next = NULL; \
 \
-    for(size_t i = 0; i < (_struct_size_); i++) { \
+    for(size_t i = 0; i < (SIZEOF_ARRAY(_entries_)); i++) { \
         if (entries[i].name == DEFAULT_LOOKUP_FUNC) { \
             default_lookup = entries[i].func; \
         } else if (0 == strcmp(name, entries[i].name)) { \

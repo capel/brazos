@@ -11,7 +11,6 @@ static int noop() { return 0; }
 
 static kfile * procfs_dir;
 
-LOOKUP_FUNC(get_current_dir) { return kget_file_raw(f); }
 LOOKUP_FUNC(get_procfs_dir) { return procfs_dir; }
 LOOKUP_FUNC(get_parent) {return NULL; }
 LOOKUP_FUNC(get_pid) { 
@@ -26,15 +25,11 @@ LOOKUP_FUNC(get_proc_dir) {
     return p ? kget_procfile(p) : NULL;
 }
 
-static dir_entry proc_dir_entries[] = {
-    {".", VIRTUAL_INODE, KFS_DIR},
-    {"..", VIRTUAL_INODE, KFS_DIR},
-    {"parent", VIRTUAL_INODE, KFS_NORMAL_FILE},
-    {"pid", VIRTUAL_INODE, KFS_NORMAL_FILE},
-    EMPTY_DE,
-    EMPTY_DE,
-    EMPTY_DE,
-    EMPTY_DE
+static char* proc_dir_entries[] = {
+    ".",
+    "..",
+    "parent",
+    "pid",
 };
 
 static lookup_entry proc_lookup_entries[] = {

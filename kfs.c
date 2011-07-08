@@ -12,17 +12,14 @@
 
 #define TYPE_ROOT (1 << 8)
 
+#define KFILE_DATA(x) ((normal_file_data*)(x)->d)
+
 static hashmap* file_map;
 static kfile* _root;
 
 void kfs_register_file(kfile* f) {
     hm_insert(file_map, f->inode, f);
 }
-
-void vfs_bad_func() {
-    panic("Bad vfs func called.");
-}
-
 
 void ksetup_fs() {
     file_map = make_hashmap(NUM_FILES_PW2, &kernel_alloc_funcs);
@@ -56,9 +53,8 @@ void kf_copy_from_inode(kfile * f, const kinode* inode) {
 }
 
 
-kfile* kget_file(inode_t inum) {
-    if (inum == 0)
-        return 0;
+kfile* kf_lookup_inode(inode_t inum) {
+    assert(inum);
     
     kfile* f = hm_lookup(file_map, inum);
     if (!f) {
@@ -257,7 +253,7 @@ size_t _file_read(kfile* f, char* buf, size_t len, size_t pos) {
     return old_len;
 }
 
-int _basic_flush(kfile *f) {
+int file_flush(kfile *f) {
     printk("In basic flush");
     kinode* i = kget_inode(f->inode);
     i->size = f->size;
@@ -273,29 +269,37 @@ int _basic_flush(kfile *f) {
 
     kput_inode(i, true);
 
-    printk("Done with flush");
     return 0;
 }
 
-void kf_setup_new_normal_file(kfile * f) {
-    kf_setup_normal_file(f);
+static void file_added(kfile* f, kfile* dir) {
+    KF_FILE_DATA(f)->link_count++;
 }
-void kf_setup_normal_file(kfile * f) {
-    f->dir_name = 0;
-    f->private_data = NULL;
-    
-    f->flush = _basic_flush;
-    f->delete_self = _basic_delete_self;
 
-    // file funcs
-    f->write = _file_write;
-    f->read = _file_read;
-    
-    // directory funcs -- shouldn't be called
-    f->get_entries = 0;
-    f->add_file = 0;
-    f->rm_file = 0;
-    f->lookup_file = 0;
+static void file_removed(kfile* f, kfile* dir) {
+    KF_FILE_DATA(f)->link_count--;
+}
+
+
+static file_funcs normal_file_funcs = {
+    .get_entries = 0,
+    .put_entries = 0,
+    .add = 0,
+    .rm = 0,
+    .lookup = 0,
+
+    .added = file_added,
+    .removed = file_removed,
+    .flush = file_flush,
+    .write = file_write,
+    .read = file_read,
+    .cleanup = file_cleanup,
+};
+
+void kf_setup_normal_file(kfile * f) {
+    f->ref_count = 1;
+    f->d = kmalloc(sizeof(normal_file_data));
+    f->f = normal_file_funcs;
 }
 
 const char* kitoa(int i) {
