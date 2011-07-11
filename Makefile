@@ -1,6 +1,9 @@
 TARGET  := kernel
-SRCS    := rand.c dir.c disk.c bcache.c hashmap.c kfs.c main.c kio.c stdlib.c mem.c sched.c user.c malloc.c vector.c stdio.c kexec.c procfs.c
-ASRCS   := start.s
+COMMON_SRC := common/rand.c common/hashmap.c common/vector.c common/malloc.c common/stdlib.c
+SYS_SRC := sys/dir.c sys/kfs.c sys/main.c sys/mem.c sys/sched.c sys/kexec.c sys/syscall.c sys/kio.c sys/ent_gen.c sys/ent.c
+USER_SRC := user/user.c user/malloc.c user/stdio.c
+SRCS 		:= ${COMMON_SRC} ${SYS_SRC} ${USER_SRC}
+ASRCS   := sys/start.s
 OBJS    := ${SRCS:.c=.o} 
 AOBJS   := ${ASRCS:.s=.o}
 DEPS    := ${SRCS:.c=.dep} 
@@ -17,7 +20,7 @@ all: ${TARGET}
 	gxemul  -VT -d disk -E testarm kernel
 
 ${TARGET}: ${OBJS} ${AOBJS}
-	${LD} ${LDFLAGS} -o ${TARGET} start.o ${OBJS}
+	${LD} ${LDFLAGS} -o ${TARGET} sys/start.o ${OBJS}
 
 ${OBJS}: %.o: %.c
 	${CC} ${CCFLAGS} -o $@ -c $< 
@@ -26,6 +29,6 @@ ${AOBJS}: %.o: %.s
 	${AS} -o $@ $<
 
 clean:
-	rm -f *.o ${TARGET} 
+	rm -f sys/*.o user/*.o common/*.o ${TARGET} 
 
 distclean:: clean
