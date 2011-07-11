@@ -101,40 +101,19 @@ void kmain(void)
     proc *p = ksched();
 
    // kflush_file(root());
-    restore_pcb(&p->pcb);
+    restore_pcb(&GET_PCB(p->pcb));
 }
 
-char* parent_path(char* path) {
-    size_t size = strlen(path)+1;
-    char* newpath;
-    for(size_t i = 0; i < size; i++) {
-        if (path[i] == '/') {
-            goto complex_path;
-        }
-    }
-    // the path isn't complex (read: is just the filename)
-    // so we just return "." for the current directory.
-    return ".";
-
-    complex_path:
-
-    newpath = kmalloc(size);
-    strlcpy(newpath, path, size);
-    for(int i = size; i >= 0; i--) {
-        if (newpath[i] == '/') {
-            newpath[i] = '\0'; // null it out to end the path
-            return newpath;
-        }
-    }
-    return newpath;
-}
+#define RETURN(r) do { ret = r; goto cleanup; } while (0)
 
 int _ksyscall (int code, int r1, int r2, int r3) 
 {
-    void* prog_addr;
-    proc* new_proc;
+    void* prog_addr = NULL;
+    proc* new_proc = NULL;
     int ret;
-    kfile *f;
+    ko* o = NULL;
+    ko* cwd = NULL;
+    string *s = NULL;
 
     switch (code) {
         case PUTC:
@@ -181,122 +160,88 @@ int _ksyscall (int code, int r1, int r2, int r3)
             return 0;
 
         case CREATE:
-            f = kf_create(r2);
-            if (!f) return E_ERROR;
-
-            printk("creating");
-
-            if (!cp()->cwd->add_file) { 
-                kput_file(f);
-                return E_NOT_SUPPORTED;
-            }
-
-            bool success = cp()->cwd->add_file(cp()->cwd, (char*)r1, f);
-            if (!success) {
-                kput_file(f);
-                return E_ERROR;
-            }
-
-            if (f->type == KFS_DIR) {
-                char* ppath = parent_path((char*)r1);
-                kfile* parent = kf_lookup(ppath, cp()->cwd);
-                if (!parent) {
-                    kput_file(f);
-                    return E_ERROR;
-                }
-                f->add_file(f, "..", parent);
-                kput_file(parent);
-                kput_file(f);
-                return 0;
+            if (r2 == CREATE_FILE) {
+              o = kcreate_file();
+            } else if (r2 == CREATE_DIR) {
+              o = kcreate_dir();
             } else {
-                return kadd_file_proc(cp(), f);
+              RETURN(E_BAD_SYSCALL);
+            }
+            if (!o) RETURN(E_ERROR);
+
+            ko* cwd = LOOKUP_NAME(cp(), CWD_STRING);
+            s = mkstring(r1);
+            if (BAD_HANDLE == ADD_CHILD(cwd, s, o)) RETURN(E_NOT_SUPPORTED);
+
+            ADD_PARENT(o, cwd);
+
+            if (r2 == CREATE_DIR) {
+              RETURN(SUCCESS);
+            } else {
+                handle_t h = ADD_CHILD(cp(), FD_STRING, o);
+                ADD_PARENT(f, cp());
+                RETURN(h);
             }
         case OPEN:
-            f = kf_lookup((char*)r1, cp()->cwd);
-            if (!f) return E_BAD_FILENAME;
+            o = kget_by_path((char*)r1, cp()->cwd);
+            if (!o) RETURN(E_BAD_FILENAME);
             
-            if (f->type == KFS_DIR) {
-                kput_file(f);
-                return E_IS_DIR;
-            }
-            printk("F INODE %d", f->inode);
+            if (o->type == TYPE_DIR) RETURN(E_IS_DIR);
+            printk("F INODE %d", o->inode);
 
-            return kadd_file_proc(cp(), f);
+            handle_t h = ADD_CHILD(cp(), o);
+            ADD_PARENT(o, cp());
+            RETURN(h);
         case CLOSE:
-            if (r1 == 0 || r1 >= NUM_FDS) return E_BAD_FD;
+            ko* o = LOOKUP_HANDLE(cp(), r1);
+            if (!o) RETURN(E_BAD_FD);
 
-            return kclose_file_proc(cp(), r1);
+            status_t status = REMOVE_CHILD(cp(), o);
+            REMOVE_PARENT(o, cp());
+            RETURN(status);
         case WRITE:
-            if (r1 == 0 || r1 >= NUM_FDS) return E_BAD_FD;
+            ko* o = LOOKUP_HANDLE(cp(), r1);
+            if (!o) RETURN(E_BAD_FD);
 
-            f = cp()->files[r1].file;
+            if (!o->f->write) RETURN(E_NOT_SUPPORTED);
 
-            if (!f) return E_ERROR;
-            if (!f->write) return E_NOT_SUPPORTED;
-
-            ret = f->write(f, (const char*)r2, r3, cp()->files[r1].pos);
-            if (ret > 0)
-                cp()->files[r1].pos += ret;
-            return ret;
+            RETURN(WRITE(f, (const char*)r2, r3, r4));
         case READ:
-            if (r1 == 0 || r1 >= NUM_FDS) return E_BAD_FD;
+            ko* o = LOOKUP_HANDLE(cp(), r1);
+            if (!o) RETURN(E_BAD_FD);
 
-            f = cp()->files[r1].file;
+            if (!o->f->read) RETURN(E_NOT_SUPPORTED);
 
-            if (!f) return E_ERROR;
-            if (!f->read) return E_NOT_SUPPORTED;
-
-            ret = f->read(f, (char*)r2, r3, cp()->files[r1].pos);
-            if (ret > 0) cp()->files[r1].pos += ret;
-
-            return ret;
-
+            RETURN(READ(f, (const char*)r2, r3, r4));
         case GET_DIR_ENTRIES:
-            return kf_copy_dir_entries(cp()->cwd, (void*)r1, r2);
+            return kf_copy_dir_entries(LOOKUP_NAME(cp(), CWD_STRING), (void*)r1, r2);
 
         case GET_CWD:
-            strlcpy((char*)r1, cp()->cwd->dir_name, r2);
-            return 0;
+            cwd = LOOKUP_NAME(cp(), PWD);
+            s = NAME(cwd);
+            strlcpy((char*)r1, STRVAL(s), r2);
+            RETURN(SUCCESS);
 
         case SET_CWD:
-            f = kf_lookup((char*)r1, cp()->cwd);
-            if (!f) return E_BAD_FILENAME;
+            o = kget_by_path((char*)r1, cp()->cwd);
+            if (!o) RETURN(E_BAD_FILENAME);
 
-            if (f->type != KFS_DIR) {
-                kput_file(f);
-                printk("type: %d", f->type);
-                return E_ISNT_DIR;
-            }
-            cp()->cwd = f;
-            return 0;
+            if (o->type != KFS_DIR) RETURN(E_ISNT_DIR); 
+            status_t status = ADD_CHILD(cp()->cwd, PWD_STRING, o);
+            ADD_PARENT(o, PWD_STRING, cp()->cwd);
+            RETURN(status);
         case UNLINK:
-            f = kf_lookup((char*)r1, cp()->cwd);
-            char* ppath = parent_path((char*)r1);
-            kfile* parent = kf_lookup(ppath, cp()->cwd);
-            if (!f) {
-                return E_BAD_FILENAME;
-            }
-            if (!parent) {
-                kput_file(f);
-                return E_ERROR;
-            }
-            if (!parent->rm_file) {
-                kput_file(f);
-                kput_file(parent);
-                return E_NOT_SUPPORTED;
-            }
+            cwd = LOOKUP_NAME(cp(), CWD_STRING);
+            f = kget_by_path((char*)r1, cwd);
+            if (!f) RETURN(E_BAD_FILENAME);
+            if (!cwd) RETURN(E_ERROR);
+            
+            if (!cwd->f->remove_child) RETURN(E_NOT_SUPPORTED);
 
-            success = parent->rm_file(parent, f);
-            if (!success) {
-                kput_file(f);
-                kput_file(parent);
-                return E_NOT_SUPPORTED;
-            }
-            kput_file(f);
-            kput_file(parent);
-            return 0;
+            RETURN(REMOVE_CHILD(pwd, o));
         case SEEK:
-            if (r1 == 0 || r1 >= NUM_FDS) return E_BAD_FD;
+            assert(false);
+        /*    if (r1 == 0 || r1 >= NUM_FDS) return E_BAD_FD;
 
             switch (r3) {
                 case SEEK_ABS:
@@ -307,16 +252,23 @@ int _ksyscall (int code, int r1, int r2, int r3)
                     return 0;
                 default:
                     return E_BAD_ARG;
-            }
+            }*/
         default:
             printk("Bad syscall code %d", code);
             return E_BAD_SYSCALL;
     }
+
+    cleanup:
+      kput(o);
+      kput(cwd);
+      kput(proc);
+      kput(s);
+      return ret;
 }
 
 PCB* ksyscall (void* stacked_pcb) {
     kcopy_pcb(stacked_pcb);
-    PCB* pcb = &cp()->pcb;
+    PCB* pcb = &GET_PCB(cp());
     int ret = _ksyscall(pcb->r0, pcb->r1, pcb->r2, pcb->r3);
     // ret == -255 means that the process doesn't exist anymore
     // or something else went wildly wrong
@@ -324,5 +276,5 @@ PCB* ksyscall (void* stacked_pcb) {
         pcb->r0 = ret;
     }
     proc *p = ksched();
-    return &p->pcb;
+    return &GET_PCB(p->pcb);
 }

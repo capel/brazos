@@ -8,7 +8,6 @@
 #include "mem.h"
 #include "vector.h"
 
-
 extern const alloc_funcs kernel_alloc_funcs;
 
 static inline vector* kmake_vector(int data_type_size, enum cleanup_type type) {

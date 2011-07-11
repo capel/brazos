@@ -9,12 +9,11 @@
 
 #define PAGE_SIZE 4096
 
-void ksetup_memory(void);
-void* kget_page(void);
-void* kget_pages(size_t num);
+typedef ent pages;
 
-void kfree_page(void* pageaddr);
-void kfree_pages(void* pageaddr, size_t num);
+void ksetup_memory(void);
+pages* kget_page(void);
+pages* kget_pages(size_t num);
 
 void* kmalloc(size_t size);
 void* kcalloc(size_t size, size_t obj_size);

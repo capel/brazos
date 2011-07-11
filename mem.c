@@ -13,6 +13,8 @@ size_t mcurrent;
 malloc_data kmalloc_data;
 alloc_funcs kernel_alloc_funcs = {kmalloc, kcalloc, krealloc, kfree, _printk};
 
+ONLY_CLEANUP(pages_funcs, cleanup_pages);
+
 void* kmalloc(size_t size) {
     return _malloc(size, &kmalloc_data);
 }
@@ -39,28 +41,36 @@ static void* get_addr_from_page(size_t page)
     return mstart + PAGE_SIZE * page;
 }
 
+static void* get_raw_pages(size_t num) {
+    size_t start_page = mcurrent;
+    mcurrent += num;
+    
+    return get_addr_from_page(start_page);
+}
+
 void ksetup_memory(void)
 {
     setup_mem_bounds();
-    kmalloc_data.get_pages = kget_pages;
+    kmalloc_data.get_pages = get_raw_pages;
     kmalloc_data.db = _printk;
     _mem_init(10, &kmalloc_data); 
     mcurrent = 0;
 }
 
-void* kget_page()
+pages* kget_page()
 {
     return kget_pages(1);
 }
 
-void* kget_pages(size_t num)
+pages* kget_pages(size_t num)
 {
     size_t start_page = mcurrent;
     mcurrent += num;
-  //  printk("Allocing %u pages at %p (page %u)", 
-  //      num, get_addr_from_page(start_page), start_page);
     
-    return get_addr_from_page(start_page);
+    pages* p = entalloc(pages_funcs);
+    p->d2 = num;
+    p->d1 = get_addr_from_page(start_page);
+    return p;
 }
 
 static size_t get_page_from_addr(void* addr)
@@ -69,13 +79,8 @@ static size_t get_page_from_addr(void* addr)
     return (size_t)relative / PAGE_SIZE;
 }
 
-void kfree_page(void* pageaddr)
+void kfree_pages(pages* p)
 {
-    kfree_pages(pageaddr, 1);
-}
-
-void kfree_pages(void* pageaddr, size_t num)
-{
-    // make it obvious we have free this.
-    memset(pageaddr, 0xff, PAGE_SIZE * num);
+    // make it obvious we have freed this.
+    memset(p->d, 0xff, PAGE_SIZE * p->d2);
 }
