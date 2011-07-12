@@ -4,7 +4,7 @@
 #include "include/ent_gen.h"
 #include "include/kfs.h"
 
-ent* kf_lookup_path(actor *a, const char* path, ent *start) {
+ent* kf_lookup_path(const char* path, ent *start) {
     assert(start);
     
     if (0 == strcmp(path, "/")) return root();
@@ -18,7 +18,7 @@ ent* kf_lookup_path(actor *a, const char* path, ent *start) {
       v = ksplit_to_vector(path, "/");
     }
 
-    ent* e = LOOKUP(start, a, v, 0);
+    ent* e = LOOKUP(start, v, 0);
     cleanup_vector(v);
     return e;
 }

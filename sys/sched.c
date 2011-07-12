@@ -5,6 +5,8 @@
 #include "include/ent_gen.h"
 #include "include/proc.h"
 
+typedef ent sched;
+
 proc * current;
 sched* scheduler;
 
@@ -16,11 +18,14 @@ typedef struct {
 #define DATA(sch) ((sched_data*)(sch->d1))
 #define PROCS(sch) ((vector*)(sch->d2))
 
-proc * new_proc(sched * sch, actor *a, vector* v, size_t level)
+static proc * new_proc(sched * sch, const vector* v, size_t level, bool *done)
 {
-  proc* p = kcreate_proc(DATA(sch)->cur_pid, a);
-  LINK_R(sch, a, p, kitoa(DATA(sch)->cur_pid));
+  proc* p = kcreate_proc(DATA(sch)->cur_pid);
+  printk("new proc sched %p", p);
+  err_t err = LINK_R(sch, p, "%d", DATA(sch)->cur_pid);
+  printk("err: %d", err);
   DATA(sch)->cur_pid++;
+  *done = true;
   return kget(p);
 }
 
@@ -32,19 +37,22 @@ void kcopy_pcb(PCB *pcb) {
 }
 
 bool better(void *a, void *b) {
-  return PROC_STRIDE((ent*)a) < PROC_STRIDE((ent*)b);
+  assert(a);
+  assert(b);
+  return PROC_STRIDE(GET_ENT(a)) < PROC_STRIDE(GET_ENT(b));
 }
 
-proc* ksched()
+static proc* do_sched(sched * sch, const vector* v, size_t level, bool *done)
 {
-  if (PROCS(scheduler)->size == 0) {
+  if (PROCS(sch)->size == 0) {
       panic("No procs. Goodbye world!");
   }
-  proc* p = vector_best(scheduler->d2, better);
-  DATA(scheduler)->min_stride = PROC_STRIDE(p);
+  proc* p = GET_ENT(vector_best(sch->d2, better));
+  DATA(sch)->min_stride = PROC_STRIDE(p);
   PROC_STRIDE(p) += 10;
   current = p;
-  return p;
+  *done = true;
+  return kget(p);
 }
 
 proc * cp(void) {
@@ -53,14 +61,15 @@ proc * cp(void) {
 
 static ent_lookup internal_funcs[] = {
   {DEFAULT_LOOKUP_FUNC, managed_lookup_func_not_found},
-  {"new!", new_proc}
+  {"new!", new_proc},
+  {"sched!", do_sched}
 };
 
 MAKE_LOOKUP(internal_funcs);
 MAKE_MAP(internal_funcs);
 MAKE_UNMAP(internal_funcs);
 
-static void cleanup(ent* e) {}
+static void cleanup(ent* e) { panic("Sched was cleaned up!"); }
 
 static ent_funcs sched_funcs = {
   .lookup = NAME_LOOKUP(internal_funcs),
@@ -78,6 +87,7 @@ sched* kcreate_sched()
   sch->d1 = kmalloc(sizeof(sched_data));
   DATA(sch)->min_stride = 0;
   DATA(sch)->cur_pid = 1;
+  simple_managed_create(sch);
   return sch;
 }
 

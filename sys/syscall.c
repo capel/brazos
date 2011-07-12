@@ -46,6 +46,6 @@ PCB* ksyscall (void* stacked_pcb) {
     if (ret != -255) {
         pcb->r0 = ret;
     }
-    proc *p = ksched();
+    proc *p = FS("/proc/sched!");
     return &PROC_PCB(p);
 }

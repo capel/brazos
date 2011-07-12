@@ -31,16 +31,14 @@ typedef struct _ent {
     struct _ent_funcs* f;
 } ent;
 
-#include "actor.h"
 #include "kvector.h"
 
-typedef ent* (*lookup_func)(ent* e, actor* a, const vector* v, size_t level);
-typedef err_t (*link_func)(ent* e, actor* a, ent* child,
-                          const vector* v, size_t level);
-typedef err_t (*unlink_func)(ent* e, actor* a, const char* path);
-typedef err_t (*map_func)(ent* e, actor* a, const perms_t requested_perms, 
+typedef ent* (*lookup_func)(ent* e, const vector* v, size_t level);
+typedef err_t (*link_func)(ent* e, ent* child, const vector* v, size_t level);
+typedef err_t (*unlink_func)(ent* e, const char* path);
+typedef err_t (*map_func)(ent* e, perms_t requested_perms, 
         size_t* out_size, void** out_ptr);
-typedef err_t (*unmap_func)(ent* e, actor* a, void* ptr);
+typedef err_t (*unmap_func)(ent* e, void* ptr);
 typedef void (*cleanup_func)(ent* e);
 
 typedef struct _ent_funcs {
@@ -52,16 +50,18 @@ typedef struct _ent_funcs {
     cleanup_func cleanup;
 } ent_funcs;
 
-#define LOOKUP(e, a, v, level) ((e)->f->lookup((e), (a), (v), (level)))
-#define LINK(e, a, child, v, level) ((e)->f->link((e), (a), (child), (v), (level)))
-#define UNLINK(e, a, path) ((e)->f->unlink((e), (a), (path)))
-#define MAP(e, a, p, o, ptr) ((e)->f->map((e), (a), (p), (o), (ptr)))
-#define UNMAP(e, a, p) ((e)->f->unmap((e), (a), (p)))
+#define LOOKUP(e, v, level) ((e)->f->lookup((e), (v), (level)))
+#define LINK(e, child, v, level) ((e)->f->link((e), (child), (v), (level)))
+#define UNLINK(e, path) ((e)->f->unlink((e), (path)))
+#define MAP(e, p, o, ptr) ((e)->f->map((e), (p), (o), (ptr)))
+#define UNMAP(e, p) ((e)->f->unmap((e), (p)))
 #define CLEANUP(e) ((e)->f->cleanup((e)))
 
-ent* LOOKUP_R(ent* e, actor* a, const char* path);
-err_t LINK_R(ent* e, actor* a, ent* child, const char* path);
-err_t MAP_R(ent* e, actor* a, const perms_t rp, size_t *out_size, void** out_ptr);
+ent* LOOKUP_R(ent* e, const char* path, ...);
+ent* root(void);
+#define FS(path, ...) LOOKUP_R(root(), path, ## __VA_ARGS__)
+
+err_t LINK_R(ent* e, ent* child, const char* path, ...);
 
 
 ent* entalloc(ent_funcs* f);

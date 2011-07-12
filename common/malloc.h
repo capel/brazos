@@ -6,7 +6,7 @@
 typedef void* (*malloc_func)(size_t);
 typedef void* (*calloc_func)(size_t,size_t);
 typedef void* (*realloc_func)(void*,size_t);
-typedef int (*free_func)(void*);
+typedef int (*free_func)(const void*);
 
 typedef void* (*get_pages_func)(size_t);
 
@@ -33,7 +33,7 @@ int _mem_init(size_t pages, malloc_data *md);
 void* _malloc(size_t size, malloc_data *md);
 void* _calloc(size_t size, size_t obj_size, malloc_data *md);
 void* _realloc(void *ptr, size_t newsize, malloc_data *md);
-int _free(void *ptr, malloc_data *md);
+int _free(const void *ptr, malloc_data *md);
 
 void Mem_Dump(malloc_data *md);
 

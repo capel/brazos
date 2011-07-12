@@ -7,7 +7,7 @@
 typedef ent kfile;
 typedef ent kdir;
 
-void ksetup_fs(void);
+void kcreate_root(void);
 
 kfile* kcreate_file(void);
 kdir* kcreate_dir(void);

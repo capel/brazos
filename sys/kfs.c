@@ -8,7 +8,7 @@ ent* root() {
     return _root;
 }
 
-void ksetup_fs() {
+void kcreate_root() {
     _root = kcreate_dir();
     kget(_root); // it contains itself!
 }

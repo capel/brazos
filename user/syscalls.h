@@ -23,7 +23,7 @@ static inline void yield() {
 }
 
 static inline void write_stdout(const char* c) {
-  return syscall(SYS_WRITE_STDOUT, (int)c, 0, 0);
+  syscall(SYS_WRITE_STDOUT, (int)c, 0, 0);
 }
 
 #endif

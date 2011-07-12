@@ -10,7 +10,7 @@
 #include "vector.h"
 
 void exit(void) {
-    _exit();
+  println("Exiting!");
 }
 
 void perror(int error) {
@@ -250,8 +250,9 @@ bool parse_line(char* line) {
 
 int sh_main()
 {
-    mem_init(100);
+   // mem_init(100);
     printf("Hello world!\n");
+    return 0;
     readline_lib("brazos> ", parse_line);
     return 0;
 }

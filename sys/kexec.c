@@ -8,14 +8,14 @@ extern void dummy_main(void);
 
 char* names[] = {
     "sh",
-    "bc",
-    "dummy"
+   // "bc",
+   // "dummy"
 };
 
 void* addrs[] = {
     sh_main,
-    bc_main,
-    dummy_main,
+    //bc_main,
+   // dummy_main,
 };
 
 void* program_lookup(char* name) {

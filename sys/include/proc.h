@@ -1,6 +1,8 @@
 #ifndef PROC_H
 #define PROC_H
 
+#include "common.h"
+
 typedef ent proc;
 
 typedef struct _PCB {
@@ -28,13 +30,13 @@ typedef struct {
     size_t stride;
     int pid;
     void* stack;
-    actor* owner;
+    ent* cwd;
 } proc_data;
 
 #define PROC_DATA(p) ((proc_data*)(p)->d1)
 #define PROC_STRIDE(p) PROC_DATA(p)->stride
 #define PROC_PCB(p) PROC_DATA(p)->pcb
 
-proc* kcreate_proc(int pid, actor* owner);
+proc* kcreate_proc(size_t pid);
 
 #endif

@@ -159,7 +159,7 @@ void* vector_best(vector* v, vector_better_func better) {
   if (v->size == 0) {
     return NULL;
   }
-  void* best;
+  void* best = NULL;
 
   for(size_t i = 0; i < v->size; i++) {
     if (!best) best = v->data[i];

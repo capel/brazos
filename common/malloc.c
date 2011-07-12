@@ -144,7 +144,7 @@ void* _calloc(size_t size, size_t obj_size, malloc_data * md)
 }
 
 
-int _free(void *ptr, malloc_data * md)
+int _free(const void *ptr, malloc_data * md)
 {
  //   db("Start free");
 	if (!ptr)
@@ -152,7 +152,7 @@ int _free(void *ptr, malloc_data * md)
 		return -1;
 	}
 	
-	allocated_node* a = ptr - sizeof(allocated_node);
+	allocated_node* a = (void*)ptr - sizeof(allocated_node);
 	if (a->magic_number != CAPEL_MAGIC_NUMBER)
 	{
 			md->db("Bad pointer %p passed to Mem_Free.", ptr);

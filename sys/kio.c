@@ -16,11 +16,16 @@ const char* kitoa(int i) {
   return s;
 }
 
+const char* kstrclone(const char* s) {
+    char* n = kmalloc(strlen(s)+1);
+    strlcpy(n, s, strlen(s)+1);
+    return n;
+}
+
 #define	PUTCHAR_ADDRESS		(PHYSADDR_OFFSET +		\
 				DEV_CONS_ADDRESS + DEV_CONS_PUTGETCHAR)
 #define	HALT_ADDRESS		(PHYSADDR_OFFSET +		\
 				DEV_CONS_ADDRESS + DEV_CONS_HALT)
-int vprintf(char* buf, size_t size, const char* fmt, va_list va, int newline);
 
 int kgetc(void)
 {
