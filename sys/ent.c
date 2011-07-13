@@ -19,12 +19,11 @@ ent* LOOKUP_R(ent* e, const char* fmt, ...) {
 
   va_list va;
   va_start(va, fmt);
-  vprintf(buf, 128, fmt, va, true);
+  vprintf(buf, 128, fmt, va, false);
   va_end(va);
 
   vector* v = ksplit_to_vector(buf, "/");
   ent * ret = LOOKUP(e, v, 0);
-  printk("%d", ret);
   cleanup_vector(v);
   return ret;
 }
@@ -34,12 +33,12 @@ err_t LINK_R(ent* e, ent* child, const char* fmt, ...) {
 
   va_list va;
   va_start(va, fmt);
-  vprintf(buf, 128, fmt, va, true);
+  vprintf(buf, 128, fmt, va, false);
   va_end(va);
   
-  vector* v = ksplit_to_vector(fmt, "/");
+  vector* v = ksplit_to_vector(buf, "/");
   err_t ret = LINK(e, child, v, 0);
-  printk("%d", ret);
+  if (ret != SUCCESS) printk("LINK_R err %d", ret);
   cleanup_vector(v);
   return ret;
 }

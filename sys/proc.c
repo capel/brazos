@@ -4,7 +4,9 @@
 #include "include/ent_gen.h"
 #include "include/mach.h"
 
-void bad_main() {
+ent* kcreate_rid_manager(void);
+
+static void bad_main() {
   panic("Bad main called!!!");
 }
 static void default_exit() {
@@ -20,15 +22,15 @@ static void exec(proc* p, program* main) {
     MAP(main, P_R, &ignore, &PROC_PCB(p).pc);
 }
 
-static void cleanup(proc *p) {}
+static void cleanup(proc *p) { printk("TODO"); }
 
 static ent_funcs proc_funcs = {
-  .lookup = disable_lookup,
+  .lookup = simple_managed_lookup,
   .link = disable_link,
   .unlink = disable_unlink,
   .map = disable_map,
   .unmap = disable_unmap,
-  .cleanup = cleanup,
+  .cleanup = cleanup
 };
 
 proc * kcreate_proc(size_t pid) {
@@ -51,5 +53,12 @@ proc * kcreate_proc(size_t pid) {
     MAP(pp, P_W, &size, &mem);
     PROC_DATA(p)->stack = mem + size;
     PROC_PCB(p).sp = PROC_DATA(p)->stack;
+
+    ent* ridm = kcreate_rid_manager();
+    p->f->link = simple_managed_link;
+    err_t err = LINK_R(p, ridm, "rid");
+    if (!OK(err)) printk("err: %d", err);
+    p->f->link = disable_link;
+
     return p;
 }

@@ -1,5 +1,4 @@
-#include "sched.h"
-#include "stdlib.h"
+#include "include/sched.h"
 #include "include/common.h"
 #include "include/sched.h"
 #include "include/ent_gen.h"
@@ -7,12 +6,12 @@
 
 typedef ent sched;
 
-proc * current;
 sched* scheduler;
 
 typedef struct {
   size_t min_stride;
   size_t cur_pid;
+  proc* current;
 } sched_data;
 
 #define DATA(sch) ((sched_data*)(sch->d1))
@@ -20,16 +19,21 @@ typedef struct {
 
 static proc * new_proc(sched * sch, const vector* v, size_t level, bool *done)
 {
+  printk("v %p", v);
   proc* p = kcreate_proc(DATA(sch)->cur_pid);
   printk("new proc sched %p", p);
+  
+  sch->f->link = simple_managed_link;
   err_t err = LINK_R(sch, p, "%d", DATA(sch)->cur_pid);
   printk("err: %d", err);
+  sch->f->link = disable_link;
   DATA(sch)->cur_pid++;
   *done = true;
   return kget(p);
 }
 
 void kcopy_pcb(PCB *pcb) {
+    proc* current = FS("/proc/me");
     if (&PROC_PCB(current) == pcb) {
         printk("current and src are the same [%p]?", pcb);
     }
@@ -50,19 +54,23 @@ static proc* do_sched(sched * sch, const vector* v, size_t level, bool *done)
   proc* p = GET_ENT(vector_best(sch->d2, better));
   DATA(sch)->min_stride = PROC_STRIDE(p);
   PROC_STRIDE(p) += 10;
-  current = p;
+  DATA(sch)->current = p;
+  printk("Sched! proc %p", p);
   *done = true;
   return kget(p);
 }
 
-proc * cp(void) {
-    return current;
+static proc* me(sched *sch, const vector* v, 
+    size_t level, bool *done) {
+  return kget(DATA(sch)->current);
 }
+
 
 static ent_lookup internal_funcs[] = {
   {DEFAULT_LOOKUP_FUNC, managed_lookup_func_not_found},
   {"new!", new_proc},
-  {"sched!", do_sched}
+  {"sched!", do_sched},
+  {"me", me},
 };
 
 MAKE_LOOKUP(internal_funcs);
@@ -87,6 +95,7 @@ sched* kcreate_sched()
   sch->d1 = kmalloc(sizeof(sched_data));
   DATA(sch)->min_stride = 0;
   DATA(sch)->cur_pid = 1;
+  DATA(sch)->current = NULL;
   simple_managed_create(sch);
   return sch;
 }

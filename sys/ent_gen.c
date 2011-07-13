@@ -36,7 +36,8 @@ ent* managed_lookup_func_not_found(ent* e,
 ent* vector_find_child(vector* v, const char* name) {
     for(size_t i = 0; i < v->size; i++) {
         if (0 == strcmp(name, DE(v->data[i])->name)) {
-            return kget(((vector_de*)v->data[i])->val);
+          printk("Found %s", name); 
+          return kget(((vector_de*)v->data[i])->val);
         }
     }
     return (ent*)E_NOT_FOUND;
@@ -59,14 +60,17 @@ ent* smart_find_child(ent_lookup* table, size_t size,
     ent* e, const vector* v, size_t level, bool *done) {
   const char *name = v->data[level];
   ent* next = vector_find_child(e->d2, name);
-  if ((err_t)next != E_NOT_FOUND)  return next;
+  printk("vector found: %p : %s" , next, name);
+  if ((err_t)next != E_NOT_FOUND)  return next; 
 
   for(size_t i = 0; i < size; i++) { 
       if (0 == strcmp(name, table[i].name)) { 
+          printk("Calling func %s", name);
           return table[i].func(e, v, level, done); 
       }
   }
   // Try the default
+  printk("Calling default");
   return table[0].func(e, v, level, done);
 }
 
@@ -102,6 +106,7 @@ err_t simple_managed_link(ent* e, ent* child,
   ent* next = vector_find_child(e->d2, v->data[level]);
 
   if (level + 1 == v->size) { 
+    printk("next %p", next);
     if ((err_t)next != E_NOT_FOUND) return E_ALREADY_EXISTS;
     return vector_link(e, child, v->data[level]);
   } else {

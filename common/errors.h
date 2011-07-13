@@ -1,3 +1,7 @@
+#ifndef ERRORS_H
+#define ERRORS_H
+#include "types.h"
+
 typedef size_t err_t;
 
 #define SUCCESS 1
@@ -15,4 +19,8 @@ typedef size_t err_t;
 
 #define MAX_ERROR 32
 
-#define IS_ERROR(x) (((err_t)(x)) < MAX_ERROR)
+#define IS_ERR(x) (((err_t)(x)) < MAX_ERROR)
+#define ERR(x) ((err_t)(x))
+#define OK(x) ((x) == SUCCESS)
+
+#endif
