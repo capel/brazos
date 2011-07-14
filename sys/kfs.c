@@ -1,7 +1,4 @@
-#include "include/kfs.h"
-#include "include/mem.h"
-#include "../common/stdlib.h"
-#include "include/kio.h"
+#include "include/common.h"
 
 static ent* _root;
 ent* root() {

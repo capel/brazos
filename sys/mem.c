@@ -1,6 +1,3 @@
-#include "include/mem.h"
-#include "../common/stdlib.h"
-#include "include/kio.h"
 #include "../common/malloc.h"
 #include "include/ent_gen.h"
 #include "include/mach.h"

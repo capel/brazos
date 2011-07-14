@@ -1,6 +1,4 @@
-#include "include/proc.h"
 #include "include/common.h"
-#include "include/kfs.h"
 #include "include/ent_gen.h"
 #include "include/mach.h"
 

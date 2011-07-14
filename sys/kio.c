@@ -1,6 +1,4 @@
 #include "include/common.h"
-#include "../common/stdlib.h"
-#include "include/kio.h"
 #include "../common/syscalls.h"
 #include "../common/chars.h"
 

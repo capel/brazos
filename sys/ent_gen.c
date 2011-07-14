@@ -1,6 +1,5 @@
+#include "include/common.h"
 #include "include/ent_gen.h"
-#include "../common/stdlib.h"
-#include "include/mem.h"
 
 #define DE(x) ((vector_de*)(x))
 #define VECTOR(e) ((vector*)(e)->d2)

@@ -1,8 +1,5 @@
-#include "../common/stdlib.h"
-#include "include/ent.h"
-#include "include/kvector.h"
+#include "include/common.h"
 #include "include/ent_gen.h"
-#include "include/kfs.h"
   
 static void cleanup(ent* e) { printk("TODO"); }
 

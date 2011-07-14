@@ -1,6 +1,3 @@
-#include "include/ent.h"
-#include "include/kvector.h"
-#include "include/kfs.h"
 #include "include/common.h"
 
 ent* entalloc(ent_funcs *funcs) {

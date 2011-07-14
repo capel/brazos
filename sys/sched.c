@@ -1,12 +1,7 @@
-#include "include/sched.h"
 #include "include/common.h"
-#include "include/sched.h"
 #include "include/ent_gen.h"
-#include "include/proc.h"
 
 typedef ent sched;
-
-sched* scheduler;
 
 typedef struct {
   size_t min_stride;

@@ -1,9 +1,6 @@
 #define KERNEL
 
 #include "include/common.h"
-#include "include/sched.h"
-#include "include/kexec.h"
-#include "include/kfs.h"
 #include "include/mach.h"
 
 #define INPUTBUFSIZE 500

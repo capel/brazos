@@ -1,6 +1,4 @@
-#include "include/kexec.h"
-#include "../common/types.h"
-#include "../common/stdlib.h"
+#include "include/common.h"
 
 extern void sh_main(void);
 extern void bc_main(void);
