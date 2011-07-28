@@ -1,9 +1,8 @@
 #include "include/common.h"
-#include "include/ent_gen.h"
 
 size_t kalloc_raw_pages(size_t num);
 void* kget_addr_from_page(size_t page);
-static pages* make_pages(size_t pnum, size_t num);
+static pages* mkpages(size_t pnum, size_t num);
 
 static pages * new_pages(mm * m, const vector* v, size_t level, bool *done)
 {
@@ -15,7 +14,7 @@ static pages * new_pages(mm * m, const vector* v, size_t level, bool *done)
   printk("making!");
   size_t num = atoi((char*)v->data[level+1]);
   size_t pnum = kalloc_raw_pages(num);
-  pages * pp = make_pages(pnum, num);
+  pages * pp = mkpages(pnum, num);
 
   m->f->link = simple_managed_link;
   err_t err = LINK_R(m, pp, "%d", pnum);
@@ -46,7 +45,7 @@ static ent_funcs mm_funcs = {
   .cleanup = cleanup,
 };
 
-ent* kcreate_mm()
+ent* mkmm()
 {
   mm *m = entalloc(&mm_funcs);
   simple_managed_create(m);
@@ -79,7 +78,7 @@ static ent_funcs pages_funcs = {
   .cleanup = cleanup_pages,
 };
 
-static pages* make_pages(size_t pnum, size_t num)
+static pages* mkpages(size_t pnum, size_t num)
 {
     pages* p = entalloc(&pages_funcs);
     p->d2 = (void*)num;

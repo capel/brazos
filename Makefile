@@ -1,9 +1,5 @@
 TARGET  := kernel
-COMMON_SRC := common/rand.c common/hashmap.c common/vector.c common/malloc.c common/stdlib.c
-SYS_SRC := sys/dir.c sys/kfs.c sys/main.c sys/mem.c sys/sched.c \
-sys/kexec.c sys/syscall.c sys/kio.c sys/ent_gen.c sys/ent.c sys/proc.c sys/page.c
-USER_SRC := user/user.c user/malloc.c user/stdio.c
-SRCS 		:= ${COMMON_SRC} ${SYS_SRC} ${USER_SRC}
+SRCS 		:= $(wildcard common/*.c sys/*c user/*.c)
 ASRCS   := sys/start.s
 OBJS    := ${SRCS:.c=.o} 
 AOBJS   := ${ASRCS:.s=.o}

@@ -1,5 +1,4 @@
 #include "include/common.h"
-#include "include/ent_gen.h"
 #include "include/mach.h"
 
 ent* kcreate_rid_manager(void);
@@ -31,7 +30,7 @@ static ent_funcs proc_funcs = {
   .cleanup = cleanup
 };
 
-proc * kcreate_proc(size_t pid) {
+proc * mkproc(size_t pid) {
     proc *p = entalloc(&proc_funcs);
     printk("new proc %p", p);
     p->d1 = kmalloc(sizeof(proc_data));
@@ -52,7 +51,7 @@ proc * kcreate_proc(size_t pid) {
     PROC_DATA(p)->stack = mem + size;
     PROC_PCB(p).sp = PROC_DATA(p)->stack;
 
-    ent* ridm = kcreate_rid_manager();
+    rid_manager* ridm = mkrid_manager();
     p->f->link = simple_managed_link;
     err_t err = LINK_R(p, ridm, "rid");
     if (!OK(err)) printk("err: %d", err);

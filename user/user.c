@@ -251,12 +251,12 @@ bool parse_line(char* line) {
 int sh_main()
 {
    // mem_init(100);
-   for (;;) {
     printf("Hello world!\n");
-    printf("/proc rid %d", lookup("/proc"));
-  }
-    return 0;
-    readline_lib("brazos> ", parse_line);
+    rid_t rid = lookup("/proc/me");
+    void* ptr;
+    size_t size;
+    err_t err = map(rid, &size, &ptr);
+    println("/proc rid %d %d %p", rid, size, ptr);
     return 0;
 }
     

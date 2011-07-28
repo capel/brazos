@@ -37,6 +37,6 @@ typedef struct {
 #define PROC_STRIDE(p) PROC_DATA(p)->stride
 #define PROC_PCB(p) PROC_DATA(p)->pcb
 
-proc* kcreate_proc(size_t pid);
+proc* mkproc(size_t pid);
 
 #endif

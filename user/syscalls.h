@@ -42,13 +42,18 @@ static inline err_t unlink(const char *path) {
   return syscall(SYS_UNLINK, (int)path, 0, 0);
 }
 
-static inline err_t map(rid_t resource, perms_t requested_perms, 
+static inline err_t map(rid_t resource, 
     size_t *out_size, void **out_ptr) {
-  return syscall(SYS_MAP, resource, requested_perms, 0);
+  return syscall(SYS_MAP, (int)resource, (int)out_size, (int)out_ptr);
 }
 
 static inline err_t unmap(rid_t resource) {
   return syscall(SYS_UNMAP, resource, 0, 0);
+}
+
+static inline err_t list(rid_t resource, 
+    size_t *out_size, const char**out_ptr) {
+  return syscall(SYS_LIST, resource, out_size, out_ptr);
 }
 
 

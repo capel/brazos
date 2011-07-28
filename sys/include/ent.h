@@ -13,16 +13,15 @@ typedef struct _ent {
     void* d2; // Private data or, if using ent_gen.h, ent_gen private data.
     struct _ent_funcs* f;
 } ent;
-
-#include "kvector.h"
+typedef ent string;
 
 typedef ent* (*lookup_func)(ent* e, const vector* v, size_t level);
 typedef err_t (*link_func)(ent* e, ent* child, const vector* v, size_t level);
 typedef err_t (*unlink_func)(ent* e, const char* path);
-typedef err_t (*map_func)(ent* e, perms_t requested_perms, 
-        size_t* out_size, void** out_ptr);
+typedef err_t (*map_func)(ent* e, size_t* out_size, void** out_ptr);
 typedef err_t (*unmap_func)(ent* e, void* ptr);
 typedef void (*cleanup_func)(ent* e);
+typedef string* (*list_func)(ent* e);
 
 typedef struct _ent_funcs {
     lookup_func lookup;
@@ -31,14 +30,16 @@ typedef struct _ent_funcs {
     map_func map;
     unmap_func unmap;
     cleanup_func cleanup;
+    list_func list;
 } ent_funcs;
 
 #define LOOKUP(e, v, level) ((e)->f->lookup((e), (v), (level)))
 #define LINK(e, child, v, level) ((e)->f->link((e), (child), (v), (level)))
 #define UNLINK(e, path) ((e)->f->unlink((e), (path)))
-#define MAP(e, p, o, ptr) ((e)->f->map((e), (p), (o), (ptr)))
+#define MAP(e, o, ptr) ((e)->f->map((e), (o), (ptr)))
 #define UNMAP(e, p) ((e)->f->unmap((e), (p)))
 #define CLEANUP(e) ((e)->f->cleanup((e)))
+#define LIST(e) ((e)->f->list((e)))
 
 ent* LOOKUP_R(ent* e, const char* path, ...);
 ent* root(void);

@@ -12,11 +12,19 @@ static ent_funcs dir_funcs = {
   .cleanup = cleanup
 };
 
-ent* kcreate_dir() {
+ent* mkdir() {
   ent* dir = entalloc(&dir_funcs);
   simple_managed_create(dir);
   return dir;
 }
 
+static dir* _root;
+dir* root() {
+    return _root;
+}
 
+void mkroot() {
+    _root = mkdir();
+    kget(_root); // it contains itself!
+}
 

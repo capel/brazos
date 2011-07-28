@@ -8,7 +8,7 @@ typedef ent proc;
 
 void restore_pcb(PCB* pcb);
 
-ent* kcreate_sched(void);
+ent* mksched(void);
 
 // implicitly the current proc
 void kcopy_pcb(PCB * pcb);

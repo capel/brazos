@@ -15,7 +15,7 @@ typedef struct {
 static proc * new_proc(sched * sch, const vector* v, size_t level, bool *done)
 {
   printk("v %p", v);
-  proc* p = kcreate_proc(DATA(sch)->cur_pid);
+  proc* p = mkproc(DATA(sch)->cur_pid);
   printk("new proc sched %p", p);
   
   sch->f->link = simple_managed_link;
@@ -57,6 +57,7 @@ static proc* do_sched(sched * sch, const vector* v, size_t level, bool *done)
 
 static proc* me(sched *sch, const vector* v, 
     size_t level, bool *done) {
+  printk("current:", DATA(sch)->current);
   return kget(DATA(sch)->current);
 }
 
@@ -83,10 +84,9 @@ static ent_funcs sched_funcs = {
   .cleanup = cleanup,
 };
 
-sched* kcreate_sched()
+sched* mksched()
 {
   sched *sch = entalloc(&sched_funcs);
-  scheduler = sch;
   sch->d1 = kmalloc(sizeof(sched_data));
   DATA(sch)->min_stride = 0;
   DATA(sch)->cur_pid = 1;

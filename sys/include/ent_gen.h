@@ -24,7 +24,7 @@ typedef struct {
 
 ent* smart_managed_lookup(ent_lookup* table, size_t size,
                       ent* e, const vector* v, size_t level);    
-err_t ent_map(ent_lookup* table, size_t size, ent* e, perms_t p,
+err_t ent_map(ent_lookup* table, size_t size, ent* e,
               size_t *out_size, void** out_ptr);
 err_t ent_unmap(ent *e, void* ptr);
 
@@ -38,9 +38,9 @@ err_t ent_unmap(ent *e, void* ptr);
 #define NAME_MAP(_data_) _gen_map ## _data_
 #define MAKE_MAP(_data_) \
   static err_t NAME_MAP(_data_) (ent * e, \
-            perms_t p, size_t *out_size, void** out_ptr) { \
+            size_t *out_size, void** out_ptr) { \
         return ent_map(_data_, sizeof(_data_)/sizeof(_data_[0]), \
-                e, p, out_size, out_ptr); }
+                e, out_size, out_ptr); }
 
 
 #define NAME_UNMAP(_data_) _gen_unmap ## _data_
@@ -61,10 +61,10 @@ err_t disable_link(ent* e, ent* child, const vector* v, size_t level);
 
 err_t disable_unlink(ent* e, const char* path);
 
-err_t disable_map(ent* e, perms_t requested_perms, 
-        size_t* out_size, void** out_ptr);
+err_t disable_map(ent* e, size_t* out_size, void** out_ptr);
 
 err_t disable_unmap(ent* e, void* ptr);
+string* disable_list(ent* e);
 
 #define ONLY_CLEANUP(name, _cleanup) \
   static ent_funcs name = { \

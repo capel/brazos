@@ -74,7 +74,7 @@ ent* smart_find_child(ent_lookup* table, size_t size,
 }
 
 ent* walk_lookup(ent* next, const vector * v, size_t level) {
-  if (IS_ERROR(next)) return next;
+  if (IS_ERR(next)) return next;
   printk("size: %d level %d", v->size, level);
   if (level + 1 == v->size) { 
       return next; 
@@ -141,4 +141,6 @@ err_t disable_unmap(ent* e, void* ptr) {
   return E_NOT_SUPPORTED;
 }
 
-
+string* disable_list(ent* e) {
+  return (ent*)E_NOT_SUPPORTED;
+}

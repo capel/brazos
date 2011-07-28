@@ -1,3 +1,4 @@
+#include "include/common.h"
 #include "../common/malloc.h"
 #include "include/ent_gen.h"
 #include "include/mach.h"

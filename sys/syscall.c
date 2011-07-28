@@ -19,6 +19,7 @@ int _ksyscall (int code, int r1, int r2, int r3)
 {
   const char* path = "UNINIT";
   ent* e = NULL;
+  rid_t rid = E_ERROR;
   err_t err; 
 
     switch (code) {
@@ -32,9 +33,9 @@ int _ksyscall (int code, int r1, int r2, int r3)
             }
         case SYS_WRITE_STDOUT:
             kputs((char*)r1);
-            return 0;
+            return SUCCESS;
         case SYS_YIELD:
-            return 0;
+            return SUCCESS;
         case SYS_LOOKUP:
             path = (const char*)r1;
             if (!path) return E_BAD_ARG;
@@ -45,12 +46,21 @@ int _ksyscall (int code, int r1, int r2, int r3)
               e = FS("/proc/me/cwd/%s", path);
               if (IS_ERR(e)) return ERR(e);
             }
-            rid_t rid = (rid_t) FS("/proc/me/rid/new!");
-            if (IS_ERR(rid)) return rid;
+            rid = (rid_t) FS("/proc/me/rid/new!");
+            if (IS_ERR(rid)) { kput(e); return rid; }
             err = LINK_FS(e, "/proc/me/rid/%d", rid);
-            if (!OK(err)) return err;
+            if (!OK(err)) { kput(e); return err; }
             return rid;
-            
+        case SYS_MAP:
+            rid = r1;
+            e = FS("/proc/me/rid/%d", rid);
+            printk("e %d : rid %d", e, rid);
+            if (IS_ERR(e)) return ERR(e);
+            err = MAP(e, (size_t*)r2, (void**)r3);
+            printk("Err: %d, size %d, ptr %p", err, *(size_t*)r2, *(void**)r3);
+            if (!OK(err)) { kput(e); return err; }
+            kput(e);
+            return SUCCESS;
         default:
             printk("Bad syscall code %d", code);
             return E_BAD_SYSCALL;

@@ -1,12 +1,14 @@
+#ifndef SYS_COMMON_H
+#define SYS_COMMON_H
+
 #include "kio.h"
-#include "mem.h"
 #include "../../common/stdlib.h"
 #include "../../common/vector.h"
-#include "ent.h"
 
+#include "ent.h"
 #include "proc.h"
 #include "sched.h"
-
+#include "ent_gen.h"
 
 typedef ent string;
 string * mkstr(const char *cstring);
@@ -24,18 +26,21 @@ typedef ent dir;
 dir* mkdir(void);
 
 void mkroot(void);
-kdir* root(void);
+dir* root(void);
 
 #define PAGE_SIZE 4096
 
 typedef ent pages;
 typedef ent mm;
 
-mm* kcreate_mm(void);
+mm* mkmm(void);
 void ksetup_memory(void);
 
 typedef ent program;
-program mkprogram();
+program mkprogram(void);
+
+typedef ent rid_manager;
+rid_manager* mkrid_manager(void);
 
 void* kmalloc(size_t size);
 void* kcalloc(size_t size, size_t obj_size);
@@ -51,3 +56,4 @@ static inline vector* ksplit_to_vector(const char * str, const char* seps) {
     return _split_to_vector(str, seps, &kernel_alloc_funcs);
 }
 
+#endif

@@ -15,6 +15,7 @@
 #define SYS_UNLINK 10
 #define SYS_MAP 11
 #define SYS_UNMAP 12
+#define SYS_LIST 13
 // Range 0 < err_t < 4096
 typedef size_t err_t;
 // Range 4096 <= rid_t < SIZE_T_MAX

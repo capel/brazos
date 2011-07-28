@@ -54,10 +54,10 @@ int update_input()
 }
 
 void setup(void) {
-    kcreate_root();
-    ent * sch = kcreate_sched();
+    mkroot();
+    ent * sch = mksched();
     assert(SUCCESS == LINK_R(root(), sch, "proc"));
-    ent* mm = kcreate_mm();
+    ent* mm = mkmm();
     assert(SUCCESS == LINK_R(root(), mm, "mm"));
 }
 
