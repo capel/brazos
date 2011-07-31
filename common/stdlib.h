@@ -24,15 +24,15 @@ size_t strlcpy(char* dst, const char* src, size_t len);
 int strncmp(const char* a, const char* b, size_t len);
 int strcmp(const char* a, const char* b);
 
-// allocates a new string long enough to hold a + b + NULL.
-// this new string does not overlap with a or b in memory, and it must
-// be freed seperately.
-char* strgcat(const char* a, const char* b, size_t alen, size_t blen);
-
 /*
 void* malloc(size_t bytes);
 void free(void* addr);
 */
+
+void* operator new(size_t bytes);
+void* operator new [] (size_t bytes);
+void operator delete(void*p);
+void operator delete [] (void* p);
 
 bool isspace(char c);
 bool isupper(char c);
@@ -53,6 +53,10 @@ int power(int a, int b);
 
 int snprintf(char* buf, size_t size, const char* fmt, ...);
 int vprintf(char* buf, size_t size, const char* fmt, va_list va, int newline);
+
+#include "vector.h"
+#include "string.h"
+#include "hashmap.h"
 
 #ifdef USER
 #define assert(x) do { if (!(x)) { debug("Assert (%s) in %s at " __FILE__ ":%d failed.", #x, __func__, __LINE__); _exit(); } } while(0)

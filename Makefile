@@ -1,12 +1,12 @@
 TARGET  := kernel
-SRCS 		:= $(wildcard common/*.c sys/*c user/*.c)
+SRCS 		:= $(wildcard common/*.cpp sys/*.cpp user/*.cpp)
 ASRCS   := sys/start.s
-OBJS    := ${SRCS:.c=.o} 
+OBJS    := ${SRCS:.cpp=.o} 
 AOBJS   := ${ASRCS:.s=.o}
-DEPS    := ${SRCS:.c=.dep} 
+DEPS    := ${SRCS:.cpp=.dep} 
 
-CCFLAGS=-Wall -Wextra -nostdlib -nostartfiles -ffreestanding -std=gnu99 -Wno-unused-parameter
-CC=arm-elf-gcc-4.6
+CCFLAGS=-Wall -Wextra -nostdlib -nostartfiles -ffreestanding -std=c++0x -Wno-unused-parameter
+CC=clang++
 AS=arm-elf-as
 LDFLAGS=-T link.ld
 LD=arm-elf-ld
@@ -19,7 +19,7 @@ all: ${TARGET}
 ${TARGET}: ${OBJS} ${AOBJS}
 	${LD} ${LDFLAGS} -o ${TARGET} sys/start.o ${OBJS}
 
-${OBJS}: %.o: %.c
+${OBJS}: %.o: %.cpp
 	${CC} ${CCFLAGS} -o $@ -c $< 
 
 ${AOBJS}: %.o: %.s

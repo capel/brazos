@@ -3,9 +3,6 @@
 
 #include <stddef.h>
 typedef unsigned char byte;
-#define true 1
-#define false 0
-typedef int bool;
 typedef size_t disk_addr;
 typedef size_t inode_t;
 
