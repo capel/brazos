@@ -49,7 +49,7 @@ static inline void wait(int pid) {
     syscall(WAIT, pid, 0, 0);
 }
 
-static inline int open(char* name) {
+static inline int open(const char* name) {
     int ret = syscall(OPEN, (int)name, 0, 0);
     if (ret < 0) {
         debug("Error code: %d", ret);
@@ -57,7 +57,7 @@ static inline int open(char* name) {
     return ret;
 }
 
-static inline int write(int fd, char* buf, size_t len) {
+static inline int write(int fd, const char* buf, size_t len) {
     int ret = syscall(WRITE, fd, (int)buf, len);
     if (ret < 0) {
         debug("Error code: %d", ret);

@@ -18,7 +18,7 @@ void* addrs[] = {
     dummy_main,
 };
 
-void* program_lookup(char* name) {
+void* program_lookup(const char* name) {
     for(size_t i = 0; i < sizeof(names); i++) {
         if(0 == strcmp(name, names[i])) {
             return addrs[i];

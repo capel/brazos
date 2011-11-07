@@ -9,6 +9,7 @@
 #include "stdio.h"
 #include "malloc.h"
 #include "vector.h"
+#include "chars.h"
 
 void exit(void) {
     _exit();
@@ -237,8 +238,9 @@ bool parse_line(char* line) {
                 get_dir_entries(space, GET_DIR_ENTRIES_SPACE);
                 for(int i = 0; i < FILES_PER_DIR; i++) {
                     if (strlen(space[i].name) > 0 && space[i].name[0] != '.')
-                        println("%s %d %s", space[i].name, space[i].inode, 
-                                space[i].type == CREATE_DIR ? "DIR" : "FILE");
+                        println("%s " RED "%d" WHITE " %s", space[i].name, space[i].inode, 
+                                space[i].type == CREATE_DIR ? BLUE "DIR" WHITE 
+                                : GREEN "FILE" WHITE);
                 }
                 free(space);
                 goto cleanup;
@@ -316,7 +318,7 @@ bool bc_parse(char* line) {
 
 int bc_main()
 {
-    mem_init(10);
+ //   mem_init(10);
 
     readline_lib("BC> ", bc_parse);
     return 0;

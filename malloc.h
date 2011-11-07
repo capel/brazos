@@ -39,8 +39,6 @@ typedef struct {
     printf_func db;
 } malloc_data;
 
-#ifdef USER
-
 
 int mem_init(size_t pages);
 void* malloc(size_t size);
@@ -48,7 +46,6 @@ void* calloc(size_t size, size_t obj_size);
 void* realloc(void *ptr, size_t newsize);
 int free(void *ptr);
 
-#endif
 
 int _mem_init(size_t pages, malloc_data *md);
 void* _malloc(size_t size, malloc_data *md);

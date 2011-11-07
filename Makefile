@@ -6,7 +6,7 @@ AOBJS   := ${ASRCS:.s=.o}
 DEPS    := ${SRCS:.c=.dep} 
 
 CCFLAGS=-Wall -Wextra -nostdlib -nostartfiles -ffreestanding -std=gnu99 -Wno-unused-parameter
-CC=arm-elf-gcc-4.5
+CC=arm-elf-gcc-4.6
 AS=arm-elf-as
 LDFLAGS=-T link.ld
 LD=arm-elf-ld

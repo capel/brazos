@@ -114,6 +114,7 @@ kfile* kf_create(int type) {
 
 
 void _basic_delete_self(kfile* f) {
+    printk("delete name %s", f->dir_name);
     kfree((void*)f->dir_name);
     kfree(f);
 }

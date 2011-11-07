@@ -92,6 +92,7 @@ void kexec_proc(proc* p, void* main, void* exit) {
 }
 
 void kwake_procs(int pid) {
+  printk("in wake for pid %d", pid);
     for(size_t i = 0; i < PROC_TABLE_SIZE; i++) {
         proc *p = proc_table[i];
         if (p && p->wait_pid == pid) {
@@ -142,7 +143,10 @@ void kfree_proc(proc *p)
             kfree_pages(p->stack, USER_STACK_SIZE);
             kclose_all_files_proc(p);
             kput_file(p->file);
+            printk("after kput_file");
             kfree(p);
+            printk("after kfree");
+            return;
         }
     }
 }
@@ -153,6 +157,7 @@ void ksleep_proc(proc* p) {
 }
 
 void kwake_proc(proc* p) {
+  printk("waking proc %d", p->pid);
     num_runnable_procs++;
     p->runnable = 1;
 }
