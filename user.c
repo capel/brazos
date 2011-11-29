@@ -15,6 +15,9 @@ void exit(void) {
     _exit();
 }
 
+#define ARG(x) v->data[(x)]
+#define IARG(x) atoi(v->data[(x)])
+
 void perror(int error) {
     switch (error) {
         case E_ERROR:
@@ -218,6 +221,20 @@ bool parse_line(char* line) {
             goto unknown;
             
         case 'm':
+            if (strcmp(v->data[0], "map") == 0) {
+              if (v->size < 2) {
+                println("map: map <rid>");
+                goto cleanup;
+              }
+
+              size_t out_size;
+              void* ptr;
+              if (0 != map(atoi(v->data[1]), &out_size, &ptr)) {
+                  goto cleanup;
+              }
+              println("%s", ptr);
+              goto cleanup;
+            }
             if (strcmp(v->data[0], "mkdir") == 0) {
                 if (v->size < 2) {
                     println("mkdir: mkdir <file>");
@@ -233,6 +250,15 @@ bool parse_line(char* line) {
             }
             goto unknown;
         case 'l':
+            if (strcmp(v->data[0], "lookup") == 0 || strcmp(v->data[0], "l") == 0) {
+              int rid = lookup(v->data[1]);
+              println("Rid: %d", rid);
+              goto cleanup;
+            }
+            if (strcmp(v->data[0], "link") == 0) {
+              link(IARG(1), IARG(2), ARG(3));
+              goto cleanup;
+            }
             if (strcmp(v->data[0], "ls") == 0) {
                 user_dir_entry* space = malloc(GET_DIR_ENTRIES_SPACE);
                 get_dir_entries(space, GET_DIR_ENTRIES_SPACE);
@@ -328,5 +354,6 @@ int dummy_main() {
     for(;;) {
         yield();
     }
+    return 0;
 }
 #endif

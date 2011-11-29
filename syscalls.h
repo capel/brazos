@@ -22,12 +22,17 @@
 #define OPEN 14
 #define CREATE 15
 #define CLOSE 16
-#define LINK 17
-#define UNLINK 18
 
 #define SET_CWD 19
 #define GET_CWD 20
 #define GET_DIR_ENTRIES 21
+
+
+#define SYS_MAP 22
+#define SYS_UNMAP 23
+#define SYS_LOOKUP 24
+#define SYS_LINK 17
+#define SYS_UNLINK 18
 
 // Not syscalls; flags for various syscalls
 #define SEEK_ABS 1

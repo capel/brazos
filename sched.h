@@ -7,10 +7,11 @@
 
 #include "types.h"
 #include "kfs.h"
+#include "sys/ko.h"
 
 #define NUM_FDS 4
 #define PROC_TABLE_SIZE 4
-
+#define NUM_KOS 8
 
 typedef struct _PCB {
     int spsr;
@@ -53,13 +54,17 @@ typedef struct _proc {
     proc_pages * mem;
     void* stack;
     kfile* cwd;
+    ko* cwd_ko;
+    ko* ko;
     // file for procfs
     kfile * file;
     proc_file files[NUM_FDS];
 } proc;
 
-void restore_pcb(PCB* pcb);
+int proc_add_ko(proc* p, ko* o);
+ko* proc_rid(proc* p, int rid);
 
+void restore_pcb(PCB* pcb);
 
 void ksetup_sched(void);
 
@@ -86,6 +91,7 @@ proc * proc_by_pos(size_t pos);
 
 kfile* kget_procfile(proc *p);
 
+const char* string_rid(int rid);
 
 proc * proc_by_pid(int pid);
 proc * cp(void);

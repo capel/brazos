@@ -1,8 +1,10 @@
-#ifndef HASHMAP_H
-#define HASHMAP_H
+#ifndef KHASHMAP_H
+#define KHASHMAP_H
 
-#include "types.h"
-#include "malloc.h"
+#include "../types.h"
+#include "../malloc.h"
+#include "ko.h"
+#include "../vector.h"
 
 // Basic hashmap data structure. It is designed to do a few very
 // specific cases extremely fast and well.
@@ -25,36 +27,35 @@
 // storing a zero, have fun.
 
 typedef struct _bucket {
-    unsigned key;
-    void* val;
+    const char* key;
+    ko * value;
     struct _bucket *next;
-} bucket;
+} kbucket;
 
 typedef struct _hashmap {
     size_t bucket_mask; // the mask to use to find the modulo
-    bucket** buckets;
-    const alloc_funcs* funcs;
-} hashmap;
+    size_t size;
+    kbucket** buckets;
+} khashmap;
 
 // power2_num_buckets is the log2 of the number of buckets you want
 // eg, 1024 bucket -> 10
 // Powers over 31 are not supported.
-hashmap* make_hashmap(size_t power2_num_buckets, const alloc_funcs * func);
+khashmap* mk_khashmap(size_t power2_num_buckets);
+
+vector* khm_keys(khashmap* map);
 
 // The key is assumed to already be hashed.
 // True on insert, false on failure (the key already exists)
-bool hm_insert(hashmap* map, unsigned key, void* val);
+bool khm_insert(khashmap* map, const char *key, ko* val);
 
 // Returns 0 if the key is not found. Store 0 at your own risk.
-void* hm_lookup(hashmap* map, unsigned key);
+ko* khm_lookup(khashmap* map, const char* key);
 
 // The data is returned if the key is found, otherwise 0 is returned.
 // It is your job to free the data, if necessary.
-void* hm_delete(hashmap* map, unsigned key);
+bool khm_delete(khashmap* map, const char* key);
 
-// This is somewhat silly since it's specificly for the block cache,
-// but its better than that code breaking into our data structure manually.
-// or doing some other crazy hack.
-void* hm_delete_random(hashmap* map);
+void khm_cleanup(khashmap* map);
 
 #endif

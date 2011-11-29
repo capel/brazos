@@ -11,10 +11,19 @@
 #include "kexec.h"
 #include "bcache.h"
 
+ko* mk_dir(void);
+ko* mk_fs(void);
+ko* mk_proc(void);
+
 #define INPUTBUFSIZE 500
 volatile bool newchar;
 char input[INPUTBUFSIZE];
 size_t inputpos;
+
+static ko* _new_root;
+ko* new_root(void) {
+  return _new_root;
+}
 
 PCB* kirq (PCB* stacked_pcb) {
   newchar = true;
@@ -78,6 +87,16 @@ void setup(void) {
   ksetup_fs();
   ksetup_sched();
 
+  _new_root = mk_dir();
+  SAFE_ADD(new_root(), mk_fs(), "fs");
+  SAFE_ADD(new_root(), mk_dir(), "proc");
+
+
+
+  SAFE_ADD(new_root(), mk_dir(), "aaaa");
+  SAFE_ADD(new_root(), mk_dir(), "bbbb");
+  SAFE_ADD(new_root(), mk_dir(), "cccc");
+  SAFE_ADD(new_root(), mk_dir(), "dddd");
 }
 
 void kmain(void) {
@@ -102,6 +121,7 @@ void kmain(void) {
   knew_proc(sh_main, exit);
   //knew_proc(main2, exit);
   proc *p = ksched();
+  p->parent_pid = p->pid;
 
   // kflush_file(root());
   restore_pcb(&p->pcb);
@@ -184,6 +204,7 @@ static int sys_forkexec(const char* prog_name) {
   if (!prog_addr) return E_BAD_PROGRAM;
 
   proc* new_proc = knew_proc(prog_addr, exit);
+  new_proc->parent_pid = cp()->pid;
   new_proc->pcb.r0 = 0;
   return new_proc->pid;
 }
@@ -307,6 +328,14 @@ static int sys_set_cwd(const char* path) {
   return 0;
 }
 
+static int sys_link(int prid, int crid, const char* name) {
+  ko* parent = proc_rid(cp(), prid);
+  if (!parent) return E_BAD_FD;
+  ko* child = proc_rid(cp(), crid);
+  if (!child) return E_BAD_FD;
+
+  return LINK(parent, child, name);
+}
 
 static int sys_unlink(const char* path) {
   kfile * f = kf_lookup(path, cp()->cwd);
@@ -351,6 +380,41 @@ static int sys_seek(int fd, int offset, int type) {
   }
 }
 
+static int sys_lookup(const char* path) {
+  printk("in lookup with path %s", path);
+  if (!path || strlen(path) == 0) {
+    printk("No path...");
+    path = "/";
+  }
+  bool abs = (path[0] == '/');
+
+  ko * o;
+  vector* v = ksplit_to_vector(path, "/");
+  printk("vector %p size %d", v, v->size);
+  printk("new root %p", new_root());
+  print_vector(v, "%s", 0);
+  if (abs) {
+    o = LOOKUP(new_root(), (const char**)v->data);
+  } else {
+    o = LOOKUP(cp()->cwd_ko, (const char**)v->data);
+  }
+
+  cleanup_vector(v);
+
+  printk("o %p", o);
+  if (!o) return E_BAD_FILENAME;
+
+  return proc_add_ko(cp(), o);
+}
+
+static int sys_map(int rid, size_t* out_size, void** out_ptr) {
+  ko* o = proc_rid(cp(), rid);
+  if (!o) return E_BAD_FD;
+
+  return MAP(o, out_size, out_ptr);
+}
+
+
 int _ksyscall (int code, int r1, int r2, int r3) {
   switch (code) {
     case PUTC:
@@ -379,9 +443,8 @@ int _ksyscall (int code, int r1, int r2, int r3) {
       return sys_open((const char*)r1);
     case CLOSE:
       return sys_close(r1);
-    case LINK:
-      printk("Hit bad sys_link");
-      //return sys_link((const char*)r1, r2);
+    case SYS_LINK:
+      return sys_link(r1, r2, (const char*)r3);
     case WRITE:
       return sys_write(r1, (const char*)r2, r3);
     case READ:
@@ -392,10 +455,14 @@ int _ksyscall (int code, int r1, int r2, int r3) {
       return sys_get_cwd((char*)r1, r2);
     case SET_CWD:
       return sys_set_cwd((const char*)r1);
-    case UNLINK:
+    case SYS_UNLINK:
       return sys_unlink((const char*)r1);
     case SEEK:
       return sys_seek(r1, r2, r3);
+    case SYS_LOOKUP:
+      return sys_lookup((const char*)r1);
+    case SYS_MAP:
+      return sys_map(r1, (size_t*)r2, (void**)r3);
     default:
       printk("Bad syscall code %d", code);
       return E_BAD_SYSCALL;

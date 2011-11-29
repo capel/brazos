@@ -3,13 +3,14 @@
 
 #ifndef EXTERNAL
 
+#include <stddef.h>
  
 typedef unsigned char byte;
 
-typedef unsigned size_t;
+//typedef unsigned size_t;
 #define true 1
 #define false 0
-#define NULL 0
+//#define NULL 0
 #define SIZE_T size_t
 #else
 #include <stdint.h>
@@ -18,7 +19,6 @@ typedef unsigned size_t;
 typedef int bool;
 typedef SIZE_T disk_addr;
 typedef SIZE_T inode_t;
-
 
 typedef SIZE_T lock_t;
 #define LOCK_INIT 0

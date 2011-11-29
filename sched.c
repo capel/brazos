@@ -4,7 +4,27 @@
 #include "mach.h"
 #include "kfs.h"
 #include "procfs.h"
+#include "syscalls.h"
 
+
+const char* numbers[] = { 
+"BAD RID",
+"1",
+"2",
+"3",
+"4",
+"5",
+"6",
+"7",
+"8",
+"9",
+};
+
+const char* rid_string(int rid) {
+  printk("%d", rid);
+  assert(rid > 0 && rid < 10);
+  return numbers[rid];
+}
 
 proc *proc_table[PROC_TABLE_SIZE];
 size_t proc_table_pos;
@@ -20,6 +40,8 @@ proc * proc_by_pos(size_t pos) {
 
 extern void exit(void);
 
+ko* new_root(void);
+
 void ksetup_sched()
 {
     for (int i = 0; i < PROC_TABLE_SIZE; i++) {
@@ -31,6 +53,29 @@ void ksetup_sched()
     num_procs = 0;
     num_runnable_procs = 0;
 }
+
+int proc_add_ko(proc* p, ko* o) {
+  const char* a[] = {"rids", 0}; 
+  ko* rids = LOOKUP(p->ko, a);
+  
+  for(int i = 1; i < NUM_KOS; i++) {
+    const char* b[] = {rid_string(i), 0};
+    if (!LOOKUP(rids, b)) {
+      err_t err = LINK(rids, o, rid_string(i));
+      if (err) return err;
+      return i;
+    }
+  }
+  return E_ERROR;
+}
+
+ko* proc_rid(proc* p, int rid) {
+  if (rid <= 0 || rid >= 10) return 0;
+  const char* a[] = {"rids", rid_string(rid), 0};
+  return LOOKUP(p->ko, a);
+}
+
+ko* mk_procfs(proc *p);
 
 proc * knew_proc(void* main, void* exit)
 {
@@ -49,6 +94,12 @@ proc * knew_proc(void* main, void* exit)
     p->wait_pid = 0;
     p->cwd = root();
     p->file = setup_procfile(p);
+    p->cwd_ko = new_root();
+    p->ko = mk_procfs(p);
+    
+    const char* b[] = {"proc", 0};
+    ko* procdir = LOOKUP(new_root(), b); 
+    LINK(procdir, p->ko, rid_string(p->pid));
 
     unsigned spsr = __get_CPSR();
     p->pcb.spsr = spsr & (~0x1f);

@@ -137,8 +137,10 @@ vector* _split_to_vector(const char * str, const char* seps, const alloc_funcs* 
         }
       }
 
-      if (i >= len)
+      if (i >= len) {
+        vector_push(v, NULL);
         return v;
+      }
 
     beginning = i;
     for (; i < len; ++i) {
@@ -155,6 +157,7 @@ vector* _split_to_vector(const char * str, const char* seps, const alloc_funcs* 
             src[++i] = '\0';
             vector_push(v, src+beginning);
         }
+        vector_push(v, NULL);
         return v;
     }
   }
@@ -162,6 +165,7 @@ vector* _split_to_vector(const char * str, const char* seps, const alloc_funcs* 
 
 void print_vector(vector* v, const char* format_string, size_t start)
 {
-	for	(size_t i = start; i < v->size; ++i)
+	for	(size_t i = start; i < v->size; ++i) {
 		v->__alloc_funcs->printf(format_string, v->data[i]);	
+	}
 }

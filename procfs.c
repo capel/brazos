@@ -13,7 +13,12 @@ static kfile * procfs_dir;
 
 LOOKUP_FUNC(get_current_dir) { return kget_file_raw(f); }
 LOOKUP_FUNC(get_procfs_dir) { return procfs_dir; }
-LOOKUP_FUNC(get_parent) {return NULL; }
+LOOKUP_FUNC(get_parent) {
+  int pid = ((proc*)f->private_data)->parent_pid; 
+  printk("parent pid %d", pid);
+  
+  return proc_by_pid(pid)->file;
+}
 LOOKUP_FUNC(get_pid) { 
     return setup_messagefile(kitoa(((proc*)(f->private_data))->pid));
 }
@@ -29,7 +34,7 @@ LOOKUP_FUNC(get_proc_dir) {
 static dir_entry proc_dir_entries[] = {
     {".", VIRTUAL_INODE, KFS_DIR},
     {"..", VIRTUAL_INODE, KFS_DIR},
-    {"parent", VIRTUAL_INODE, KFS_NORMAL_FILE},
+    {"parent", VIRTUAL_INODE, KFS_DIR},
     {"pid", VIRTUAL_INODE, KFS_NORMAL_FILE},
     EMPTY_DE,
     EMPTY_DE,
@@ -58,7 +63,7 @@ static bool rm(kfile* f, kfile* rm) {
         return false;
     }
     kfree_proc(p);
-    return true;;
+    return true;
 }
 
 static void procfs_put_entries(kfile* f, bool dirty) {

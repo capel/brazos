@@ -9,6 +9,8 @@
 #include "syscalls.h"
 #include "stdio.h"
 
+void perror(int error);
+
 static inline int getc() {
     return syscall(GETC, 0, 0, 0);
 }
@@ -89,8 +91,8 @@ static inline int create(const char* name, int flags) {
     return ret;
 }
 
-static inline int link(const char* name, int fd) {
-    int ret = syscall(CREATE, (int)name, fd, 0);
+static inline int link(int prid, int crid, const char* name) {
+    int ret = syscall(SYS_LINK, prid, crid, (int)name);
     if (ret < 0) {
         debug("Error code: %d", ret);
     }   
@@ -106,7 +108,7 @@ static inline int close(int fd) {
 }
 
 static inline int unlink(const char* path) {
-    int ret = syscall(UNLINK, (int) path, 0, 0);
+    int ret = syscall(SYS_UNLINK, (int) path, 0, 0);
     if (ret < 0) {
         debug("Error code: %d", ret);
     }   
@@ -123,6 +125,22 @@ static inline int get_cwd(char* name_space, size_t size) {
 
 static inline void get_dir_entries(void* space, size_t size) {
     syscall(GET_DIR_ENTRIES, (int)space, size, 0);
+}
+
+static inline int lookup(const char* path) {
+  int ret = syscall(SYS_LOOKUP, (int)path,0, 0);
+  if (ret < 0) {
+    perror(ret);
+  }
+  return ret;
+}
+
+static inline int map(int rid, size_t *out_size, void** out_ptr) {
+  int ret = syscall(SYS_MAP, rid, (int)out_size, (int)out_ptr);
+  if (ret < 0) {
+    perror(ret);
+  }
+  return ret;
 }
 
 #endif

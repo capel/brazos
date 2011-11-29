@@ -3,6 +3,7 @@
 #include "mem.h"
 #include "kvector.h"
 #include "bcache.h"
+//#include "ko.h"
 
 int _basic_flush(kfile* f);
 void _basic_delete_self(kfile * f);
@@ -124,6 +125,16 @@ kfile * _dir_lookup_file(kfile* dir, vector* v, size_t level) {
     kput_file(dir);
     return 0;
 }
+
+/*
+static vtable dir_vtable = {
+  .lookup = _dir_lookup_file;
+  .link = _dir_add_file;
+  .unlink = _dir_rm_file;
+  .map = NULL;
+  .unmap = void_unmap;
+  .cleanup = _basic_delete_self;
+};*/
 
 void kf_setup_new_dir(kfile* f) {
     kf_setup_dir(f);
