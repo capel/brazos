@@ -1,5 +1,5 @@
 TARGET  := kernel
-SRCS    := sys/procfs.c sys/message.c sys/fs.c sys/dir.c sys/bind.c sys/khashmap.c rand.c dir.c disk.c bcache.c hashmap.c kfs.c main.c kio.c stdlib.c mem.c sched.c user.c malloc.c vector.c stdio.c kexec.c procfs.c
+SRCS    := sys/sched.c sys/numdir.c sys/kihashmap.c sys/procfs.c sys/message.c sys/fs.c sys/dir.c sys/bind.c sys/khashmap.c rand.c dir.c disk.c bcache.c hashmap.c kfs.c main.c kio.c stdlib.c mem.c sched.c user.c malloc.c vector.c stdio.c kexec.c procfs.c
 ASRCS   := start.s
 OBJS    := ${SRCS:.c=.o} 
 AOBJS   := ${ASRCS:.s=.o}

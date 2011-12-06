@@ -1,13 +1,7 @@
-#include "khashmap.h"
-#include "ko.h"
 #include "../mem.h"
 #include "../stdlib.h"
 #include "../syscalls.h"
-
-typedef struct {
-  ko o;
-  khashmap* h;
-} dir;
+#include "dir.h"
 
 err_t void_unmap(ko* o, void *ptr) { return 0; }
 const char* vector_join(vector* v, char joiner);
@@ -101,7 +95,7 @@ static err_t dir_unmap(dir* d, void* ptr) {
   return 0;
 }
 
-vtable dir_vt = {
+static vtable dir_vt = {
   .lookup = (lookup_func)dir_lookup,
   .link = (link_func)dir_link,
   .unlink = (unlink_func)dir_unlink,

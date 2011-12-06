@@ -14,6 +14,7 @@
 ko* mk_dir(void);
 ko* mk_fs(void);
 ko* mk_proc(void);
+ko* mk_sched(void);
 
 #define INPUTBUFSIZE 500
 volatile bool newchar;
@@ -90,6 +91,7 @@ void setup(void) {
   _new_root = mk_dir();
   SAFE_ADD(new_root(), mk_fs(), "fs");
   SAFE_ADD(new_root(), mk_dir(), "proc");
+  SAFE_ADD(new_root(), mk_sched(), "sch");
 
 
 

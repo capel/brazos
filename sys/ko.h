@@ -3,6 +3,7 @@
 #define KO_H
 
 #include "../types.h"
+#include "../kfs.h"
 
 typedef struct _ko {
   struct _vtable *v;
