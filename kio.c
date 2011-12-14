@@ -2,6 +2,11 @@
 #include "kio.h"
 #include "syscalls.h"
 #include "chars.h"
+#include "mem.h"
+#include "sys/ko.h"
+#include "sys/khashmap.h"
+#include "sys/kihashmap.h"
+#include "vector.h"
 
 #define DEV_CONS_ADDRESS        0x0000000010000000
 #define DEV_CONS_LENGTH         0x0000000000000020
@@ -15,6 +20,19 @@
 #define	HALT_ADDRESS		(PHYSADDR_OFFSET +		\
 				DEV_CONS_ADDRESS + DEV_CONS_HALT)
 int vprintf(char* buf, size_t size, const char* fmt, va_list va, int newline);
+
+const char* kitoa(int i) {
+    char* buf = kmalloc(12); // known to be big enough
+    snprintf(buf, 12, "%d", i);
+    return buf;
+}
+
+const char* kstrclone(const char* s) {
+    size_t len = strlen(s)+1;
+    char* tmp = kmalloc(len);
+    strlcpy(tmp, s, len);
+    return tmp;
+}
 
 int kgetc(void)
 {
@@ -148,15 +166,57 @@ int snprintf(char* buf, size_t size, const char* fmt, ...)
     return 0;
 }
 
+static int print_str(char* buf, size_t bufpos, size_t size, const char* s) {
+  size_t newpos = bufpos;
+  if (!s) {
+      newpos += strlcpy(buf + bufpos, "<NULL>", strlen("<NULL>")+1);
+      newpos--;
+      return newpos;
+  }
+  size_t chars = strlcpy(buf + bufpos, s, size - bufpos);
+  newpos += chars -1; // remove null
+  return newpos;
+}
 
+#define PRINT(x) bufpos = print_str(buf, bufpos, size, (x))
+#define PRINTC(c) buf[bufpos++] = (c);
+
+static int print_ko(char* buf, size_t oldpos, size_t size, ko* o) {
+  size_t bufpos = oldpos;
+  if (!o) {
+    PRINT("NULL<0>");
+    return bufpos;
+  }
+
+  const int BUFSIZE = 64;
+  char tmpbuf[BUFSIZE]; // PLENTY of room for scratch stuff
+  PRINT(MAGENTA);
+  utoa16(tmpbuf, BUFSIZE, (unsigned)o);
+  PRINT(tmpbuf);
+  PRINT(WHITE);
+
+  PRINTC('<');
+  PRINT(LIGHT_RED);
+  utoa(tmpbuf, BUFSIZE, o->rc);
+  PRINT(tmpbuf);
+  PRINT(WHITE);
+  PRINTC('>');
+  return bufpos;
+}
 
 int vprintf(char* buf, size_t size, const char* fmt, va_list va, int newline)
 {
     const int BUFSIZE = 64;
     char tmpbuf[BUFSIZE]; // PLENTY of room for scratch stuff
-    int chars, d;
+    int d;
     unsigned u;
     char *s;
+    const char * cs;
+    vector* v;
+    khashmap* h;
+
+#define PRINT(x) bufpos = print_str(buf, bufpos, size, (x))
+#define PRINTC(c) buf[bufpos++] = (c);
 
     size_t fmtpos, bufpos;
     for (fmtpos = 0, bufpos = 0; bufpos < size && fmt[fmtpos] != '\0'; fmtpos++) {
@@ -166,48 +226,79 @@ int vprintf(char* buf, size_t size, const char* fmt, va_list va, int newline)
         } else {
             fmtpos++;
             switch (fmt[fmtpos]) {
+                case 'k':
+                    u = va_arg(va, unsigned);
+                    ko* o = (ko*)u;
+                    bufpos = print_ko(buf, bufpos, size, o);
+                    break;
                 case 'd':
                     d = va_arg(va, int);
                     itoa(tmpbuf, BUFSIZE, d);
-                    chars = strlcpy(buf + bufpos, tmpbuf, size - bufpos);
-                    bufpos += chars -1; // remove null
+                    PRINT(tmpbuf);
                     break;
                 case 'u':
                     u = va_arg(va, unsigned);
                     utoa(tmpbuf, BUFSIZE, u);
-                    chars = strlcpy(buf + bufpos, tmpbuf, size - bufpos);
-                    bufpos += chars -1; // remove null
+                    PRINT(tmpbuf);
                     break;
                 case 'p': // we assume sizeof(void*) = sizeof(unsigned)
                 case 'x':
                     u = va_arg(va, unsigned);
-
                     utoa16(tmpbuf, BUFSIZE, u);
-                    //bufpos += strlcpy(buf+bufpos, GREEN, strlen(GREEN));
-                    //bufpos--;
-                    bufpos += strlcpy(buf + bufpos, tmpbuf, size - bufpos);
-                    bufpos--; // remove null
-                    //bufpos += strlcpy(buf+bufpos, WHITE, strlen(WHITE));
-                    //bufpos--;
+                    PRINT(tmpbuf);
                     break;
                 case 's':
                     s = va_arg(va, char*);
-                    if (!s) {
-                        bufpos += strlcpy(buf + bufpos, "<NULL>", strlen("<NULL>")+1);
-                        bufpos--;
-                        break;
-                    }
-                    chars = strlcpy(buf + bufpos, s, size - bufpos);
-                    bufpos += chars -1; // remove null
+                    PRINT(s);
                     break;
                 case 'c':
                     d = va_arg(va, int);
-                    buf[bufpos] = (char)d;
-                    bufpos++;
+                    PRINTC((char)d);
+                    break;
+                case 'v':
+                    v = va_arg(va, vector*);
+                    if (v->size == 0) {
+                      PRINT("[]");
+                      break;
+                    }
+                    bool restore = false;
+                    if (v->data[v->size-1] == NULL) {
+                      v->size--; // heh
+                      restore = true;
+                    }
+                    PRINTC('[');
+                    cs = vector_join(v, ", ");
+                    PRINT(cs);
+                    kfree((char*)cs);
+                    PRINTC(']');
+                    if (restore)
+                      v->size++;
+                    break;
+                case 'h':
+                    h = va_arg(va, khashmap*);
+                    PRINTC('{');
+
+                    v = kmake_vector(sizeof(char*), UNMANAGED_POINTERS);
+                    vector* keys = khm_keys(h);
+                    for(size_t i = 0; i < keys->size; i++) {
+                      PRINT(CYAN);
+                      PRINT(keys->data[i]);
+                      PRINT(WHITE);
+                      PRINTC(':');
+                      bufpos = print_ko(buf, bufpos, size, 
+                          khm_lookup(h, keys->data[i]));
+
+                      if (i != keys->size-1) {
+                        PRINTC(',');
+                        PRINTC(' ');
+                      }
+                    }
+                    PRINTC('}');
+
+                    cleanup_vector(keys);
                     break;
                 case '%':
-                    buf[bufpos] = '%';
-                    bufpos++;
+                    PRINTC('%');
                     break;
             }
         }

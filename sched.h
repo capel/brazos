@@ -8,6 +8,7 @@
 #include "types.h"
 #include "kfs.h"
 #include "sys/ko.h"
+#include "sys/kihashmap.h"
 
 #define NUM_FDS 4
 #define PROC_TABLE_SIZE 4
@@ -33,17 +34,6 @@ typedef struct _PCB {
     void* pc;
 } PCB;
 
-typedef struct _proc_pages {
-    void* pages;
-    size_t num_pages;
-    struct _proc_pages * next;
-} proc_pages;
-
-typedef struct _proc_file {
-    kfile* file;
-    size_t pos;
-} proc_file;
-
 typedef struct _proc {
     PCB pcb;
     size_t stride;
@@ -51,14 +41,10 @@ typedef struct _proc {
     int parent_pid;
     int pid;
     int wait_pid;
-    proc_pages * mem;
     void* stack;
-    kfile* cwd;
-    ko* cwd_ko;
     ko* ko;
-    // file for procfs
-    kfile * file;
-    proc_file files[NUM_FDS];
+    kihashmap* rids;
+    int current_rid;
 } proc;
 
 int proc_add_ko(proc* p, ko* o);
@@ -80,7 +66,6 @@ void kwake_proc(proc *p);
 // implicitly the current proc
 void kcopy_pcb(PCB * pcb);
 
-int kadd_file_proc(proc * p, kfile * f);
 int kclose_file_proc(proc *p, int fd);
 
 void* kget_pages_for_user(proc* p, size_t num);
@@ -89,7 +74,6 @@ proc * ksched(void);
 
 proc * proc_by_pos(size_t pos);
 
-kfile* kget_procfile(proc *p);
 
 const char* string_rid(int rid);
 

@@ -42,7 +42,7 @@ int getline(char* buf, size_t size)
 }
 
 void readline_lib(const char * prompt, readline_func func) {
-    vector * history = make_vector(sizeof(char*), MANAGED_POINTERS);
+    vector * history = kmake_vector(sizeof(char*), MANAGED_POINTERS);
     size_t history_pos = 0;
     size_t len;
     char * line;

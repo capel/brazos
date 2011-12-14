@@ -2,13 +2,6 @@
 #include "../mem.h"
 #include "../kvector.h"
 
-static const char* kstrclone(const char* s) {
-    size_t len = strlen(s)+1;
-    char* tmp = kmalloc(len);
-    strlcpy(tmp, s, len);
-    return tmp;
-}
-
 static unsigned hash(const char* s) {
   unsigned h = 0;
   unsigned m = 1;
@@ -32,7 +25,7 @@ khashmap* mk_khashmap(size_t power2_num_buckets) {
 static void add_keys(vector* v, kbucket* b) {
   if (!b) return;
   
-  vector_push(v, (void*)b->key);
+  vector_push(v, (char*)b->key);
   add_keys(v, b->next);
 }
 

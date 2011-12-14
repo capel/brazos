@@ -31,6 +31,8 @@ typedef struct _vtable {
 
 #define KO(e) ((ko*)e)
 
+#define PATH(v) ((const char**)(v)->data)
+
 #define LOOKUP(e, path) (KO(e)->v->lookup((e), (path)))
 #define LINK(e, child, name) (KO(e)->v->link((e), (child), (name)))
 #define UNLINK(e, a, name) (KO(e)->v->unlink((e), (name)))

@@ -2,7 +2,9 @@
 #define MALLOC_H
 
 #include "types.h"
+#include "nmalloc.h"
 
+/*
 typedef void* (*malloc_func)(size_t);
 typedef void* (*calloc_func)(size_t,size_t);
 typedef void* (*realloc_func)(void*,size_t);
@@ -57,5 +59,6 @@ void Mem_Dump(malloc_data *md);
 
 
 extern const alloc_funcs user_alloc_funcs;
+*/
 
 #endif 

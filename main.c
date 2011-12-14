@@ -10,11 +10,13 @@
 #include "sched.h"
 #include "kexec.h"
 #include "bcache.h"
+#include "sys/dir.h"
 
 ko* mk_dir(void);
 ko* mk_fs(void);
 ko* mk_proc(void);
 ko* mk_sched(void);
+ko* mk_queue(void);
 
 #define INPUTBUFSIZE 500
 volatile bool newchar;
@@ -82,23 +84,25 @@ int update_input() {
 
 }
 
+static ko* proc_me(void * ignore) {
+  return cp()->ko;
+}
+
 void setup(void) {
-  ksetup_bcache();
-  ksetup_disk();
-  ksetup_fs();
   ksetup_sched();
 
   _new_root = mk_dir();
+  printk("root %k", _new_root);
   SAFE_ADD(new_root(), mk_fs(), "fs");
-  SAFE_ADD(new_root(), mk_dir(), "proc");
+
+  ko* proc = mk_dir();
+  LINK(new_root(), proc, "proc");
+  SAFE_ADD(proc, bind0(proc_me, 0), "me");
+  printk("%h", ((dir*)proc)->h);
+  kput(proc);
+
   SAFE_ADD(new_root(), mk_sched(), "sch");
 
-
-
-  SAFE_ADD(new_root(), mk_dir(), "aaaa");
-  SAFE_ADD(new_root(), mk_dir(), "bbbb");
-  SAFE_ADD(new_root(), mk_dir(), "cccc");
-  SAFE_ADD(new_root(), mk_dir(), "dddd");
 }
 
 void kmain(void) {
@@ -183,12 +187,6 @@ static int sys_exit(void) {
   return -255;
 }
 
-static int sys_get_pages(size_t num) {
-  return (int)kget_pages_for_user(cp(), num);
-}
-
-
-
 static int sys_exec(const char * prog_name) {
   void* prog_addr = program_lookup(prog_name);
   printk("Proc %d execing %s (%p)", cp()->pid, prog_name, prog_addr);
@@ -223,112 +221,6 @@ static int sys_wait(int pid) {
 }
 
 
-static int sys_create(const char * name, int flags) {
-  kfile* f = kf_create(flags);
-  if (!f) return E_ERROR;
-
-  printk("creating %s", name);
-
-  if (!cp()->cwd->add_file) {
-    kput_file(f);
-    return E_NOT_SUPPORTED;
-  }
-
-  bool success = cp()->cwd->add_file(cp()->cwd, name, f);
-  printk("Added %s to cwd? %d", name, success);
-  if (!success) {
-    kput_file(f);
-    return E_ERROR;
-  }
-
-  if (f->type == KFS_DIR) {
-    printk("Making a dir");
-    //char* ppath = parent_path(name);
-    f->add_file(f, "..", cp()->cwd);
-    return 0;
-  } else {
-    return kadd_file_proc(cp(), f);
-  }
-}
-
-
-static int sys_open(const char* name) {
-  kfile* f = kf_lookup(name, cp()->cwd);
-  if (!f) return E_BAD_FILENAME;
-
-  if (f->type == KFS_DIR) {
-    kput_file(f);
-    return E_IS_DIR;
-  }
-  printk("F INODE %d", f->inode);
-
-  return kadd_file_proc(cp(), f);
-}
-
-
-static int sys_close(int fd) {
-  if (fd == 0 || fd >= NUM_FDS) return E_BAD_FD;
-
-  return kclose_file_proc(cp(), fd);
-}
-
-
-
-static int sys_write(int fd, const char* buf, size_t len) {
-  if (fd == 0 || fd >= NUM_FDS) return E_BAD_FD;
-
-  kfile* f = cp()->files[fd].file;
-
-  if (!f) return E_ERROR;
-  if (!f->write) return E_NOT_SUPPORTED;
-
-  int ret = f->write(f, buf, len, cp()->files[fd].pos);
-  if (ret > 0)
-    cp()->files[fd].pos += ret;
-  return ret;
-}
-
-
-
-static int sys_read(int fd, char* buf, size_t len) {
-  if (fd == 0 || fd >= NUM_FDS) return E_BAD_FD;
-
-  kfile* f = cp()->files[fd].file;
-
-  if (!f) return E_ERROR;
-  if (!f->read) return E_NOT_SUPPORTED;
-
-  int ret = f->read(f, buf, len, cp()->files[fd].pos);
-  if (ret > 0) cp()->files[fd].pos += ret;
-
-  return ret;
-}
-
-
-
-static int sys_get_dir_entries(void* space, size_t size) {
-  return kf_copy_dir_entries(cp()->cwd, space, size);
-}
-
-
-static int sys_get_cwd(char* name_space, size_t size) {
-  strlcpy((char*)name_space, cp()->cwd->dir_name, size);
-  return 0;
-}
-
-
-static int sys_set_cwd(const char* path) {
-  kfile* f = kf_lookup(path, cp()->cwd);
-  if (!f) return E_BAD_FILENAME;
-
-  if (f->type != KFS_DIR) {
-    kput_file(f);
-    printk("type: %d", f->type);
-    return E_ISNT_DIR;
-  }
-  cp()->cwd = f;
-  return 0;
-}
 
 static int sys_link(int prid, int crid, const char* name) {
   ko* parent = proc_rid(cp(), prid);
@@ -339,75 +231,41 @@ static int sys_link(int prid, int crid, const char* name) {
   return LINK(parent, child, name);
 }
 
-static int sys_unlink(const char* path) {
-  kfile * f = kf_lookup(path, cp()->cwd);
-  char* ppath = parent_path(path);
-  kfile* parent = kf_lookup(ppath, cp()->cwd);
-  if (!f) {
-    return E_BAD_FILENAME;
-  }
-  if (!parent) {
-    kput_file(f);
-    return E_ERROR;
-  }
-  if (!parent->rm_file) {
-    kput_file(f);
-    kput_file(parent);
-    return E_NOT_SUPPORTED;
-  }
-
-  bool success = parent->rm_file(parent, f);
-  if (!success) {
-    kput_file(f);
-    kput_file(parent);
-    return E_NOT_SUPPORTED;
-  }
-  kput_file(f);
-  kput_file(parent);
-  return 0;
-}
-
-static int sys_seek(int fd, int offset, int type) {
-  if (fd == 0 || fd >= NUM_FDS) return E_BAD_FD;
-
-  switch (type) {
-  case SEEK_ABS:
-    cp()->files[fd].pos = offset;
-    return 0;
-  case SEEK_REL:
-    cp()->files[fd].pos += offset;
-    return 0;
-  default:
-    return E_BAD_ARG;
-  }
-}
+static ko* path_lookup(const char* path);
 
 static int sys_lookup(const char* path) {
-  printk("in lookup with path %s", path);
-  if (!path || strlen(path) == 0) {
-    printk("No path...");
-    path = "/";
-  }
-  bool abs = (path[0] == '/');
-
-  ko * o;
-  vector* v = ksplit_to_vector(path, "/");
-  printk("vector %p size %d", v, v->size);
-  printk("new root %p", new_root());
-  print_vector(v, "%s", 0);
-  if (abs) {
-    o = LOOKUP(new_root(), (const char**)v->data);
-  } else {
-    o = LOOKUP(cp()->cwd_ko, (const char**)v->data);
-  }
-
-  cleanup_vector(v);
-
-  printk("o %p", o);
+  ko* o = path_lookup(path);
   if (!o) return E_BAD_FILENAME;
 
   return proc_add_ko(cp(), o);
 }
+
+static ko* path_lookup(const char* path) {
+  if (!path || strlen(path) == 0) {
+    printk("No path...");
+    const char* a[] = {"cwd", 0};
+    return LOOKUP(cp()->ko, a);
+  }
+
+  if (strcmp(path, "/") == 0) return new_root(); 
+
+  bool abs = (path[0] == '/');
+
+  ko * o;
+  vector* v = ksplit_to_vector(abs ? path+1 : path, "/");
+  if (abs) {
+    o = LOOKUP(new_root(), PATH(v));
+  } else {
+    const char* a[] = {"cwd", 0};
+    ko* cwd = LOOKUP(cp()->ko, a);
+    o = LOOKUP(cwd, PATH(v));
+  }
+
+  cleanup_vector(v);
+  
+  return o; 
+}
+
 
 static int sys_map(int rid, size_t* out_size, void** out_ptr) {
   ko* o = proc_rid(cp(), rid);
@@ -427,8 +285,6 @@ int _ksyscall (int code, int r1, int r2, int r3) {
       return sys_write_stdout((const char*)r1);
     case HALT:
       return sys_halt();
-    case GET_PAGES:
-      return sys_get_pages((int)r1);
     case EXIT:
       return sys_exit();
     case YIELD:
@@ -439,28 +295,10 @@ int _ksyscall (int code, int r1, int r2, int r3) {
       return sys_forkexec((const char*)r1);
     case WAIT:
       return sys_wait(r1);
-    case CREATE:
-      return sys_create((const char*)r1, r2);
-    case OPEN:
-      return sys_open((const char*)r1);
-    case CLOSE:
-      return sys_close(r1);
     case SYS_LINK:
       return sys_link(r1, r2, (const char*)r3);
-    case WRITE:
-      return sys_write(r1, (const char*)r2, r3);
-    case READ:
-      return sys_read(r1, (char*)r2, r3);
-    case GET_DIR_ENTRIES:
-      return sys_get_dir_entries((void*)r1, r2);
-    case GET_CWD:
-      return sys_get_cwd((char*)r1, r2);
-    case SET_CWD:
-      return sys_set_cwd((const char*)r1);
     case SYS_UNLINK:
-      return sys_unlink((const char*)r1);
-    case SEEK:
-      return sys_seek(r1, r2, r3);
+      return 0; // sys_unlink((const char*)r1);
     case SYS_LOOKUP:
       return sys_lookup((const char*)r1);
     case SYS_MAP:

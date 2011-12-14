@@ -4,11 +4,12 @@
 
 #include "stdlib.h"
 #include "stdio.h"
-#include "malloc.h"
+#include "mem.h"
 
 #include "vector.h"
+#include "kio.h"
 
-void vector_push(vector* v, void* object)
+void vector_push(vector* v, char* object)
 {
 		if (!v) // null objects are allowed, so we don't bother checking the object.
 			return;
@@ -16,27 +17,23 @@ void vector_push(vector* v, void* object)
         if (v->size >= v->__allocated_size-2)
         {
                 v->__allocated_size *= 2;
-                v->data = v->__alloc_funcs->realloc(v->data, v->__allocated_size * v->__data_type_size);
+                void* old = v->data;
+                v->data = kmalloc(v->__allocated_size * sizeof(char*));
+                memcpy((char*)v->data, old, v->__allocated_size * sizeof(char*));
         }
         
         v->data[v->size] = object;
         ++v->size;
 }
 
-vector* make_vector(int data_type_size, enum cleanup_type type)
+vector* kmake_vector(int data_type_size, enum cleanup_type type)
 {
-    return _make_vector(data_type_size, type, &user_alloc_funcs);
-}
-vector* _make_vector(int data_type_size, enum cleanup_type type, const alloc_funcs* funcs)
-{
-        vector* v = funcs->malloc(sizeof(vector));
-        v->__alloc_funcs = funcs;
-        v->__allocated_size = 3;
-        v->__data_type_size = data_type_size;
-        v->data = v->__alloc_funcs->calloc(3, v->__data_type_size);
+        vector* v = kmalloc(sizeof(vector));
+        v->__allocated_size = 8;
+        v->data = malloc(8 * sizeof(char*));
         v->size = 0;
-		v->__source = 0;
-		v->__type = type;
+        v->__source = 0;
+        v->__type = type;
 
         return v;
 }
@@ -46,18 +43,16 @@ void cleanup_vector(vector* v)
 	if (!v)
 		return;
 
-	if (v->__type == __SPLIT_TO_VECTOR) 
-	    v->__alloc_funcs->free(v->__source);
-	else if (v->__type == MANAGED_POINTERS) {
-        size_t i;
-        for(i = 0; i < v->size; ++i)
-        {	
-            v->__alloc_funcs->free(v->data[i]);
-        }
+	if (v->__type == __SPLIT_TO_VECTOR) {
+	    kfree(v->__source);
+	} else if (v->__type == MANAGED_POINTERS) {
+      for(size_t i = 0; i < v->size; ++i) {	
+         kfree(v->data[i]);
+      }
 	}
   
-  	v->__alloc_funcs->free(v->data);
-  	v->__alloc_funcs->free(v);
+  kfree(v->data);
+  kfree(v);
 }
 
 void* vector_remove(vector* v, size_t i)
@@ -70,7 +65,7 @@ void* vector_remove(vector* v, size_t i)
 		
 	void* item = v->data[i];
 	if (v->__type == MANAGED_POINTERS)
-		v->__alloc_funcs->free(item);
+		kfree(item);
 		
 		
 	// copy stuff over
@@ -101,25 +96,16 @@ bool is_sep(const char c, const char* seps)
     return false;
 }
 
-
-
-
-vector* split_to_vector(const char * str, const char* seps)
-{
-    return _split_to_vector(str, seps, &user_alloc_funcs);
-}
-
-vector* _split_to_vector(const char * str, const char* seps, const alloc_funcs* funcs)
+vector* ksplit_to_vector(const char * str, const char* seps)
 {
 	
 	if (!str || !seps)
 		return 0;
   
-  vector * v = _make_vector(sizeof(char*), __SPLIT_TO_VECTOR, funcs);
- 
+  vector * v = kmake_vector(sizeof(char*), __SPLIT_TO_VECTOR);
 
   size_t len = strlen(str);
-  v->__source = v->__alloc_funcs->calloc(len+1, 1);
+  v->__source = kmalloc(len+1);
   strlcpy(v->__source, str, len+1);
 
   // for ease of use
@@ -166,6 +152,41 @@ vector* _split_to_vector(const char * str, const char* seps, const alloc_funcs* 
 void print_vector(vector* v, const char* format_string, size_t start)
 {
 	for	(size_t i = start; i < v->size; ++i) {
-		v->__alloc_funcs->printf(format_string, v->data[i]);	
+		kprintf(format_string, v->data[i]);	
 	}
+	kprintf("\n");
+}
+
+const char* vector_join(vector* v, const char* joiner) {
+  if (v->size == 0) { return ""; }
+  size_t needed = 0;
+  size_t pos = 0;
+  size_t joiner_len = strlen(joiner);
+  bool restore = false;
+  if (v->data[v->size-1] == 0) {
+    v->size--;
+    restore = true;
+  }
+  for(size_t i = 0; i < v->size; i++) {
+    needed += strlen(v->data[i]) + joiner_len;
+  }
+
+  char* s = kmalloc(needed + 3);
+
+  for(size_t i = 0; i < v->size; i++) {
+    size_t len = strlen(v->data[i]);
+    memcpy(s + pos, v->data[i], len);
+    pos += len;
+    if (i != v->size-1) {
+      memcpy(s + pos, joiner, joiner_len);
+      pos += joiner_len;
+    } else {
+      pos += 1;
+    }
+  }
+  s[pos-1] = '\0';
+  if (restore)
+    v->size++;
+
+  return s;
 }

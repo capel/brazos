@@ -18,6 +18,15 @@ void exit(void) {
 #define ARG(x) v->data[(x)]
 #define IARG(x) atoi(v->data[(x)])
 
+
+char * strclone(const char * s) {
+  size_t len = strlen(s);
+  char * news = malloc(len+2);
+  strlcpy(news, s, len);
+  return news;
+}
+
+
 void perror(int error) {
     switch (error) {
         case E_ERROR:
@@ -58,11 +67,46 @@ void erase_chars(size_t num) {
     }
 }
 
+void print_map(int rid) {
+  size_t out_size;
+  void* ptr;
+  if (0 != map(rid, &out_size, &ptr)) {
+    return;
+  }
+  vector* v = ksplit_to_vector(ptr, "/");
+  vector_remove(v, v->size-1);
+  for(size_t i = 0; i < v->size; i++) {
+    if (i && i % 3 == 0) printf("\n");
+    
+    char *s = v->data[i];
+    if (!s || strlen(s) == 0) printf("NULL ");
+    switch (s[strlen(s)-1]) {
+      case '@':
+        printf("%s%s%s  ", CYAN, s, WHITE);
+        break;
+      case '^':
+        printf("%s%s%s  ", YELLOW, s, WHITE);
+        break;
+      case '!':
+        printf("%s%s%s  ", MAGENTA, s, WHITE);
+        break;
+      case '=':
+        printf("%s%s%s  ", GREEN, s, WHITE);
+        break;
+      default:
+        printf("%s  ", s);
+        break;
+    }
+  }
+  printf("\n");
+  cleanup_vector(v);
+}
+
 bool parse_line(char* line) {
     if (strlen(line) == 0)
         return false;
 
-    vector * v = split_to_vector(line, " ");
+    vector * v = ksplit_to_vector(line, " ");
     switch (((char*)v->data[0])[0]) {
         case '\0':
             break;
@@ -136,16 +180,6 @@ bool parse_line(char* line) {
             goto unknown;
         case 'p':
             if (strcmp(v->data[0], "pwd") == 0) {
-                char * name = malloc(FILENAME_LEN);
-                int ret = get_cwd(name, FILENAME_LEN);
-                if (ret < 0) {
-                    perror(ret);
-                    goto cleanup;
-                }
-                println("%s", name);
-                
-                free(name);
-                goto cleanup;
             }
             goto unknown;
         case 't':
@@ -184,12 +218,15 @@ bool parse_line(char* line) {
                     println("cd: cd <dir>");
                     goto cleanup;
                 }
-
-                int ret = set_cwd(v->data[1]);
-                if (ret < 0) {
-                    perror(ret);
-                    goto cleanup;
+                
+                int rid = lookup(ARG(1));
+                if (rid < 0) {
+                  println("Bad directory");
+                  goto cleanup;
                 }
+
+                int cwd = lookup("/proc/me");
+                link(cwd, rid, "cwd");
                 goto cleanup;
             } else if (strcmp(v->data[0], "cat") == 0) {
                 if (v->size < 2) {
@@ -226,13 +263,7 @@ bool parse_line(char* line) {
                 println("map: map <rid>");
                 goto cleanup;
               }
-
-              size_t out_size;
-              void* ptr;
-              if (0 != map(atoi(v->data[1]), &out_size, &ptr)) {
-                  goto cleanup;
-              }
-              println("%s", ptr);
+              print_map(IARG(1));
               goto cleanup;
             }
             if (strcmp(v->data[0], "mkdir") == 0) {
@@ -256,20 +287,81 @@ bool parse_line(char* line) {
               goto cleanup;
             }
             if (strcmp(v->data[0], "link") == 0) {
-              link(IARG(1), IARG(2), ARG(3));
+              if (v->size < 3) {
+                println("Link <src> <dst>");
+              }
+              /*
+              int prid;
+              char * name;
+              println("arg2 %s", ARG(2));
+              vector * path = ksplit_to_vector(ARG(2), "/");
+              path->size--;
+              if (path->size == 1) {
+                println("lame branch %v", path);
+                if (path->data[0][0] == '/') {
+                  prid = lookup("/");
+                } else {
+                  prid = lookup("/proc/me/cwd");
+                }
+                name = path->data[0];
+              } else {
+                println("cool branch %v, size %d", path, path->size);
+                name = strclone(path->data[path->size-1]);
+                println("name %s", name);
+                vector_remove(path, path->size-1);
+                const char * ppath = vector_join(path, "/");
+                println("ppath %s", ppath);
+
+                prid = lookup(ppath);
+                free((char*)ppath);
+                free(name);
+              }
+              */
+
+              char * dst = ARG(2);
+              size_t dst_len = strlen(dst);
+              if (dst[dst_len] == '/') {
+                println("Bad filename %s (you can't end in /)", dst);
+                goto cleanup;
+              }
+              
+              bool abs = false;
+              if (dst[0] == '/') { // abs
+                abs = true;
+                dst++;
+              }
+
+              bool found = false;
+              char * name = dst;
+              for(int i = dst_len; i > 0; i--) {
+                if (dst[i] == '/') {
+                  dst[i] = '\0';
+                  name = dst + i+1;
+                  found = true;
+                  break;
+                }
+              }
+
+              debug("child %s : parent %s : name %s", ARG(1), found ? "cwd" : dst, name);
+
+              int prid;
+              if (found) {
+                prid = lookup(dst);
+              } else {
+                prid = lookup(abs ? "/" : "/proc/me/cwd");
+              }
+
+              if (prid < 0) println("Bad parent");
+              int crid = lookup(ARG(1));
+              if (crid < 0) println("Bad child");
+              link(prid, crid, name);
+
               goto cleanup;
             }
             if (strcmp(v->data[0], "ls") == 0) {
-                user_dir_entry* space = malloc(GET_DIR_ENTRIES_SPACE);
-                get_dir_entries(space, GET_DIR_ENTRIES_SPACE);
-                for(int i = 0; i < FILES_PER_DIR; i++) {
-                    if (strlen(space[i].name) > 0 && space[i].name[0] != '.')
-                        println("%s " RED "%d" WHITE " %s", space[i].name, space[i].inode, 
-                                space[i].type == CREATE_DIR ? BLUE "DIR" WHITE 
-                                : GREEN "FILE" WHITE);
-                }
-                free(space);
-                goto cleanup;
+              int rid = lookup(v->data[1]);
+              print_map(rid);
+              goto cleanup;
             }
             goto unknown;
         default:
@@ -284,7 +376,6 @@ bool parse_line(char* line) {
 
 int sh_main()
 {
-    mem_init(100);
     printf("Hello world!\n");
     readline_lib("brazos> ", parse_line);
     return 0;
@@ -293,7 +384,7 @@ int sh_main()
 
 
 bool bc_parse(char* line) {
-    vector * v = split_to_vector(line, " ");
+    vector * v = ksplit_to_vector(line, " ");
     if (v->size == 1) {
         if (strcmp(v->data[0], "exit") == 0) {
             println("Goodbye.");

@@ -6,26 +6,6 @@
 #include "procfs.h"
 #include "syscalls.h"
 
-
-const char* numbers[] = { 
-"BAD RID",
-"1",
-"2",
-"3",
-"4",
-"5",
-"6",
-"7",
-"8",
-"9",
-};
-
-const char* rid_string(int rid) {
-  printk("%d", rid);
-  assert(rid > 0 && rid < 10);
-  return numbers[rid];
-}
-
 proc *proc_table[PROC_TABLE_SIZE];
 size_t proc_table_pos;
 size_t cur_pid;
@@ -55,24 +35,13 @@ void ksetup_sched()
 }
 
 int proc_add_ko(proc* p, ko* o) {
-  const char* a[] = {"rids", 0}; 
-  ko* rids = LOOKUP(p->ko, a);
-  
-  for(int i = 1; i < NUM_KOS; i++) {
-    const char* b[] = {rid_string(i), 0};
-    if (!LOOKUP(rids, b)) {
-      err_t err = LINK(rids, o, rid_string(i));
-      if (err) return err;
-      return i;
-    }
-  }
-  return E_ERROR;
+  int rid = p->current_rid++;
+  kihm_insert(p->rids, rid, o);
+  return rid;
 }
 
 ko* proc_rid(proc* p, int rid) {
-  if (rid <= 0 || rid >= 10) return 0;
-  const char* a[] = {"rids", rid_string(rid), 0};
-  return LOOKUP(p->ko, a);
+  return kihm_lookup(p->rids, rid);
 }
 
 ko* mk_procfs(proc *p);
@@ -89,17 +58,24 @@ proc * knew_proc(void* main, void* exit)
     printk("%p", p);
     p->pid = cur_pid++;
     p->stride = 0;
-    p->mem = 0;
     p->runnable = 1;
     p->wait_pid = 0;
-    p->cwd = root();
-    p->file = setup_procfile(p);
-    p->cwd_ko = new_root();
     p->ko = mk_procfs(p);
+    p->rids = mk_kihashmap(4);
+    p->current_rid = 1;
+
+    LINK(p->ko, new_root(), "cwd"); 
     
     const char* b[] = {"proc", 0};
     ko* procdir = LOOKUP(new_root(), b); 
-    LINK(procdir, p->ko, rid_string(p->pid));
+
+    char n[32];
+    itoa(n, 32, p->pid);
+    LINK(procdir, p->ko, n); // dont kput because we have a reference
+
+    const char* c[] = {"sch", "runnable", 0};
+    ko* runnable = LOOKUP(new_root(), c); 
+    LINK(runnable, p->ko, "push@");
 
     unsigned spsr = __get_CPSR();
     p->pcb.spsr = spsr & (~0x1f);
@@ -129,17 +105,6 @@ void kexec_proc(proc* p, void* main, void* exit) {
     p->pcb.sp = p->stack;
     p->pcb.lr = exit;
     p->pcb.pc = main;
-/*
-    // free mem they can't access anymore. 
-    for(proc_pages* mem = p->mem; mem; ) {
-        proc_pages* tmp;
-        kfree_pages(mem->pages, mem->num_pages);
-        tmp = mem;
-        mem = mem->next;
-        kfree(tmp);
-*/
-        p->mem = 0;
-//    }
 }
 
 void kwake_procs(int pid) {
@@ -148,35 +113,6 @@ void kwake_procs(int pid) {
         proc *p = proc_table[i];
         if (p && p->wait_pid == pid) {
             kwake_proc(p);
-        }
-    }
-}
-
-int kadd_file_proc(proc * p, kfile * f) {
-    for(size_t i = 1; i < NUM_FDS; i++) {
-        if (p->files[i].file == 0) {
-            p->files[i].file = f;
-            p->files[i].pos = 0;
-            f->ref_count++;
-            return i;
-        }
-    }
-    return -1;
-}
-
-int kclose_file_proc(proc *p, int fd) {
-    kput_file(p->files[fd].file);
-    p->files[fd].file = 0;
-    p->files[fd].pos = 0;
-    return 0;
-}
-
-
-
-void kclose_all_files_proc(proc *p) {
-    for(size_t i = 0; i < NUM_FDS; i++) {
-        if (p->files[i].file != 0) {
-            kclose_file_proc(p, i);
         }
     }
 }
@@ -191,12 +127,7 @@ void kfree_proc(proc *p)
             num_runnable_procs--;
             kwake_procs(p->pid);
             
-            kfree_pages(p->stack, USER_STACK_SIZE);
-            kclose_all_files_proc(p);
-            kput_file(p->file);
-            printk("after kput_file");
             kfree(p);
-            printk("after kfree");
             return;
         }
     }
@@ -211,11 +142,6 @@ void kwake_proc(proc* p) {
   printk("waking proc %d", p->pid);
     num_runnable_procs++;
     p->runnable = 1;
-}
-
-kfile* kget_procfile(proc *p) {
-    p->file->ref_count++;
-    return p->file;
 }
 
 void kcopy_pcb(PCB *pcb) {
@@ -253,17 +179,6 @@ proc* ksched(void)
     // because num_procs says there is one to run
     // and we just enabled every proc
     goto select;
-}
-
-void* kget_pages_for_user(proc* p, size_t num)
-{
-    void* pages = kget_pages(num);
-    proc_pages * pp = kmalloc(sizeof(*pp));
-    pp->pages = pages;
-    pp->num_pages = num;
-    pp->next = p->mem;
-    p->mem = pp;
-    return pages;
 }
 
 proc* proc_by_pid(int pid) {

@@ -1,5 +1,5 @@
 TARGET  := kernel
-SRCS    := sys/sched.c sys/numdir.c sys/kihashmap.c sys/procfs.c sys/message.c sys/fs.c sys/dir.c sys/bind.c sys/khashmap.c rand.c dir.c disk.c bcache.c hashmap.c kfs.c main.c kio.c stdlib.c mem.c sched.c user.c malloc.c vector.c stdio.c kexec.c procfs.c
+SRCS    := nmalloc.c sys/sched.c sys/numdir.c sys/kihashmap.c sys/procfs.c sys/message.c sys/fs.c sys/dir.c sys/bind.c sys/khashmap.c rand.c  main.c kio.c stdlib.c mem.c sched.c user.c vector.c stdio.c kexec.c sys/queue_dir.c
 ASRCS   := start.s
 OBJS    := ${SRCS:.c=.o} 
 AOBJS   := ${ASRCS:.s=.o}
@@ -27,5 +27,6 @@ ${AOBJS}: %.o: %.s
 
 clean:
 	rm -f *.o ${TARGET} 
+	rm -f sys/*.o
 
 distclean:: clean
