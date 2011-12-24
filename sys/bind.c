@@ -8,21 +8,37 @@ typedef struct {
   void* data;
 } bound;
 
-ko* bind0(bound_func func, void* data) {
+static void bound_cleanup(ko* o) {
+  // ???
+}
+
+ko* bind(bound_func func, void* data) {
   bound * b = kmalloc(sizeof(bound));
-  b->o.type = KO_BOUND;
-  b->o.rc = 1;
-  b->o.v = 0;
+  KO(b)->cleanup = bound_cleanup;
+  KO(b)->type = KO_BOUND;
+  KO(b)->rc = 1;
 
   b->func = func;
   b->data = data;
-  return (ko*)b;
+  return KO(b);
 }
 
-ko* release0(ko* o) {
-  assert(o->type = KO_BOUND);
+ko* release(ko* o) {
+  assert(IS_BOUND(o));
   bound * b = (bound*) o;
-  printk("bound: %p, func %p, obj %p", b, b->func, b->data);
   return b->func(b->data);
 }
 
+static void sinkhole_cleanup(ko* sh) {
+  printk("sinkhole cleaned up %k", sh);
+}
+
+sinkhole* mk_sinkhole(sink_func func, void* data) {
+  sinkhole * b = kmalloc(sizeof(sinkhole));
+  KO(b)->cleanup = sinkhole_cleanup;
+  KO(b)->type = KO_SINKHOLE;
+  KO(b)->rc = 1;
+  b->sink = func;
+  b->data = data;
+  return b;
+}

@@ -1,60 +1,65 @@
-#include "../mem.h"
-#include "../stdlib.h"
-#include "../syscalls.h"
-#include "dir.h"
+#include "ko.h"
+#include "khashmap.h"
 
-err_t void_unmap(ko* o, void *ptr) { return 0; }
-
-ko* no_lookup(ko* o, char** path) {
-  return 0;
-}
-
-err_t no_link(ko* o, ko* child, const char* name) {
-  return E_NOT_SUPPORTED;
-}
-
-err_t no_unlink(ko* o, void* ptr) {
-  return E_NOT_SUPPORTED;
-}
+typedef struct dir_impl {
+  dir d;
+  khashmap * h;
+} dir_impl;
 
 static ko* dir_lookup(dir* d, const char** path) {
+  dir_impl * di = (dir_impl*) d;
+
   assert(path);
   if (!*path) {
-    return (ko*)d;
+    return KO(d);
   }
 
-  ko* child = khm_lookup(d->h, *path);
+  ko* child = khm_lookup(di->h, *path);
   if (!child) {
     return NULL;
   }
   
   if (IS_BOUND(child)) {
-    child = release0(child);
+    child = release(child);
   }
 
-  return LOOKUP(child, path+1);
+  if (IS_DIR(child)) {
+    return LOOKUP(DIR(child), path+1);
+  } else {
+    // its chill, no more path left anyway
+    if (!path[1]) return KO(child);
+
+    // More path but its not a dir...
+    return 0;
+  }
 }
 
 static err_t dir_link(dir* d, ko* child, const char* name) {
-  bool success = khm_insert(d->h, name, child);
+  dir_impl * di = (dir_impl*)d;
+
+  bool success = khm_insert(di->h, name, child);
   if (!success) {
-    printk("Detected failure, delete and insert");
-    khm_delete(d->h, name);
-    khm_insert(d->h, name, child);
+    khm_delete(di->h, name);
+    khm_insert(di->h, name, child);
   }
   return 0;
 }
 
 static err_t dir_unlink(dir* d, const char* name) {
-  return khm_delete(d->h, name) ? 0 : E_BAD_FILENAME;
+  dir_impl * di = (dir_impl*) d;
+  return khm_delete(di->h, name) ? 0 : E_BAD_FILENAME;
 }
 
-static void dir_cleanup(dir* d) {
-  khm_cleanup(d->h);
-  kfree(d);
+static void dir_cleanup(ko* o) {
+  dir_impl * di = (dir_impl*) o;
+  
+  khm_cleanup(di->h);
 }
 
-static err_t dir_map(dir* d, size_t* out_size, void** out_ptr) {
+static err_t dir_map(file* f, size_t* out_size, void** out_ptr) {
+  dir_impl * d = (dir_impl*)f;
+  printk("%h", d->h);
+
   vector* v = khm_keys(d->h);
   const char* s = vector_join(v, "/");
 
@@ -63,29 +68,35 @@ static err_t dir_map(dir* d, size_t* out_size, void** out_ptr) {
   return 0;
 }
 
-static err_t dir_unmap(dir* d, void* ptr) {
+static err_t dir_unmap(file* f, void* ptr) {
   kfree(ptr);
   return 0;
 }
 
-static vtable dir_vt = {
-  .lookup = (lookup_func)dir_lookup,
-  .link = (link_func)dir_link,
-  .unlink = (unlink_func)dir_unlink,
-  .map = (map_func)dir_map,
-  .unmap = (unmap_func)dir_unmap,
-  .cleanup = (cleanup_func)dir_cleanup,
+static dir_vtable dir_vt = {
+  .lookup = dir_lookup,
+  .link = dir_link,
+  .unlink = dir_unlink,
+};
+
+static file_vtable dir_file_vt = {
+  .map = dir_map,
+  .unmap = dir_unmap,
 };
 
 
-ko* mk_dir() {
-  dir* d = kmalloc(sizeof(dir));
-  d->o.type = KO_OBJ;
-  d->o.v = &dir_vt;
-  d->o.rc = 1;
+dir* mk_dir() {
+  dir_impl* d = kmalloc(sizeof(dir_impl));
+
+  KO(d)->cleanup = dir_cleanup;
+  KO(d)->type = KO_DIR;
+  KO(d)->rc = 1;
+  FILE(d)->v = &dir_file_vt;
+  DIR(d)->v = &dir_vt;
 
   d->h = mk_khashmap(3);
-  return (ko*)d;
+
+  return (dir*)d;
 }
 
 

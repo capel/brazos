@@ -1,3 +1,5 @@
+#ifndef NMALLOC_H
+#define NMALLOC_H
 /*
  * Copyright (c) 2007, Kohsuke Ohtani
  * All rights reserved.
@@ -30,6 +32,7 @@
 /* #define DEBUG_MALLOC 1 */
 
 #include "types.h"
+#include "stdlib.h"
 
 #define MALLOC_MAGIC    (int)0xBAADF00D /* "bad food" from LocalAlloc :) */
 
@@ -57,3 +60,4 @@ struct header {
 void* malloc(size_t size);
 void free(void* p);
 void* calloc(size_t num, size_t size);
+#endif

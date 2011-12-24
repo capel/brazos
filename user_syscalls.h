@@ -59,48 +59,8 @@ static inline int open(const char* name) {
     return ret;
 }
 
-static inline int write(int fd, const char* buf, size_t len) {
-    int ret = syscall(WRITE, fd, (int)buf, len);
-    if (ret < 0) {
-        debug("Error code: %d", ret);
-    }
-    return ret;
-}
-
-static inline int read(int fd, char* buf, size_t len) {
-    int ret = syscall(READ, fd, (int)buf, len);
-    if (ret < 0) {
-        debug("Error code: %d", ret);
-    }
-    return ret;
-}
-
-static inline int seek(int fd, int offset, int type) {
-    int ret = syscall(SEEK, fd, offset, type);
-    if (ret < 0) {
-        debug("Error code: %d", ret);
-    }
-    return ret;
-}
-
-static inline int create(const char* name, int flags) {
-    int ret = syscall(CREATE, (int)name, flags, 0);
-    if (ret < 0) {
-        debug("Error code: %d", ret);
-    }   
-    return ret;
-}
-
 static inline int link(int prid, int crid, const char* name) {
     int ret = syscall(SYS_LINK, prid, crid, (int)name);
-    if (ret < 0) {
-        debug("Error code: %d", ret);
-    }   
-    return ret;
-}
-
-static inline int close(int fd) {
-    int ret = syscall(CLOSE, fd, 0, 0);
     if (ret < 0) {
         debug("Error code: %d", ret);
     }   
@@ -115,18 +75,6 @@ static inline int unlink(const char* path) {
     return ret;
 }
 
-static inline int set_cwd(const char* path) {
-    return syscall(SET_CWD, (int)path, 0, 0);
-}
-
-static inline int get_cwd(char* name_space, size_t size) {
-    return syscall(GET_CWD, (int)name_space, size, 0);
-}
-
-static inline void get_dir_entries(void* space, size_t size) {
-    syscall(GET_DIR_ENTRIES, (int)space, size, 0);
-}
-
 static inline int lookup(const char* path) {
   int ret = syscall(SYS_LOOKUP, (int)path,0, 0);
   if (ret < 0) {
@@ -135,12 +83,29 @@ static inline int lookup(const char* path) {
   return ret;
 }
 
-static inline int map(int rid, size_t *out_size, void** out_ptr) {
-  int ret = syscall(SYS_MAP, rid, (int)out_size, (int)out_ptr);
+static inline int map(int rid, void** out_ptr, size_t *out_size) {
+  int ret = syscall(SYS_MAP, rid, (int)out_ptr, (int)out_size);
   if (ret < 0) {
     perror(ret);
   }
   return ret;
 }
+
+static inline int rmap(void* ptr, size_t size) {
+  int ret = syscall(SYS_RMAP, (int)ptr, (int)size, 0);
+  if (ret < 0) {
+    perror(ret);
+  }
+  return ret;
+}
+
+static inline int sink(int src_rid, int sh_rid) {
+  int ret = syscall(SYS_SINK, src_rid, sh_rid, 0);
+  if (ret < 0) {
+    perror(ret);
+  }
+  return ret;
+}
+
 
 #endif

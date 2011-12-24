@@ -1,8 +1,4 @@
-#include "../mem.h"
-#include "../stdlib.h"
-#include "../syscalls.h"
-#include "../kvector.h"
-#include "dir.h"
+#include "ko.h"
 
 static ko* dir_lookup(numdir* d, const char** path) {
   printk("path %s", *path);

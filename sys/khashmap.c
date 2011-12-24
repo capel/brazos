@@ -40,7 +40,6 @@ vector* khm_keys(khashmap* map) {
 
 bool khm_insert(khashmap* map, const char* key, ko* value) {
     if (khm_lookup(map, key)) {
-        printk("hm_insert: Double insert on key %u\n");
         return false;
     }
     

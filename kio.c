@@ -27,7 +27,7 @@ const char* kitoa(int i) {
     return buf;
 }
 
-const char* kstrclone(const char* s) {
+char* kstrclone(const char* s) {
     size_t len = strlen(s)+1;
     char* tmp = kmalloc(len);
     strlcpy(tmp, s, len);
@@ -122,6 +122,8 @@ void _panic(const char* fmt, ...)
     khalt();
 }
 
+#include "user_syscalls.h"
+
 int printf(const char* fmt, ...)
 {
     char buf[1024];
@@ -131,8 +133,8 @@ int printf(const char* fmt, ...)
     vprintf(buf, 1024, fmt, va, false);
     va_end(va);
 
-
-    syscall(WRITE_STDOUT, (int)buf, 0, 0);
+    int rid = rmap(buf, strlen(buf)+1);
+    sink(rid, lookup("/proc/me/stdio"));
 
     return 0;
 }
@@ -147,8 +149,8 @@ int println(const char* fmt, ...)
     vprintf(buf, 1024, fmt, va, true);
     va_end(va);
 
-
-    syscall(WRITE_STDOUT, (int)buf, 0, 0);
+    int rid = rmap(buf, strlen(buf)+1);
+    sink(rid, lookup("/proc/me/stdio"));
 
     return 0;
 }
@@ -196,6 +198,29 @@ static int print_ko(char* buf, size_t oldpos, size_t size, ko* o) {
   PRINT(WHITE);
 
   PRINTC('<');
+  PRINT(GREEN);
+  switch (o->type) {
+    case KO_UNKNOWN:
+      PRINTC('U');
+      break;
+    case KO_FILE:
+      PRINTC('F');
+      break;
+    case KO_DIR:
+      PRINTC('D');
+      break;
+    case KO_SINKHOLE:
+      PRINTC('S');
+      break;
+    case KO_BOUND:
+      PRINTC('B');
+      break;
+    default:
+      PRINTC('?');
+      break;
+  }
+  PRINT(WHITE);
+  PRINTC(',');
   PRINT(LIGHT_RED);
   utoa(tmpbuf, BUFSIZE, o->rc);
   PRINT(tmpbuf);

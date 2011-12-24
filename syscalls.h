@@ -33,6 +33,8 @@
 #define SYS_LOOKUP 24
 #define SYS_LINK 17
 #define SYS_UNLINK 18
+#define SYS_SINK 25
+#define SYS_RMAP 26
 
 // Not syscalls; flags for various syscalls
 #define SEEK_ABS 1
@@ -41,15 +43,20 @@
 #define CREATE_DIR 1
 #define CREATE_FILE 2
 
+
+#define SINK_ASYNC 0
+
 #define E_NOT_SUPPORTED -2
 #define E_ERROR -1
 #define E_BAD_FILENAME -3
 #define E_BAD_PROGRAM -4
 #define E_IS_DIR -5
 #define E_BAD_FD -6
-#define E_ISNT_DIR -7
+#define E_NOT_DIR -7
 #define E_BAD_ARG -8
 #define E_BAD_SYSCALL -9
+#define E_NOT_SINKHOLE -10
+#define E_NOT_FILE -11
 
 #ifndef EXTERNAL
 int syscall(int r0, int r1, int r2, int r3);

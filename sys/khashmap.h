@@ -2,7 +2,7 @@
 #define KHASHMAP_H
 
 #include "../types.h"
-#include "../malloc.h"
+#include "../mem.h"
 #include "ko.h"
 #include "../vector.h"
 

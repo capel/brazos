@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  */
 
-#include "nmalloc.h"
+#include "malloc.h"
 #define PAGE_SIZE 4096
 
 static struct header *more_core(size_t size);

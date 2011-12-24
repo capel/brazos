@@ -9,22 +9,20 @@
 #include "mem.h"
 #include "sched.h"
 #include "kexec.h"
-#include "bcache.h"
-#include "sys/dir.h"
+#include "sys/ko.h"
 
-ko* mk_dir(void);
-ko* mk_fs(void);
-ko* mk_proc(void);
+dir* mk_fs(void);
+dir* mk_proc(void);
 ko* mk_sched(void);
-ko* mk_queue(void);
+dir* mk_queue(void);
 
 #define INPUTBUFSIZE 500
 volatile bool newchar;
 char input[INPUTBUFSIZE];
 size_t inputpos;
 
-static ko* _new_root;
-ko* new_root(void) {
+static dir* _new_root;
+dir* new_root(void) {
   return _new_root;
 }
 
@@ -84,7 +82,7 @@ int update_input() {
 
 }
 
-static ko* proc_me(void * ignore) {
+static dir* proc_me(void * ignore) {
   return cp()->ko;
 }
 
@@ -93,12 +91,13 @@ void setup(void) {
 
   _new_root = mk_dir();
   printk("root %k", _new_root);
+  KO(new_root())->rc = 99;
+
   SAFE_ADD(new_root(), mk_fs(), "fs");
 
-  ko* proc = mk_dir();
+  dir* proc = mk_dir();
   LINK(new_root(), proc, "proc");
-  SAFE_ADD(proc, bind0(proc_me, 0), "me");
-  printk("%h", ((dir*)proc)->h);
+  SAFE_ADD(proc, BIND(proc_me, 0), "me");
   kput(proc);
 
   SAFE_ADD(new_root(), mk_sched(), "sch");
@@ -223,8 +222,10 @@ static int sys_wait(int pid) {
 
 
 static int sys_link(int prid, int crid, const char* name) {
-  ko* parent = proc_rid(cp(), prid);
+  dir* parent = (dir*)proc_rid(cp(), prid);
   if (!parent) return E_BAD_FD;
+  if (!IS_DIR(parent)) return E_NOT_DIR;
+
   ko* child = proc_rid(cp(), crid);
   if (!child) return E_BAD_FD;
 
@@ -242,12 +243,11 @@ static int sys_lookup(const char* path) {
 
 static ko* path_lookup(const char* path) {
   if (!path || strlen(path) == 0) {
-    printk("No path...");
     const char* a[] = {"cwd", 0};
     return LOOKUP(cp()->ko, a);
   }
 
-  if (strcmp(path, "/") == 0) return new_root(); 
+  if (strcmp(path, "/") == 0) return KO(new_root()); 
 
   bool abs = (path[0] == '/');
 
@@ -258,7 +258,8 @@ static ko* path_lookup(const char* path) {
   } else {
     const char* a[] = {"cwd", 0};
     ko* cwd = LOOKUP(cp()->ko, a);
-    o = LOOKUP(cwd, PATH(v));
+    assert(IS_DIR(cwd));
+    o = LOOKUP(DIR(cwd), PATH(v));
   }
 
   cleanup_vector(v);
@@ -267,13 +268,38 @@ static ko* path_lookup(const char* path) {
 }
 
 
-static int sys_map(int rid, size_t* out_size, void** out_ptr) {
+static int sys_map(int rid, void** out_ptr, size_t* out_size) {
   ko* o = proc_rid(cp(), rid);
   if (!o) return E_BAD_FD;
+  if (!IS_FILE(o)) return E_NOT_FILE;
 
-  return MAP(o, out_size, out_ptr);
+  return MAP(FILE(o), out_size, out_ptr);
 }
 
+static int sys_sink(int src_rid, int sh_rid) {
+  ko* src = proc_rid(cp(), src_rid);
+  ko* sh = proc_rid(cp(), sh_rid);
+  if (!sh || !src) {
+    printk("Bad fd");
+    return E_BAD_FD;
+  }
+  if (!IS_SINKHOLE(sh)) {
+    printk("%k, %d", sh, KO(sh)->type);
+    return E_NOT_SINKHOLE;
+  }
+  ko* ret = SINK(SINKHOLE(sh), src);
+  if (!ret) return SINK_ASYNC;
+
+  return proc_add_ko(cp(), ret);
+}
+
+static int sys_rmap(void* data, size_t size) {
+  if (size == 0 || data == 0) {
+    return E_BAD_ARG;
+  }
+  file* f = mk_file(data, size);
+  return proc_add_ko(cp(), KO(f));
+}
 
 int _ksyscall (int code, int r1, int r2, int r3) {
   switch (code) {
@@ -298,11 +324,15 @@ int _ksyscall (int code, int r1, int r2, int r3) {
     case SYS_LINK:
       return sys_link(r1, r2, (const char*)r3);
     case SYS_UNLINK:
-      return 0; // sys_unlink((const char*)r1);
+      return E_NOT_SUPPORTED; // sys_unlink((const char*)r1);
     case SYS_LOOKUP:
       return sys_lookup((const char*)r1);
     case SYS_MAP:
-      return sys_map(r1, (size_t*)r2, (void**)r3);
+      return sys_map(r1, (void**)r2, (size_t*)r3);
+    case SYS_SINK:
+      return sys_sink(r1, r2);
+    case SYS_RMAP:
+      return sys_rmap((void*)r1, (size_t)r2);
     default:
       printk("Bad syscall code %d", code);
       return E_BAD_SYSCALL;

@@ -6,7 +6,6 @@
 #endif
 
 #include "types.h"
-#include "kfs.h"
 #include "sys/ko.h"
 #include "sys/kihashmap.h"
 
@@ -42,7 +41,7 @@ typedef struct _proc {
     int pid;
     int wait_pid;
     void* stack;
-    ko* ko;
+    dir* ko;
     kihashmap* rids;
     int current_rid;
 } proc;

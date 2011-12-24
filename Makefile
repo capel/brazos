@@ -1,5 +1,5 @@
 TARGET  := kernel
-SRCS    := nmalloc.c sys/sched.c sys/numdir.c sys/kihashmap.c sys/procfs.c sys/message.c sys/fs.c sys/dir.c sys/bind.c sys/khashmap.c rand.c  main.c kio.c stdlib.c mem.c sched.c user.c vector.c stdio.c kexec.c sys/queue_dir.c
+SRCS    := malloc.c sys/sched.c sys/kihashmap.c sys/procfs.c sys/message.c sys/fs.c sys/dir.c sys/bind.c sys/khashmap.c rand.c  main.c kio.c stdlib.c mem.c sched.c user.c vector.c stdio.c kexec.c sys/queue_dir.c
 ASRCS   := start.s
 OBJS    := ${SRCS:.c=.o} 
 AOBJS   := ${ASRCS:.s=.o}
@@ -13,7 +13,6 @@ LD=arm-elf-ld
 
 .PHONY: all clean distclean 
 all: ${TARGET} 
-	./mkfs disk
 	gxemul -K  -VT -d disk -E testarm kernel
 
 ${TARGET}: ${OBJS} ${AOBJS}

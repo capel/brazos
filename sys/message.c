@@ -3,47 +3,81 @@
 #include "../mem.h"
 
 typedef struct {
-  ko o;
-  const char* msg;
+  file f;
+  char* msg;
 } msg;
 
-static err_t msg_map(msg* msg, size_t* out_size, void** out_ptr) {
-  printk("mapping msg %p with data %s", msg, msg->msg);
-  *out_size = strlen(msg->msg);
-  *out_ptr = msg->msg;
+
+static err_t msg_map(file* f, size_t* out_size, void** out_ptr) {
+  msg *m = (msg*)f;
+  printk("mapping msg %k with data %s", m, m->msg);
+  *out_size = strlen(m->msg);
+  *out_ptr = m->msg;
   return 0;
 }
 
-static err_t msg_unmap(msg* m, void* ptr) {
+static err_t msg_unmap(file* f, void* ptr) {
   return 0;
 }
 
-static void msg_cleanup(msg* m) {
-  kfree((void*)m->msg);
-  kfree(m);
+static void msg_cleanup(ko* o) {
+  msg * m = (msg*)o;
+  kfree(m->msg);
 }
 
-static ko* lookup_self(ko* d, const char** path) {
-  if (!*path) { return d; }
-  return NULL;
-}
-
-vtable msg_vt = {
-  .lookup = (lookup_func)lookup_self,
-  .link = (link_func)no_link,
-  .unlink = (unlink_func)no_unlink,
-  .map = (map_func)msg_map,
-  .unmap = (unmap_func)msg_unmap,
-  .cleanup = (cleanup_func)msg_cleanup,
+static file_vtable msg_vt = {
+  .map = msg_map,
+  .unmap = msg_unmap,
 };
 
-ko* mk_msg(const char* m) {
+file* mk_msg(const char* m) {
   msg* d = kmalloc(sizeof(msg));
-  d->o.type = KO_OBJ;
-  d->o.v = &msg_vt;
-  d->o.rc = 1;
+  KO(d)->cleanup = msg_cleanup;
+  KO(d)->type = KO_FILE;
+  KO(d)->rc = 1;
+  FILE(d)->v = &msg_vt;
 
-  d->msg = m;
-  return (ko*)d;
+  d->msg = kstrclone(m);
+  return FILE(d);
 }
 
+typedef struct {
+  file f;
+  void* data;
+  size_t size;
+} file_impl;
+
+static err_t fi_map(file* f, size_t* out_size, void** out_ptr) {
+  file_impl *fi = (file_impl*)f;
+  *out_size = fi->size;
+  *out_ptr = fi->data;
+  return 0;
+}
+
+static err_t fi_unmap(file* f, void* ptr) {
+  return 0;
+}
+
+static void fi_cleanup(ko* o) {
+  file_impl *fi = (file_impl*)o;
+  kfree(fi->data);
+}
+
+static file_vtable fi_vt = {
+  .map = fi_map,
+  .unmap = fi_unmap,
+};
+
+file* mk_file(void* ptr, size_t size) {
+  file_impl* fi = kmalloc(sizeof(file_impl));
+  KO(fi)->cleanup = fi_cleanup;
+  KO(fi)->type = KO_FILE;
+  KO(fi)->rc = 1;
+  FILE(fi)->v = &fi_vt;
+
+  fi->data = kmalloc(size);
+  fi->size = size;
+  memcpy(fi->data, ptr, size);
+
+  return FILE(fi);
+}

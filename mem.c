@@ -1,7 +1,7 @@
 #include "mem.h"
 #include "stdlib.h"
 #include "kio.h"
-#include "nmalloc.h"
+#include "malloc.h"
 
 
 void* mstart;

@@ -18,6 +18,8 @@ int kprintf(const char* fmt, ...);
 void _printk(const char* fmt, ...);
 void _panic(const char* fmt, ...) __attribute__((noreturn));
 
+const char* kitoa(int i);
+char* kstrclone(const char* s);
 
 
 #define panic(x, args...) _panic(RED "PANIC " WHITE  __FILE__ ":%d [" LIGHT_BLUE "%s" WHITE "] " x, __LINE__, __func__, ## args)

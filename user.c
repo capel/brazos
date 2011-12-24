@@ -47,14 +47,20 @@ void perror(int error) {
         case E_BAD_FD:
             println("Error: Bad FD.");
             break;
-        case E_ISNT_DIR:
-            println("Error: Isn't directory.");
+        case E_NOT_DIR:
+            println("Error: Isn't a directory.");
+            break;
+        case E_NOT_FILE:
+            println("Error: Isn't a file.");
             break;
         case E_BAD_ARG:
             println("Error: Bad syscall argument.");
             break;
         case E_BAD_SYSCALL:
             println("Error: Bad syscall number.");
+            break;
+        case E_NOT_SINKHOLE:
+            println("Error: Not a sinkhole.");
             break;
         default:
             break;
@@ -70,7 +76,7 @@ void erase_chars(size_t num) {
 void print_map(int rid) {
   size_t out_size;
   void* ptr;
-  if (0 != map(rid, &out_size, &ptr)) {
+  if (0 != map(rid, &ptr, &out_size)) {
     return;
   }
   vector* v = ksplit_to_vector(ptr, "/");
@@ -90,7 +96,7 @@ void print_map(int rid) {
       case '!':
         printf("%s%s%s  ", MAGENTA, s, WHITE);
         break;
-      case '=':
+      case '#':
         printf("%s%s%s  ", GREEN, s, WHITE);
         break;
       default:
@@ -118,8 +124,10 @@ bool parse_line(char* line) {
             goto unknown;
         case 'e':
             if (strcmp(v->data[0], "echo") == 0) {
-                print_vector(v, "%s ", 1);
-                println("");
+                char* msg = line + strlen("echo") + 1;
+                println("%s", msg);
+                int rid = rmap(msg, strlen(msg));
+                println("%d", rid);
                 goto cleanup;
             } else if (strcmp(v->data[0], "exit") == 0) {
                 println("Goodbye.");
@@ -153,50 +161,6 @@ bool parse_line(char* line) {
                 goto cleanup;
             }
             goto unknown;
-        case 'w':
-            if (strcmp(v->data[0], "write") == 0) {
-                if (v->size < 4) {
-                    println("write: write <file> <pos> <data>");
-                    goto cleanup;
-                }
-                int fd = open(v->data[1]);
-                if (fd < 0) {
-                    perror(fd);
-                    goto cleanup;
-                }
-                int ret = seek(fd, atoi(v->data[2]), SEEK_ABS);
-                if (ret < 0) {
-                    perror(ret);
-                    goto cleanup;
-                }
-                ret = write(fd, v->data[3], strlen(v->data[3]));
-                if (ret < 0) {
-                    perror(ret);
-                    goto cleanup;
-                }
-              close(fd);
-                goto cleanup;
-            }
-            goto unknown;
-        case 'p':
-            if (strcmp(v->data[0], "pwd") == 0) {
-            }
-            goto unknown;
-        case 't':
-            if (strcmp(v->data[0], "touch") == 0) {
-                if (v->size < 2) {
-                    println("touch: touch <file>");
-                    goto cleanup;
-                }
-
-                int fd = create(v->data[1], CREATE_FILE);
-                if (fd < 0) {
-                    perror(fd);
-                    goto cleanup;
-                }
-                goto cleanup;
-            }
-            goto unknown;
         case 'r':
             if (strcmp(v->data[0], "rm") == 0) {
                 if (v->size < 2) {
@@ -214,47 +178,21 @@ bool parse_line(char* line) {
             goto unknown;
        case 'c':
             if (strcmp(v->data[0], "cd") == 0) {
-                if (v->size < 2) {
-                    println("cd: cd <dir>");
+                int rid;
+                if (v->size == 2) {
+                  rid = lookup("/"); 
+                } else { 
+                  rid = lookup(ARG(1));
+                  if (rid < 0) {
+                    println("Bad directory");
                     goto cleanup;
-                }
-                
-                int rid = lookup(ARG(1));
-                if (rid < 0) {
-                  println("Bad directory");
-                  goto cleanup;
+                  }
                 }
 
                 int cwd = lookup("/proc/me");
                 link(cwd, rid, "cwd");
                 goto cleanup;
-            } else if (strcmp(v->data[0], "cat") == 0) {
-                if (v->size < 2) {
-                    println("cat: cat <file>");
-                    goto cleanup;
-                }
-                int fd = open(v->data[1]);
-                debug("fd %d", fd);
-                if (fd < 0) {
-                    perror(fd);
-                    goto cleanup;
-                }
-                char* buf = malloc(1024);
-                int ret = read(fd, buf, 1024);
-                if (ret < 0) {
-                    free(buf);
-                    perror(ret);
-                    goto cleanup;
-                }
-                ret = close(fd);
-                if (ret < 0) {
-                    perror(ret);
-                    goto cleanup;
-                }
-                println("%s", buf);
-                free(buf);
-                goto cleanup;
-            }
+            }             
             goto unknown;
             
         case 'm':
@@ -266,18 +204,32 @@ bool parse_line(char* line) {
               print_map(IARG(1));
               goto cleanup;
             }
-            if (strcmp(v->data[0], "mkdir") == 0) {
-                if (v->size < 2) {
-                    println("mkdir: mkdir <file>");
-                    goto cleanup;
-                }
-
-                int fd = create(v->data[1], CREATE_DIR);
-                if (fd < 0) {
-                    perror(fd);
-                    goto cleanup;
-                }
+            goto unknown;
+        case 's':
+            if (strcmp(v->data[0], "sink") == 0) {
+              int src_rid = lookup(ARG(1));
+              debug("src %d", src_rid);
+              if (src_rid < 0) {
+                println("Bad file %s", ARG(1));
                 goto cleanup;
+              }
+
+              int sh = lookup(ARG(2));
+              debug("sh %d", sh);
+              if (sh < 0) {
+                println("Bad file %s", ARG(2));
+                goto cleanup;
+              }
+              int ret = sink(src_rid, sh);
+              if (ret == SINK_ASYNC) {
+                goto cleanup;
+              } else if (ret < 0) {
+                perror(ret);
+                goto cleanup;
+              } else {
+                println("Rid %d", ret);
+              goto cleanup;
+              }
             }
             goto unknown;
         case 'l':
@@ -290,33 +242,6 @@ bool parse_line(char* line) {
               if (v->size < 3) {
                 println("Link <src> <dst>");
               }
-              /*
-              int prid;
-              char * name;
-              println("arg2 %s", ARG(2));
-              vector * path = ksplit_to_vector(ARG(2), "/");
-              path->size--;
-              if (path->size == 1) {
-                println("lame branch %v", path);
-                if (path->data[0][0] == '/') {
-                  prid = lookup("/");
-                } else {
-                  prid = lookup("/proc/me/cwd");
-                }
-                name = path->data[0];
-              } else {
-                println("cool branch %v, size %d", path, path->size);
-                name = strclone(path->data[path->size-1]);
-                println("name %s", name);
-                vector_remove(path, path->size-1);
-                const char * ppath = vector_join(path, "/");
-                println("ppath %s", ppath);
-
-                prid = lookup(ppath);
-                free((char*)ppath);
-                free(name);
-              }
-              */
 
               char * dst = ARG(2);
               size_t dst_len = strlen(dst);

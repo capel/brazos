@@ -3,68 +3,128 @@
 #define KO_H
 
 #include "../types.h"
-#include "../kfs.h"
+#include "../kvector.h"
+#include "../kio.h"
+#include "../mem.h"
+#include "../syscalls.h"
 
-typedef struct _ko {
-  struct _vtable *v;
+typedef size_t err_t;
+struct ko;
+
+typedef void (*cleanup_func)(struct ko* o);
+
+typedef struct ko {
+  cleanup_func cleanup;
   unsigned type;
   int rc;
 } ko;
 
-typedef size_t err_t;
+typedef struct file {
+  ko o;
+  struct file_vtable * v;
+} file;
 
-typedef ko* (*lookup_func)(ko* o, const char** path);
-typedef err_t (*link_func)(ko* o, ko* child, const char* name);
-typedef err_t (*unlink_func)(ko* o, const char* name);
-typedef err_t (*map_func)(ko* o, size_t* out_size, void** out_ptr);
-typedef err_t (*unmap_func)(ko* o, void* ptr);
-typedef void (*cleanup_func)(ko* o);
+typedef struct dir {
+  file f;
+  struct dir_vtable * v;
+} dir;
 
-typedef struct _vtable {
+struct sinkhole;
+typedef ko* (*sink_func)(void* data, ko* sunk);
+
+typedef struct sinkhole {
+  ko o;
+  sink_func sink;
+  void* data;
+} sinkhole;
+
+
+typedef ko* (*lookup_func)(dir* o, const char** path);
+typedef err_t (*link_func)(dir* d, ko* child, const char* name);
+typedef err_t (*unlink_func)(dir* d, const char* name);
+typedef err_t (*map_func)(file* o, size_t* out_size, void** out_ptr);
+typedef err_t (*unmap_func)(file* o, void* ptr);
+
+typedef struct ko_vtable {
+  cleanup_func cleanup;
+} ko_vtable;
+
+typedef struct file_vtable {
+  map_func map;
+  unmap_func unmap;
+} file_vtable;;
+
+typedef struct dir_vtable {
   lookup_func lookup;
   link_func link;
   unlink_func unlink;
-  map_func map;
-  unmap_func unmap;
-  cleanup_func cleanup;
-} vtable;
+} dir_vtable;
+
+#define KO_UNKNOWN 0
+#define KO_FILE 1
+#define KO_DIR 2
+#define KO_BOUND 4 // user will never see this
+#define KO_SINKHOLE 8
+
+#define IS_DIR(e) (KO(e)->type & KO_DIR)
+#define IS_FILE(e) (KO(e)->type & KO_FILE || KO(e)->type & KO_DIR)
+#define IS_BOUND(e) (KO(e)->type & KO_BOUND)
+#define IS_SINKHOLE(e) (KO(e)->type & KO_SINKHOLE)
 
 #define KO(e) ((ko*)e)
+#define DIR(e) ((dir*)e)
+#define FILE(e) ((file*)e)
+#define SINKHOLE(e) ((sinkhole*)e)
 
 #define PATH(v) ((const char**)(v)->data)
 
-#define LOOKUP(e, path) (KO(e)->v->lookup((e), (path)))
-#define LINK(e, child, name) (KO(e)->v->link((e), (child), (name)))
-#define UNLINK(e, a, name) (KO(e)->v->unlink((e), (name)))
-#define MAP(e, o, ptr) (KO(e)->v->map((e), (o), (ptr)))
-#define UNMAP(e) (KO(e)->v->unmap((e)))
-#define CLEANUP(e) (KO(e)->v->cleanup((e)))
+#define LOOKUP(e, path) ((e)->v->lookup((e), (path)))
+#define LINK(e, child, name) ((e)->v->link((e), KO(child), (name)))
+#define UNLINK(e, a, name) ((e)->v->unlink((e), (name)))
+
+#define MAP(e, size, ptr) ((e)->v->map((e), (size), (ptr)))
+#define UNMAP(e) ((e)->v->unmap((e)))
+
+#define CLEANUP(e) (KO(e)->cleanup((e)))
+
+#define SINK(e, s) ((e)->sink((e)->data, KO(s)))
 
 
-#define KO_BOUND 4
-#define KO_OBJ 1
 typedef ko* (*bound_func)(void*);
-ko* bind0(bound_func func, void* data);
-ko* release0(ko* bound);
-#define IS_BOUND(e) (KO(e)->type == KO_BOUND)
+ko* bind(bound_func func, void* data);
+ko* release(ko* bound);
+#define BIND(func, data) bind((bound_func)(func), data)
+
+sinkhole* mk_sinkhole(sink_func, void* data);
+#define MK_SINKHOLE(func, data) mk_sinkhole((sink_func)(func), data)
 
 #define IGET_FUNC(name, type, prop) \
-  static ko* name(type * o) {return mk_msg(kitoa(o->prop)); }
+  static file* name(type * o) { \
+    char n[32]; \
+    itoa(n, 32, o->prop); \
+    return mk_msg(n); \
+  }
 
 #define SAFE_ADD(parent, child, name) do { \
-  ko* o = (child); \
+  ko* o = KO(child); \
   LINK(parent, o, name); \
   kput(o);\
 } while(0) 
 
-#define kput(e) KO(e)->rc--
-#define kget(e) KO(e)->rc++
+#define kput(e) \
+do { \
+  KO(e)->rc--; \
+  if (KO(e)->rc == 0) { \
+    printk("CLEANUP %k", e); \
+    CLEANUP(KO(e)); \
+    kfree(e); \
+  } \
+} while(0)
 
-err_t void_unmap(ko* o, void* ptr);
-ko* no_lookup(ko* o, char** path);
-err_t no_link(ko* o, ko* child, const char* name);
-err_t no_unlink(ko* o, void* ptr);
+#define kget(e) KO(e)->rc++, e
 
-ko* mk_msg(const char* msg);
+file* mk_msg(const char* msg);
+file* mk_file(void* ptr, size_t size);
+dir* mk_dir(void);
 
 #endif

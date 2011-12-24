@@ -1,27 +1,25 @@
-#include "dir.h"
+#include "ko.h"
 
 ko* mk_queue();
 
 static ko* sched(dir * d) {
   const char* a[] = {"runnable", "pop^", 0};
-  ko* p = LOOKUP(KO(d), a); 
+  ko* p = LOOKUP(d, a); 
   if (p) {
     const char* b[] = {"runnable", 0};
-    ko* queued = LOOKUP(KO(d), b); 
-    LINK(queued, p, "push@");
+    ko* queued = LOOKUP(d, b); 
+    assert(IS_DIR(queued));
+    LINK(DIR(queued), p, "push@");
     return p;
   } else {
     return NULL;
   }
 }
 
-ko* mk_dir(void);
-ko* mk_numdir(void);
-
-ko* mk_sched() {
-  ko* d = mk_dir();
+dir* mk_sched() {
+  dir* d = mk_dir();
   SAFE_ADD(d, mk_queue(), "runnable");
 
-  SAFE_ADD(d, bind0((bound_func)sched, d), "sched^");
+  SAFE_ADD(d, BIND(sched, d), "sched^");
   return d;
 }

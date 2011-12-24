@@ -2,9 +2,8 @@
 #include "stdlib.h"
 #include "mem.h"
 #include "mach.h"
-#include "kfs.h"
-#include "procfs.h"
 #include "syscalls.h"
+#include "sys/ko.h"
 
 proc *proc_table[PROC_TABLE_SIZE];
 size_t proc_table_pos;
@@ -20,7 +19,7 @@ proc * proc_by_pos(size_t pos) {
 
 extern void exit(void);
 
-ko* new_root(void);
+dir* new_root(void);
 
 void ksetup_sched()
 {
@@ -44,7 +43,7 @@ ko* proc_rid(proc* p, int rid) {
   return kihm_lookup(p->rids, rid);
 }
 
-ko* mk_procfs(proc *p);
+dir* mk_procfs(proc *p);
 
 proc * knew_proc(void* main, void* exit)
 {
@@ -67,15 +66,17 @@ proc * knew_proc(void* main, void* exit)
     LINK(p->ko, new_root(), "cwd"); 
     
     const char* b[] = {"proc", 0};
-    ko* procdir = LOOKUP(new_root(), b); 
+    dir* procdir = DIR(LOOKUP(new_root(), b));
+    assert(IS_DIR(procdir));
 
     char n[32];
     itoa(n, 32, p->pid);
-    LINK(procdir, p->ko, n); // dont kput because we have a reference
+    LINK(DIR(procdir), p->ko, n); // dont kput because we have a reference
 
-    const char* c[] = {"sch", "runnable", 0};
-    ko* runnable = LOOKUP(new_root(), c); 
-    LINK(runnable, p->ko, "push@");
+    const char* c[] = {"sch", "runnable", "push@", 0};
+    sinkhole* runnable = SINKHOLE(LOOKUP(new_root(), c));
+    assert(IS_SINKHOLE(runnable));
+    SINK(runnable, p->ko);
 
     unsigned spsr = __get_CPSR();
     p->pcb.spsr = spsr & (~0x1f);
