@@ -47,22 +47,19 @@ static inline int forkexec(char* name) {
     return ret;
 }
 
-static inline void wait(int pid) {
-    syscall(WAIT, pid, 0, 0);
-}
+static inline int wait(int rid) {
+  int ret = syscall(WAIT, rid, 0, 0);
+  if (ret < 0) {
+    perror(ret);
+  }
+  return ret;
 
-static inline int open(const char* name) {
-    int ret = syscall(OPEN, (int)name, 0, 0);
-    if (ret < 0) {
-        debug("Error code: %d", ret);
-    }
-    return ret;
 }
 
 static inline int link(int prid, int crid, const char* name) {
     int ret = syscall(SYS_LINK, prid, crid, (int)name);
     if (ret < 0) {
-        debug("Error code: %d", ret);
+      perror(ret);
     }   
     return ret;
 }
@@ -70,7 +67,7 @@ static inline int link(int prid, int crid, const char* name) {
 static inline int unlink(const char* path) {
     int ret = syscall(SYS_UNLINK, (int) path, 0, 0);
     if (ret < 0) {
-        debug("Error code: %d", ret);
+      perror(ret);
     }   
     return ret;
 }
@@ -102,6 +99,14 @@ static inline int rmap(void* ptr, size_t size) {
 static inline int sink(int src_rid, int sh_rid) {
   int ret = syscall(SYS_SINK, src_rid, sh_rid, 0);
   if (ret < 0) {
+    perror(ret);
+  }
+  return ret;
+}
+
+static inline int type(int rid) {
+  int ret = syscall(SYS_TYPE, rid, 0, 0);
+  if (ret <0) {
     perror(ret);
   }
   return ret;

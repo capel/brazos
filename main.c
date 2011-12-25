@@ -132,31 +132,6 @@ void kmain(void) {
   restore_pcb(&p->pcb);
 }
 
-char* parent_path(const char* path) {
-  size_t size = strlen(path)+1;
-  char* newpath;
-  for(size_t i = 0; i < size; i++) {
-    if (path[i] == '/') {
-      goto complex_path;
-    }
-  }
-  // the path isn't complex (read: is just the filename)
-  // so we just return "." for the current directory.
-  return ".";
-
-complex_path:
-
-  newpath = kmalloc(size);
-  strlcpy(newpath, path, size);
-  for(int i = size; i >= 0; i--) {
-    if (newpath[i] == '/') {
-      newpath[i] = '\0'; // null it out to end the path
-      return newpath;
-    }
-  }
-  return newpath;
-}
-
 
 static int sys_getc(void) {
   for (;;) {
@@ -209,14 +184,14 @@ static int sys_forkexec(const char* prog_name) {
 }
 
 
-static int sys_wait(int pid) {
-  printk("Proc %d waiting for proc %d", cp()->pid, pid);
-  proc * other = proc_by_pid(pid);
-  if (!other) return E_BAD_ARG;
+static int sys_wait(int rid) {
+  ko *o = proc_rid(cp(), rid);
+  if (!o) return E_BAD_FD;
+  if (IS_RESOLVED(o)) return proc_add_ko(cp(), GET_FUTURE(FUTURE(o)));
 
-  cp()->wait_pid = pid;
-  ksleep_proc(cp());
-  return 0;
+  if (IS_FUTURE(o)) return E_ERROR; // do something
+
+  return rid; // wait on non-future is a yield basicly
 }
 
 
@@ -276,6 +251,12 @@ static int sys_map(int rid, void** out_ptr, size_t* out_size) {
   return MAP(FILE(o), out_size, out_ptr);
 }
 
+static int sys_type(int rid) {
+  ko* o = proc_rid(cp(), rid);
+  if (!o) return E_BAD_FD;
+  return o->type;
+}
+
 static int sys_sink(int src_rid, int sh_rid) {
   ko* src = proc_rid(cp(), src_rid);
   ko* sh = proc_rid(cp(), sh_rid);
@@ -333,6 +314,8 @@ int _ksyscall (int code, int r1, int r2, int r3) {
       return sys_sink(r1, r2);
     case SYS_RMAP:
       return sys_rmap((void*)r1, (size_t)r2);
+    case SYS_TYPE:
+      return sys_type(r1);
     default:
       printk("Bad syscall code %d", code);
       return E_BAD_SYSCALL;

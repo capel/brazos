@@ -2,9 +2,7 @@
 #include "../sched.h"
 
 IGET_FUNC(get_pid, proc, pid);
-IGET_FUNC(get_stride, proc, stride);
 IGET_FUNC(get_runnable, proc, runnable);
-IGET_FUNC(get_wait_pid, proc, wait_pid);
 IGET_FUNC(get_parent_pid, proc, parent_pid);
 
 ko* stdio(proc *p, ko* sunk) {

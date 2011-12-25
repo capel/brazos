@@ -35,12 +35,11 @@ typedef struct _PCB {
 
 typedef struct _proc {
     PCB pcb;
-    size_t stride;
     bool runnable;
     int parent_pid;
     int pid;
-    int wait_pid;
     void* stack;
+    void* next_future;
     dir* ko;
     kihashmap* rids;
     int current_rid;
@@ -59,22 +58,18 @@ void kfree_proc(proc* p);
 proc* kfork_proc(proc* p);
 void kexec_proc(proc *p, void* main, void* exit);
 
-void ksleep_proc(proc *p);
-void kwake_proc(proc *p);
+void ksleep_proc(proc *p, future* f);
+void kwake_proc(proc *p, future* f);
 
 // implicitly the current proc
 void kcopy_pcb(PCB * pcb);
 
-int kclose_file_proc(proc *p, int fd);
 
 void* kget_pages_for_user(proc* p, size_t num);
 
 proc * ksched(void);
 
 proc * proc_by_pos(size_t pos);
-
-
-const char* string_rid(int rid);
 
 proc * proc_by_pid(int pid);
 proc * cp(void);

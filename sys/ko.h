@@ -38,6 +38,10 @@ typedef struct sinkhole {
   void* data;
 } sinkhole;
 
+typedef struct future {
+  ko o;
+  ko *data;
+} future;
 
 typedef ko* (*lookup_func)(dir* o, const char** path);
 typedef err_t (*link_func)(dir* d, ko* child, const char* name);
@@ -60,21 +64,19 @@ typedef struct dir_vtable {
   unlink_func unlink;
 } dir_vtable;
 
-#define KO_UNKNOWN 0
-#define KO_FILE 1
-#define KO_DIR 2
-#define KO_BOUND 4 // user will never see this
-#define KO_SINKHOLE 8
 
 #define IS_DIR(e) (KO(e)->type & KO_DIR)
 #define IS_FILE(e) (KO(e)->type & KO_FILE || KO(e)->type & KO_DIR)
 #define IS_BOUND(e) (KO(e)->type & KO_BOUND)
 #define IS_SINKHOLE(e) (KO(e)->type & KO_SINKHOLE)
+#define IS_FUTURE(e) (KO(e)->type & KO_FUTURE)
+#define IS_RESOLVED(e) (KO(e)->type & KO_RESOLVED)
 
 #define KO(e) ((ko*)e)
 #define DIR(e) ((dir*)e)
 #define FILE(e) ((file*)e)
 #define SINKHOLE(e) ((sinkhole*)e)
+#define FUTURE(e) ((future*)e)
 
 #define PATH(v) ((const char**)(v)->data)
 
@@ -89,6 +91,12 @@ typedef struct dir_vtable {
 
 #define SINK(e, s) ((e)->sink((e)->data, KO(s)))
 
+#define RESOLVE(e, o) do { \
+  ((e)->data = (o)); \
+  KO(e)->type = KO_RESOLVED; \
+} while (0);
+
+#define GET_FUTURE(e) ((e)->data)
 
 typedef ko* (*bound_func)(void*);
 ko* bind(bound_func func, void* data);
@@ -126,5 +134,6 @@ do { \
 file* mk_msg(const char* msg);
 file* mk_file(void* ptr, size_t size);
 dir* mk_dir(void);
+future * mk_future(void);
 
 #endif
