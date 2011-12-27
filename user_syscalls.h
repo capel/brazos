@@ -64,8 +64,8 @@ static inline int link(int prid, int crid, const char* name) {
     return ret;
 }
 
-static inline int unlink(const char* path) {
-    int ret = syscall(SYS_UNLINK, (int) path, 0, 0);
+static inline int unlink(int rid, const char* path) {
+    int ret = syscall(SYS_UNLINK, rid, (int) path, 0);
     if (ret < 0) {
       perror(ret);
     }   
@@ -80,10 +80,10 @@ static inline int lookup(const char* path) {
   return ret;
 }
 
-static inline int map(int rid, void** out_ptr, size_t *out_size) {
-  int ret = syscall(SYS_MAP, rid, (int)out_ptr, (int)out_size);
-  if (ret < 0) {
-    perror(ret);
+static inline const char* view(int rid) {
+  const char* ret = (const char*) syscall(SYS_VIEW, rid,0, 0);
+  if (ret == 0) {
+    perror(E_ERROR);
   }
   return ret;
 }

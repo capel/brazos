@@ -20,7 +20,7 @@ static ko* q_pop(vector* v) {
   return o;
 }
 
-static file* q_size(vector* v) {
+static ko* q_size(vector* v) {
   char buf[32];
   utoa(buf, 32, v->size);
   return mk_msg(buf);

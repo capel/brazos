@@ -1,103 +1,169 @@
+#include "../kvector.h"
 #include "ko.h"
-#include "khashmap.h"
 
-typedef struct dir_impl {
-  dir d;
-  khashmap * h;
-} dir_impl;
-
-static ko* dir_lookup(dir* d, const char** path) {
-  dir_impl * di = (dir_impl*) d;
-
-  assert(path);
-  if (!*path) {
-    return KO(d);
+static unsigned hash(const char* s) {
+  unsigned h = 0;
+  unsigned m = 1;
+  for(int i = 0; s[i]; i++) {
+    h += m++ * (unsigned char)s[i];
   }
+  return h;
+}
 
-  ko* child = khm_lookup(di->h, *path);
-  if (!child) {
-    return NULL;
-  }
+typedef struct _bucket {
+    const char* key;
+    ko * value;
+    struct _bucket *next;
+} kbucket;
+
+typedef struct _hashmap {
+    dir d;
+    size_t bucket_mask; // the mask to use to find the modulo
+    size_t size;
+    kbucket** buckets;
+} khashmap;
+
+static err_t khm_insert(dir* dmap, ko* value, const char* key);
+static ko* khm_lookup(dir* dmap, const char* key);
+static err_t khm_delete(dir* dmap, const char* key);
+
+static void add_keys(vector* v, kbucket* b) {
+  if (!b) return;
   
-  if (IS_BOUND(child)) {
-    child = release(child);
+  vector_push(v, (char*)b->key);
+  add_keys(v, b->next);
+}
+
+static vector* khm_keys(khashmap* map) {
+  vector* v = kmake_vector(sizeof(char*), UNMANAGED_POINTERS);
+  for(size_t i = 0; i < map->size; i++) {
+    add_keys(v, map->buckets[i]);
   }
+  return v;
+}
 
-  if (IS_DIR(child)) {
-    return LOOKUP(DIR(child), path+1);
-  } else {
-    // its chill, no more path left anyway
-    if (!path[1]) return KO(child);
 
-    // More path but its not a dir...
+static err_t khm_insert(dir* dmap, ko* value, const char* key) {
+    khashmap* map = (khashmap*)dmap;
+    if (khm_lookup(dmap, key)) {
+      khm_delete(dmap, key);
+    }
+    
+    unsigned b = hash(key) & map->bucket_mask;
+
+    kbucket * buck = kmalloc(sizeof(kbucket));
+    buck->key = kstrclone(key);
+    buck->value = value;
+    kget(value);
+    buck->next = map->buckets[b];
+    map->buckets[b] = buck;
+
+    return true;
+}
+
+static ko* khm_lookup(dir* dmap, const char* key) {
+    khashmap* map = (khashmap*)dmap;
+    unsigned b = hash(key) & map->bucket_mask;
+    
+    for(kbucket * buck = map->buckets[b]; buck; buck = buck->next) {
+        if (!strcmp(buck->key, key)) return buck->value;
+    }
+
     return 0;
+}
+
+static void free_bucket(kbucket* bucket, bool follow) {
+  if (!bucket) return;
+
+  kput(bucket->value);
+  kfree((void*)bucket->key);
+  kbucket *next = bucket->next;
+  kfree(bucket);
+
+  if (follow) free_bucket(next, true);
+}
+
+static err_t khm_delete(dir* dmap, const char* key) {
+    khashmap* map = (khashmap*)dmap;
+    unsigned b = hash(key) & map->bucket_mask;
+
+    kbucket * prev = 0;
+    for(kbucket * buck = map->buckets[b]; buck; buck = buck->next) {
+        if (!strcmp(buck->key, key)) {
+            if (prev) {
+                prev->next = buck->next;
+            } else {
+                map->buckets[b] = buck->next;
+            }
+            free_bucket(buck, false);
+            return 0;
+        }
+    }
+    return E_NOT_FOUND;
+}
+
+
+static void khm_cleanup(ko* kmap) {
+  khashmap* map = (khashmap*)kmap;
+  for (size_t i = 0; i < map->size; i++) {
+    free_bucket(map->buckets[i], true);
   }
+  kfree(map->buckets);
 }
 
-static err_t dir_link(dir* d, ko* child, const char* name) {
-  dir_impl * di = (dir_impl*)d;
+#define PRINT(x) bufpos = strrcpy(buf, bufpos, size, (x))
+#define PRINTC(c) buf[bufpos++] = (c);
 
-  bool success = khm_insert(di->h, name, child);
-  if (!success) {
-    khm_delete(di->h, name);
-    khm_insert(di->h, name, child);
+static const char * khm_view(ko* dmap) {
+  char buf[1024];
+  size_t bufpos = 0;
+  size_t size = 1024;
+  khashmap* h = (khashmap*)dmap;
+  PRINTC('{');
+
+  vector* keys = khm_keys(h);
+  for(size_t i = 0; i < keys->size; i++) {
+
+    PRINT(CYAN);
+    PRINT(keys->data[i]);
+    PRINT(WHITE);
+    PRINTC(':');
+
+    const char * s = ko_str(LOOKUP(DIR(h), keys->data[i]));
+    PRINT(s);
+    kfree((void*)s);
+
+    if (i != keys->size-1) {
+      PRINTC(',');
+      PRINTC(' ');
+    }
   }
-  return 0;
+  PRINTC('}');
+  PRINTC('\0');
+
+  cleanup_vector(keys);
+  return kstrclone(buf);
 }
 
-static err_t dir_unlink(dir* d, const char* name) {
-  dir_impl * di = (dir_impl*) d;
-  return khm_delete(di->h, name) ? 0 : E_BAD_FILENAME;
-}
+#undef PRINT
+#undef PRINTC
 
-static void dir_cleanup(ko* o) {
-  dir_impl * di = (dir_impl*) o;
-  
-  khm_cleanup(di->h);
-}
-
-static err_t dir_map(file* f, size_t* out_size, void** out_ptr) {
-  dir_impl * d = (dir_impl*)f;
-  printk("%h", d->h);
-
-  vector* v = khm_keys(d->h);
-  const char* s = vector_join(v, "/");
-
-  *out_ptr = (void*)s;
-  *out_size = strlen(s);
-  return 0;
-}
-
-static err_t dir_unmap(file* f, void* ptr) {
-  kfree(ptr);
-  return 0;
-}
-
-static dir_vtable dir_vt = {
-  .lookup = dir_lookup,
-  .link = dir_link,
-  .unlink = dir_unlink,
+static dir_vtable khm_vt = {
+  .lookup = khm_lookup,
+  .link = khm_insert,
+  .unlink = khm_delete,
 };
-
-static file_vtable dir_file_vt = {
-  .map = dir_map,
-  .unmap = dir_unmap,
-};
-
 
 dir* mk_dir() {
-  dir_impl* d = kmalloc(sizeof(dir_impl));
+  size_t power2_num_buckets = 3;
+  assert(power2_num_buckets <= 31);
 
-  KO(d)->cleanup = dir_cleanup;
-  KO(d)->type = KO_DIR;
-  KO(d)->rc = 1;
-  FILE(d)->v = &dir_file_vt;
-  DIR(d)->v = &dir_vt;
+  khashmap* map = (khashmap*)mk_ko(sizeof(khashmap), khm_cleanup, khm_view, KO_DIR);
+  map->bucket_mask = (1 << power2_num_buckets) - 1;
+  map->size = (1 << power2_num_buckets);
+  map->buckets = (kbucket**) kcalloc(sizeof(kbucket), map->size);
 
-  d->h = mk_khashmap(3);
+  DIR(map)->v = &khm_vt;
 
-  return (dir*)d;
+  return DIR(map);
 }
-
-
-

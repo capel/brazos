@@ -16,9 +16,7 @@
 
 #define WRITE_STDOUT 11
 
-// file (and dir) operations
-#define SYS_MAP 22
-#define SYS_UNMAP 23
+#define SYS_VIEW 12
 
 // directory ops
 #define SYS_LOOKUP 24
@@ -33,7 +31,7 @@
 
 // types
 #define KO_UNKNOWN 0
-#define KO_FILE 1
+#define KO_MESSAGE 1
 #define KO_DIR 2
 #define KO_BOUND 4 // user will never see this
 #define KO_SINKHOLE 8
@@ -56,6 +54,7 @@
 #define E_NOT_SINKHOLE -10
 #define E_NOT_FILE -11
 #define E_IS_FUTURE -12
+#define E_NOT_FOUND -13
 
 #ifndef EXTERNAL
 int syscall(int r0, int r1, int r2, int r3);

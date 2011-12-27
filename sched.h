@@ -36,13 +36,13 @@ typedef struct _PCB {
 typedef struct _proc {
     PCB pcb;
     bool runnable;
+    int stride;
     int parent_pid;
     int pid;
     void* stack;
     void* next_future;
     dir* ko;
     kihashmap* rids;
-    int current_rid;
 } proc;
 
 int proc_add_ko(proc* p, ko* o);
@@ -58,8 +58,8 @@ void kfree_proc(proc* p);
 proc* kfork_proc(proc* p);
 void kexec_proc(proc *p, void* main, void* exit);
 
-void ksleep_proc(proc *p, future* f);
-void kwake_proc(proc *p, future* f);
+//void ksleep_proc(proc *p, future* f);
+//void kwake_proc(proc *p, future* f);
 
 // implicitly the current proc
 void kcopy_pcb(PCB * pcb);

@@ -4,7 +4,6 @@
 #include "chars.h"
 #include "mem.h"
 #include "sys/ko.h"
-#include "sys/khashmap.h"
 #include "sys/kihashmap.h"
 #include "vector.h"
 
@@ -133,8 +132,11 @@ int printf(const char* fmt, ...)
     vprintf(buf, 1024, fmt, va, false);
     va_end(va);
 
+    kputs(buf);
+    /*
     int rid = rmap(buf, strlen(buf)+1);
     sink(rid, lookup("/proc/me/stdio"));
+    */
 
     return 0;
 }
@@ -149,8 +151,12 @@ int println(const char* fmt, ...)
     vprintf(buf, 1024, fmt, va, true);
     va_end(va);
 
+    kputs(buf);
+    /*
     int rid = rmap(buf, strlen(buf)+1);
     sink(rid, lookup("/proc/me/stdio"));
+    */
+
 
     return 0;
 }
@@ -168,7 +174,7 @@ int snprintf(char* buf, size_t size, const char* fmt, ...)
     return 0;
 }
 
-static int print_str(char* buf, size_t bufpos, size_t size, const char* s) {
+int strrcpy(char* buf, size_t bufpos, size_t size, const char* s) {
   size_t newpos = bufpos;
   if (!s) {
       newpos += strlcpy(buf + bufpos, "<NULL>", strlen("<NULL>")+1);
@@ -180,31 +186,34 @@ static int print_str(char* buf, size_t bufpos, size_t size, const char* s) {
   return newpos;
 }
 
-#define PRINT(x) bufpos = print_str(buf, bufpos, size, (x))
+#define PRINT(x) bufpos = strrcpy(buf, bufpos, size, (x))
 #define PRINTC(c) buf[bufpos++] = (c);
 
-static int print_ko(char* buf, size_t oldpos, size_t size, ko* o) {
-  size_t bufpos = oldpos;
+const char* ko_str(ko* o) {
+  char buf[512];
+  size_t bufpos = 0;
+  size_t size = 512;
   if (!o) {
-    PRINT("NULL<0>");
-    return bufpos;
+    return kstrclone("<0,0>");
   }
+
+  PRINTC('<');
 
   const int BUFSIZE = 64;
   char tmpbuf[BUFSIZE]; // PLENTY of room for scratch stuff
   PRINT(MAGENTA);
-  utoa16(tmpbuf, BUFSIZE, (unsigned)o);
+  utoa(tmpbuf, BUFSIZE, ID(o));
   PRINT(tmpbuf);
   PRINT(WHITE);
+  PRINTC(',');
 
-  PRINTC('<');
   PRINT(GREEN);
-  switch (o->type) {
+  switch (o->type){
     case KO_UNKNOWN:
       PRINTC('U');
       break;
-    case KO_FILE:
-      PRINTC('F');
+    case KO_MESSAGE:
+      PRINTC('M');
       break;
     case KO_DIR:
       PRINTC('D');
@@ -215,6 +224,8 @@ static int print_ko(char* buf, size_t oldpos, size_t size, ko* o) {
     case KO_BOUND:
       PRINTC('B');
       break;
+    case KO_FUTURE:
+      PRINTC('F');
     default:
       PRINTC('?');
       break;
@@ -226,7 +237,9 @@ static int print_ko(char* buf, size_t oldpos, size_t size, ko* o) {
   PRINT(tmpbuf);
   PRINT(WHITE);
   PRINTC('>');
-  return bufpos;
+  buf[bufpos] = '\0';
+
+  return kstrclone(buf);
 }
 
 int vprintf(char* buf, size_t size, const char* fmt, va_list va, int newline)
@@ -238,10 +251,7 @@ int vprintf(char* buf, size_t size, const char* fmt, va_list va, int newline)
     char *s;
     const char * cs;
     vector* v;
-    khashmap* h;
-
-#define PRINT(x) bufpos = print_str(buf, bufpos, size, (x))
-#define PRINTC(c) buf[bufpos++] = (c);
+    ko* o;
 
     size_t fmtpos, bufpos;
     for (fmtpos = 0, bufpos = 0; bufpos < size && fmt[fmtpos] != '\0'; fmtpos++) {
@@ -252,9 +262,10 @@ int vprintf(char* buf, size_t size, const char* fmt, va_list va, int newline)
             fmtpos++;
             switch (fmt[fmtpos]) {
                 case 'k':
-                    u = va_arg(va, unsigned);
-                    ko* o = (ko*)u;
-                    bufpos = print_ko(buf, bufpos, size, o);
+                    o = va_arg(va, ko*);
+                    cs = ko_str(o); 
+                    PRINT(cs);
+                    kfree((void*)cs);
                     break;
                 case 'd':
                     d = va_arg(va, int);
@@ -286,41 +297,17 @@ int vprintf(char* buf, size_t size, const char* fmt, va_list va, int newline)
                       PRINT("[]");
                       break;
                     }
-                    bool restore = false;
-                    if (v->data[v->size-1] == NULL) {
-                      v->size--; // heh
-                      restore = true;
-                    }
                     PRINTC('[');
                     cs = vector_join(v, ", ");
                     PRINT(cs);
                     kfree((char*)cs);
                     PRINTC(']');
-                    if (restore)
-                      v->size++;
                     break;
-                case 'h':
-                    h = va_arg(va, khashmap*);
-                    PRINTC('{');
-
-                    v = kmake_vector(sizeof(char*), UNMANAGED_POINTERS);
-                    vector* keys = khm_keys(h);
-                    for(size_t i = 0; i < keys->size; i++) {
-                      PRINT(CYAN);
-                      PRINT(keys->data[i]);
-                      PRINT(WHITE);
-                      PRINTC(':');
-                      bufpos = print_ko(buf, bufpos, size, 
-                          khm_lookup(h, keys->data[i]));
-
-                      if (i != keys->size-1) {
-                        PRINTC(',');
-                        PRINTC(' ');
-                      }
-                    }
-                    PRINTC('}');
-
-                    cleanup_vector(keys);
+                case 'K':
+                    o = va_arg(va, ko*);
+                    cs = VIEW(o);
+                    PRINT(cs);
+                    kfree((void*)cs);
                     break;
                 case '%':
                     PRINTC('%');

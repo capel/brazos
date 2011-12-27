@@ -37,7 +37,6 @@ vector* kihm_keys(kihashmap* map) {
 
 bool kihm_insert(kihashmap* map, unsigned key , ko* value) {
     if (kihm_lookup(map, key)) {
-        printk("hm_insert: Double insert on key %u\n");
         return false;
     }
     

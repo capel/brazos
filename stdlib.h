@@ -24,11 +24,6 @@ size_t strlcpy(char* dst, const char* src, size_t len);
 int strncmp(const char* a, const char* b, size_t len);
 int strcmp(const char* a, const char* b);
 
-// allocates a new string long enough to hold a + b + NULL.
-// this new string does not overlap with a or b in memory, and it must
-// be freed seperately.
-char* strgcat(const char* a, const char* b, size_t alen, size_t blen);
-
 /*
 void* malloc(size_t bytes);
 void free(void* addr);

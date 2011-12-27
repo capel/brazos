@@ -124,7 +124,6 @@ vector* ksplit_to_vector(const char * str, const char* seps)
       }
 
       if (i >= len) {
-        vector_push(v, NULL);
         return v;
       }
 
@@ -143,7 +142,6 @@ vector* ksplit_to_vector(const char * str, const char* seps)
             src[++i] = '\0';
             vector_push(v, src+beginning);
         }
-        vector_push(v, NULL);
         return v;
     }
   }

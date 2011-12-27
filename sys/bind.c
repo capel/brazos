@@ -12,11 +12,12 @@ static void bound_cleanup(ko* o) {
   // ???
 }
 
+const char* bound_view(ko* o) {
+  return "BOUND!";
+}
+
 ko* bind(bound_func func, void* data) {
-  bound * b = kmalloc(sizeof(bound));
-  KO(b)->cleanup = bound_cleanup;
-  KO(b)->type = KO_BOUND;
-  KO(b)->rc = 1;
+  bound * b = (bound*) mk_ko(sizeof(bound), bound_cleanup, bound_view, KO_BOUND);
 
   b->func = func;
   b->data = data;
@@ -33,11 +34,13 @@ static void sinkhole_cleanup(ko* sh) {
   printk("sinkhole cleaned up %k", sh);
 }
 
+static const char* sinkhole_view(ko* sh) {
+  return "SINKHOLE";
+}
+
 sinkhole* mk_sinkhole(sink_func func, void* data) {
-  sinkhole * b = kmalloc(sizeof(sinkhole));
-  KO(b)->cleanup = sinkhole_cleanup;
-  KO(b)->type = KO_SINKHOLE;
-  KO(b)->rc = 1;
+  sinkhole * b = (sinkhole*) mk_ko(sizeof(sinkhole), sinkhole_cleanup, 
+      sinkhole_view, KO_SINKHOLE);
   b->sink = func;
   b->data = data;
   return b;

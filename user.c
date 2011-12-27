@@ -74,13 +74,10 @@ void erase_chars(size_t num) {
 }
 
 void print_map(int rid) {
-  size_t out_size;
-  void* ptr;
-  if (0 != map(rid, &ptr, &out_size)) {
-    return;
-  }
+  const char* s = view(rid);
+  println(s);
+  /*
   vector* v = ksplit_to_vector(ptr, "/");
-  vector_remove(v, v->size-1);
   for(size_t i = 0; i < v->size; i++) {
     if (i && i % 3 == 0) printf("\n");
     
@@ -106,6 +103,7 @@ void print_map(int rid) {
   }
   printf("\n");
   cleanup_vector(v);
+  */
 }
 
 bool parse_line(char* line) {
@@ -168,10 +166,10 @@ bool parse_line(char* line) {
                     goto cleanup;
                 }
 
-                int ret = unlink(v->data[1]);
+                int rid = lookup("~cwd");
+                int ret = unlink(rid, v->data[1]);
                 if (ret < 0) {
                     perror(ret);
-                    goto cleanup;
                 }
                 goto cleanup;
             }
@@ -179,17 +177,18 @@ bool parse_line(char* line) {
        case 'c':
             if (strcmp(v->data[0], "cd") == 0) {
                 int rid;
-                if (v->size == 2) {
+                if (v->size == 1) {
                   rid = lookup("/"); 
                 } else { 
                   rid = lookup(ARG(1));
+                  println("rid %d", rid);
                   if (rid < 0) {
                     println("Bad directory");
                     goto cleanup;
                   }
                 }
 
-                int cwd = lookup("/proc/me");
+                int cwd = lookup("~");
                 link(cwd, rid, "cwd");
                 goto cleanup;
             }             
@@ -284,7 +283,16 @@ bool parse_line(char* line) {
               goto cleanup;
             }
             if (strcmp(v->data[0], "ls") == 0) {
-              int rid = lookup(v->data[1]);
+              int rid;
+              if (v->size == 1) {
+                rid = lookup("/proc/me/cwd");
+              } else {
+                rid = lookup(v->data[1]);
+              }
+              if (rid < 0) {
+                println("Bad filename");
+                goto cleanup;
+              }
               print_map(rid);
               goto cleanup;
             }
@@ -298,6 +306,8 @@ bool parse_line(char* line) {
     cleanup_vector(v);
     return true;
 }
+
+void kputs(const char* s);
 
 int sh_main()
 {

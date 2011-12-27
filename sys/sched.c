@@ -1,5 +1,6 @@
 #include "ko.h"
 
+/*
 ko* mk_queue();
 
 static ko* sched(dir * d) {
@@ -23,3 +24,4 @@ dir* mk_sched() {
   SAFE_ADD(d, BIND(sched, d), "sched^");
   return d;
 }
+*/

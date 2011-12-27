@@ -34,9 +34,8 @@ void ksetup_sched()
 }
 
 int proc_add_ko(proc* p, ko* o) {
-  int rid = p->current_rid++;
-  kihm_insert(p->rids, rid, o);
-  return rid;
+  kihm_insert(p->rids, ID(o), o);
+  return ID(o);
 }
 
 ko* proc_rid(proc* p, int rid) {
@@ -58,25 +57,25 @@ proc * knew_proc(void* main, void* exit)
     p->pid = cur_pid++;
     p->stride = 0;
     p->runnable = 1;
-    p->wait_pid = 0;
     p->ko = mk_procfs(p);
     p->rids = mk_kihashmap(4);
-    p->current_rid = 1;
 
     LINK(p->ko, new_root(), "cwd"); 
     
-    const char* b[] = {"proc", 0};
-    dir* procdir = DIR(LOOKUP(new_root(), b));
+    dir* procdir = DIR(LOOKUP(new_root(), "proc"));
+    printk("dir %k");
     assert(IS_DIR(procdir));
 
     char n[32];
     itoa(n, 32, p->pid);
     LINK(DIR(procdir), p->ko, n); // dont kput because we have a reference
 
+    /*
     const char* c[] = {"sch", "runnable", "push@", 0};
     sinkhole* runnable = SINKHOLE(LOOKUP(new_root(), c));
     assert(IS_SINKHOLE(runnable));
     SINK(runnable, p->ko);
+    */
 
     unsigned spsr = __get_CPSR();
     p->pcb.spsr = spsr & (~0x1f);
@@ -108,17 +107,6 @@ void kexec_proc(proc* p, void* main, void* exit) {
     p->pcb.pc = main;
 }
 
-void kwake_procs(int pid) {
-  printk("in wake for pid %d", pid);
-    for(size_t i = 0; i < PROC_TABLE_SIZE; i++) {
-        proc *p = proc_table[i];
-        if (p && p->wait_pid == pid) {
-            kwake_proc(p);
-        }
-    }
-}
-
-
 void kfree_proc(proc *p)
 {
     for (size_t i = 0; i < PROC_TABLE_SIZE; i++) {
@@ -126,7 +114,6 @@ void kfree_proc(proc *p)
             proc_table[i] = 0;
             num_procs--;
             num_runnable_procs--;
-            kwake_procs(p->pid);
             
             kfree(p);
             return;
@@ -134,6 +121,7 @@ void kfree_proc(proc *p)
     }
 }
 
+/*
 void ksleep_proc(proc* p) {
     num_runnable_procs--;
     p->runnable = 0;
@@ -144,6 +132,7 @@ void kwake_proc(proc* p) {
     num_runnable_procs++;
     p->runnable = 1;
 }
+*/
 
 void kcopy_pcb(PCB *pcb) {
     if (&current->pcb == pcb) {
