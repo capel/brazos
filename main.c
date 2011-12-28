@@ -273,7 +273,7 @@ static int sys_sink(int src_rid, int sh_rid) {
   return proc_add_ko(cp(), ret);
 }
 
-static int sys_rmap(void* data, size_t size) {
+static int sys_message(void* data, size_t size) {
   if (size == 0 || data == 0) {
     return E_BAD_ARG;
   }
@@ -316,8 +316,8 @@ int _ksyscall (int code, int r1, int r2, int r3) {
       return sys_lookup((const char*)r1);
     case SYS_SINK:
       return sys_sink(r1, r2);
-    case SYS_RMAP:
-      return sys_rmap((void*)r1, (size_t)r2);
+    case SYS_MESSAGE:
+      return sys_message((void*)r1, (size_t)r2);
     case SYS_TYPE:
       return sys_type(r1);
     case SYS_VIEW:

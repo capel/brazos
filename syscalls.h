@@ -25,7 +25,7 @@
 
 // sinkhole operations
 #define SYS_SINK 25
-#define SYS_RMAP 26
+#define SYS_MESSAGE 26
 
 #define SYS_TYPE 27
 

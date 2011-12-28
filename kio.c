@@ -135,7 +135,7 @@ int printf(const char* fmt, ...)
 
     kputs(buf);
     /*
-    int rid = rmap(buf, strlen(buf)+1);
+    int rid = message(buf, strlen(buf)+1);
     sink(rid, lookup("/proc/me/stdio"));
     */
 
@@ -154,7 +154,7 @@ int println(const char* fmt, ...)
 
     kputs(buf);
     /*
-    int rid = rmap(buf, strlen(buf)+1);
+    int rid = message(buf, strlen(buf)+1);
     sink(rid, lookup("/proc/me/stdio"));
     */
 

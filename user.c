@@ -127,7 +127,7 @@ bool parse_line(char* line) {
             if (strcmp(v->data[0], "echo") == 0) {
                 char* msg = line + strlen("echo") + 1;
                 println("%s", msg);
-                int rid = rmap(msg, strlen(msg));
+                int rid = message(msg, strlen(msg));
                 println("%d", rid);
                 goto cleanup;
             } else if (strcmp(v->data[0], "exit") == 0) {

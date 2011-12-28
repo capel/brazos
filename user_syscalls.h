@@ -88,8 +88,8 @@ static inline const char* view(int rid) {
   return ret;
 }
 
-static inline int rmap(void* ptr, size_t size) {
-  int ret = syscall(SYS_RMAP, (int)ptr, (int)size, 0);
+static inline int message(void* ptr, size_t size) {
+  int ret = syscall(SYS_MESSAGE, (int)ptr, (int)size, 0);
   if (ret < 0) {
     perror(ret);
   }
