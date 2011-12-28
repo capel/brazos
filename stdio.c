@@ -8,6 +8,8 @@
 #include "malloc.h"
 #include "vector.h"
 
+void erase_chars(size_t size);
+
 int getline(char* buf, size_t size) 
 {
     size_t i;

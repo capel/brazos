@@ -13,6 +13,14 @@ int char_to_digit(char c) {
     return c - 0x30;
 }
 
+const char* skip_spaces(const char* s) {
+  while(*s == ' ') {
+    s++;
+  }
+  return s;
+}
+
+
 void memset(char* start, char fill, size_t bytes)
 {
     for( ; bytes ; bytes--) {

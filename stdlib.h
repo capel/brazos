@@ -24,6 +24,8 @@ size_t strlcpy(char* dst, const char* src, size_t len);
 int strncmp(const char* a, const char* b, size_t len);
 int strcmp(const char* a, const char* b);
 
+const char* skip_spaces(const char* s);
+
 /*
 void* malloc(size_t bytes);
 void free(void* addr);

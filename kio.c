@@ -42,6 +42,7 @@ int kgetc(void)
 void khalt(void) 
 {
 	*((volatile unsigned char *) HALT_ADDRESS) = 0;
+	__builtin_unreachable();
 }
 
 void kputc(int c) {
@@ -201,13 +202,13 @@ const char* ko_str(ko* o) {
 
   const int BUFSIZE = 64;
   char tmpbuf[BUFSIZE]; // PLENTY of room for scratch stuff
-  PRINT(MAGENTA);
+  //PRINT(MAGENTA);
   utoa(tmpbuf, BUFSIZE, ID(o));
   PRINT(tmpbuf);
-  PRINT(WHITE);
+  //PRINT(WHITE);
   PRINTC(',');
 
-  PRINT(GREEN);
+  //PRINT(GREEN);
   switch (o->type){
     case KO_UNKNOWN:
       PRINTC('U');
@@ -230,12 +231,6 @@ const char* ko_str(ko* o) {
       PRINTC('?');
       break;
   }
-  PRINT(WHITE);
-  PRINTC(',');
-  PRINT(LIGHT_RED);
-  utoa(tmpbuf, BUFSIZE, o->rc);
-  PRINT(tmpbuf);
-  PRINT(WHITE);
   PRINTC('>');
   buf[bufpos] = '\0';
 

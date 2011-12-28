@@ -11,6 +11,8 @@
 #include "vector.h"
 #include "chars.h"
 
+#include "parse_dir.h"
+
 void exit(void) {
     _exit();
 }
@@ -73,37 +75,38 @@ void erase_chars(size_t num) {
     }
 }
 
-void print_map(int rid) {
+void print_dir(int rid) {
   const char* s = view(rid);
-  println(s);
-  /*
-  vector* v = ksplit_to_vector(ptr, "/");
-  for(size_t i = 0; i < v->size; i++) {
+  parsed_dir* d = parse_dir(s);
+  for(size_t i = 0; i < d->size; i++) {
     if (i && i % 3 == 0) printf("\n");
     
-    char *s = v->data[i];
-    if (!s || strlen(s) == 0) printf("NULL ");
-    switch (s[strlen(s)-1]) {
-      case '@':
-        printf("%s%s%s  ", CYAN, s, WHITE);
+    const char * n = d->entries[i]->name;
+    switch (d->entries[i]->type) {
+      case 'F':
+        printf("%s%s%s  ", RED, n, WHITE);
         break;
-      case '^':
-        printf("%s%s%s  ", YELLOW, s, WHITE);
+      case 'M':
+        printf("%s%s%s  ", YELLOW, n, WHITE);
         break;
-      case '!':
-        printf("%s%s%s  ", MAGENTA, s, WHITE);
+      case 'D':
+        printf("%s%s%s  ", GREEN, n, WHITE);
         break;
-      case '#':
-        printf("%s%s%s  ", GREEN, s, WHITE);
+      case 'U':
+        printf("%s%s%s  ", YELLOW, n, WHITE);
+        break;
+      case 'S':
+        printf("%s%s%s  ", CYAN, n, WHITE);
+        break;
+      case 'B':
+        printf("%s%s%s  ", RED, n, WHITE);
         break;
       default:
-        printf("%s  ", s);
+        printf("?%s  ", n);
         break;
     }
   }
   printf("\n");
-  cleanup_vector(v);
-  */
 }
 
 bool parse_line(char* line) {
@@ -191,18 +194,27 @@ bool parse_line(char* line) {
                 int cwd = lookup("~");
                 link(cwd, rid, "cwd");
                 goto cleanup;
-            }             
+            } else if (strcmp(v->data[0], "cat") == 0) {
+              int rid = lookup(v->data[1]);
+              if (rid < 0) {
+                println("Bad filename");
+                goto cleanup;
+              }
+              const char * s = view(rid);
+              println("%s", s);
+              goto cleanup;
+            }
             goto unknown;
             
         case 'm':
-            if (strcmp(v->data[0], "map") == 0) {
+            /*if (strcmp(v->data[0], "map") == 0) {
               if (v->size < 2) {
                 println("map: map <rid>");
                 goto cleanup;
               }
-              print_map(IARG(1));
+              print_dir(IARG(1));
               goto cleanup;
-            }
+            }*/
             goto unknown;
         case 's':
             if (strcmp(v->data[0], "sink") == 0) {
@@ -293,7 +305,11 @@ bool parse_line(char* line) {
                 println("Bad filename");
                 goto cleanup;
               }
-              print_map(rid);
+              if (type(rid) == KO_DIR) {
+                print_dir(rid);
+              } else {
+                println("Not a directory.");
+              }
               goto cleanup;
             }
             goto unknown;

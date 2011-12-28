@@ -124,9 +124,9 @@ static const char * khm_view(ko* dmap) {
   vector* keys = khm_keys(h);
   for(size_t i = 0; i < keys->size; i++) {
 
-    PRINT(CYAN);
+    //PRINT(CYAN);
     PRINT(keys->data[i]);
-    PRINT(WHITE);
+    //PRINT(WHITE);
     PRINTC(':');
 
     const char * s = ko_str(LOOKUP(DIR(h), keys->data[i]));
@@ -135,7 +135,7 @@ static const char * khm_view(ko* dmap) {
 
     if (i != keys->size-1) {
       PRINTC(',');
-      PRINTC(' ');
+      //PRINTC(' ');
     }
   }
   PRINTC('}');
