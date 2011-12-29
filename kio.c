@@ -133,11 +133,10 @@ int printf(const char* fmt, ...)
     vprintf(buf, 1024, fmt, va, false);
     va_end(va);
 
-    kputs(buf);
-    /*
+//    kputs(buf);
+
     int rid = message(buf, strlen(buf)+1);
-    sink(rid, lookup("/proc/me/stdio"));
-    */
+    sink(rid, lookup("~stdio"));
 
     return 0;
 }
@@ -152,11 +151,9 @@ int println(const char* fmt, ...)
     vprintf(buf, 1024, fmt, va, true);
     va_end(va);
 
-    kputs(buf);
-    /*
+  //  kputs(buf);
     int rid = message(buf, strlen(buf)+1);
-    sink(rid, lookup("/proc/me/stdio"));
-    */
+    sink(rid, lookup("~stdio"));
 
 
     return 0;

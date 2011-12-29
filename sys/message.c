@@ -7,7 +7,6 @@ typedef struct {
 
 static const char* msg_view(ko* f) {
   msg *m = (msg*)f;
-  printk("mapping msg %k with data %s", m, m->msg);
   return m->msg;
 }
 

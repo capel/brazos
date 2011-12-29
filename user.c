@@ -82,6 +82,9 @@ void print_dir(int rid) {
     println("Dir parse error: %s", s);
     return;
   }
+  if (d->size == 0) {
+    return;
+  }
   for(size_t i = 0; i < d->size; i++) {
     if (i && i % 3 == 0) printf("\n");
     
@@ -211,22 +214,37 @@ bool parse_line(char* line) {
             }
             goto unknown;
             
-        case 'm':
-            /*if (strcmp(v->data[0], "map") == 0) {
-              if (v->size < 2) {
-                println("map: map <rid>");
-                goto cleanup;
-              }
-              print_dir(IARG(1));
-              goto cleanup;
-            }*/
-            goto unknown;
         case 's':
             if (strcmp(v->data[0], "sink") == 0) {
               int src_rid = lookup(ARG(1));
               debug("src %d", src_rid);
               if (src_rid < 0) {
                 println("Bad file %s", ARG(1));
+                goto cleanup;
+              }
+
+              int sh = lookup(ARG(2));
+              debug("sh %d", sh);
+              if (sh < 0) {
+                println("Bad file %s", ARG(2));
+                goto cleanup;
+              }
+              int ret = sink(src_rid, sh);
+              if (ret == SINK_ASYNC) {
+                goto cleanup;
+              } else if (ret < 0) {
+                perror(ret);
+                goto cleanup;
+              } else {
+                println("Rid %d", ret);
+              goto cleanup;
+              }
+            }
+            if (strcmp(v->data[0], "sinkr") == 0) {
+              int src_rid = IARG(1);
+              debug("src %d", src_rid);
+              if (src_rid <= 0) {
+                println("Bad rid %s", ARG(1));
                 goto cleanup;
               }
 

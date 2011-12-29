@@ -134,7 +134,7 @@ parsed_dir* parse_dir(const char* s) {
   return dir;
 
 fail:
-  println("FAIL");
+  println("FAILED PARSE");
   free(dir);
   cleanup_vector(v);
   return 0;
