@@ -4,7 +4,6 @@
 #include "chars.h"
 #include "mem.h"
 #include "sys/ko.h"
-#include "sys/kihashmap.h"
 #include "vector.h"
 
 #define DEV_CONS_ADDRESS        0x0000000010000000

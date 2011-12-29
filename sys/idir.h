@@ -1,5 +1,5 @@
-#ifndef KIHASHMAP_H
-#define KIHASHMAP_H
+#ifndef idir_H
+#define idir_H
 
 #include "../types.h"
 #include "../malloc.h"
@@ -26,36 +26,27 @@
 // Also note that lookup returns 0 on not finding the key. If you are
 // storing a zero, have fun.
 
-typedef struct {
+typedef struct idir {
+    dir d;
     size_t bucket_mask; // the mask to use to find the modulo
     size_t size;
     struct _bucket** buckets;
-} kihashmap;
+} idir;
 
 // power2_num_buckets is the log2 of the number of buckets you want
 // eg, 1024 bucket -> 10
 // Powers over 31 are not supported.
-kihashmap* mk_kihashmap(size_t power2_num_buckets);
-
-vector* kihm_keys(kihashmap* map);
+idir* mk_idir();
 
 // The key is assumed to already be hashed.
 // True on insert, false on failure (the key already exists)
-bool kihm_insert(kihashmap* map, unsigned key, ko* val);
+bool idir_insert(idir* map, unsigned key, ko* val);
 
 // Returns 0 if the key is not found. Store 0 at your own risk.
-ko* kihm_lookup(kihashmap* map, unsigned key);
+ko* idir_lookup(idir* map, unsigned key);
 
 // The data is returned if the key is found, otherwise 0 is returned.
 // It is your job to free the data, if necessary.
-bool kihm_delete(kihashmap* map, unsigned key);
-
-void kihm_cleanup(kihashmap* map);
-
-// Returns the lowest key in the map
-unsigned kihm_lowest(kihashmap* map);
-
-// Returns the highest key in the map
-unsigned kihm_highest(kihashmap* map);
+bool idir_delete(idir* map, unsigned key);
 
 #endif

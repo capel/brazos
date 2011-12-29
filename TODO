@@ -1,16 +1,11 @@
-** shell
+short term:
+  futures
+  networking
+  cleanup kihm/khm/kvector/etc.
+  make some new data structures (queue and set most notably)
+  make userspace not use kernel malloc...
 
-mmap # easy
 
-preemption
-graphics
-memory management
-** fs
-#    write/read
-#    open / close
-#    lookup
-#    directories
-#    vfs
-    magic files (proc/parent, etc);
-    permissions
-    disk/stable storage
+long term:
+  preemption
+  disk/stable storage

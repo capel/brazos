@@ -7,7 +7,7 @@
 
 #include "types.h"
 #include "sys/ko.h"
-#include "sys/kihashmap.h"
+#include "sys/idir.h"
 
 #define NUM_FDS 4
 #define PROC_TABLE_SIZE 4
@@ -42,7 +42,7 @@ typedef struct _proc {
     void* stack;
     void* next_future;
     dir* ko;
-    kihashmap* rids;
+    idir* rids;
 } proc;
 
 int proc_add_ko(proc* p, ko* o);

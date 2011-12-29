@@ -34,12 +34,12 @@ void ksetup_sched()
 }
 
 int proc_add_ko(proc* p, ko* o) {
-  kihm_insert(p->rids, ID(o), o);
+  idir_insert(p->rids, ID(o), o);
   return ID(o);
 }
 
 ko* proc_rid(proc* p, int rid) {
-  return kihm_lookup(p->rids, rid);
+  return idir_lookup(p->rids, rid);
 }
 
 dir* mk_procfs(proc *p);
@@ -58,8 +58,9 @@ proc * knew_proc(void* main, void* exit)
     p->stride = 0;
     p->runnable = 1;
     p->ko = mk_procfs(p);
-    p->rids = mk_kihashmap(4);
+    p->rids = mk_idir();
 
+    LINK(p->ko, p->rids, "rids");
     LINK(p->ko, new_root(), "cwd"); 
     
     dir* procdir = DIR(LOOKUP(new_root(), "proc"));

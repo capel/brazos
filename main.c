@@ -87,8 +87,11 @@ static dir* proc_me(void * ignore) {
 }
 
 void setup(void) {
+  printk("setup");
   ksetup_sched();
+  printk("after sched");
   setup_ko_registry();
+  printk("done with registry");
 
   _new_root = mk_dir();
   printk("root %k", _new_root);

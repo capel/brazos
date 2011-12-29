@@ -1,5 +1,5 @@
 #include "ko.h"
-#include "kihashmap.h"
+#include "idir.h"
 
 size_t next_ko_id(void) {
   static size_t id = 1;
@@ -34,20 +34,26 @@ void _kput(ko* o, const char* file, const char* func) {
   }
 }
 
-static kihashmap* registry;
+static idir* registry;
+static bool created;
 
 void setup_ko_registry() {
-  registry = mk_kihashmap(7);
+  created = false;
+  printk("in reg");
+  registry = mk_idir();
+  printk("registery: %p", registry);
+  created = true;
 }
 
 static void register_ko(ko* o) {
-  kihm_insert(registry, o->id, o);
+  if (!created) return;
+  idir_insert(registry, o->id, o);
 }
 
 static void unregister_ko(ko* o) {
-  kihm_delete(registry, o->id);
+  idir_delete(registry, o->id);
 }
 
 ko* get_ko(size_t id) {
-  return kihm_lookup(registry, id);
+  return idir_lookup(registry, id);
 }
