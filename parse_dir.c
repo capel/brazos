@@ -25,7 +25,7 @@ static const char* get_name(const char* s, char* buf) {
       case '/':
         return 0;
       case ':':
-        *(++buf) = '\0';
+        *(buf) = '\0';
         s++;
         return s;
       default:
@@ -70,7 +70,7 @@ static const char* get_type(const char* s, int* type) {
     case 'D':
     case 'U':
     case 'S':
-    case 'B':
+    case 'N':
       *type = *s;
       return ++s;
     default:

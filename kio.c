@@ -207,30 +207,7 @@ const char* ko_str(ko* o) {
   PRINT(tmpbuf);
   //PRINT(WHITE);
   PRINTC(',');
-
-  //PRINT(GREEN);
-  switch (o->type){
-    case KO_UNKNOWN:
-      PRINTC('U');
-      break;
-    case KO_MESSAGE:
-      PRINTC('M');
-      break;
-    case KO_DIR:
-      PRINTC('D');
-      break;
-    case KO_SINKHOLE:
-      PRINTC('S');
-      break;
-    case KO_BOUND:
-      PRINTC('B');
-      break;
-    case KO_FUTURE:
-      PRINTC('F');
-    default:
-      PRINTC('?');
-      break;
-  }
+  PRINTC((char)o->type);
   PRINTC('>');
   buf[bufpos] = '\0';
 

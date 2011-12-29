@@ -56,12 +56,6 @@ void* kget_pages(size_t num)
     return get_addr_from_page(start_page);
 }
 
-static size_t get_page_from_addr(void* addr)
-{
-    size_t relative = addr - mstart;
-    return (size_t)relative / PAGE_SIZE;
-}
-
 void kfree_page(void* pageaddr)
 {
     kfree_pages(pageaddr, 1);

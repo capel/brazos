@@ -29,9 +29,8 @@ static ko* q_size(vector* v) {
 dir* mk_queue() {
   dir* d = mk_dir();
   vector* v = kmake_vector(sizeof(ko*), UNMANAGED_POINTERS);
-  SAFE_ADD(d, MK_SINKHOLE(q_sink, v), "push@");
-  printk("done making push");
-  SAFE_ADD(d, BIND(q_pop, v), "pop^");
-  SAFE_ADD(d, BIND(q_size, v), "size");
+  SAFE_ADD(d, MK_SINKHOLE(q_sink, v), "push");
+  SAFE_ADD(d, BIND(q_pop, KO_FOUNTAIN, v), "pop");
+  SAFE_ADD(d, BIND_MSG(q_size, v), "size");
   return d;
 }

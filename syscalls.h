@@ -30,14 +30,12 @@
 #define SYS_TYPE 27
 
 // types
-#define KO_UNKNOWN 0
-#define KO_MESSAGE 1
-#define KO_DIR 2
-#define KO_BOUND 4 // user will never see this
-#define KO_SINKHOLE 8
-#define KO_FUTURE 16
-#define KO_RESOLVED 32
-
+#define KO_UNKNOWN 'U'
+#define KO_MESSAGE 'M'
+#define KO_DIR 'D'
+#define KO_SINKHOLE 'S'
+#define KO_FOUNTAIN 'N'
+#define KO_FUTURE 'F'
 
 
 #define SINK_ASYNC 0

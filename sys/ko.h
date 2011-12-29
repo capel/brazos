@@ -17,17 +17,11 @@ typedef const char* (*view_func)(struct ko* o);
 typedef struct ko {
   cleanup_func cleanup;
   view_func view;
-  unsigned type;
   int rc;
+  size_t flags;
+  size_t type;
   size_t id;
 } ko;
-
-/*
-typedef struct file {
-  ko o;
-  struct file_vtable * v;
-} file;
-*/
 
 typedef struct dir {
   ko f;
@@ -52,31 +46,21 @@ typedef ko* (*lookup_func)(dir* o, const char* path);
 typedef err_t (*link_func)(dir* d, ko* child, const char* name);
 typedef err_t (*unlink_func)(dir* d, const char* name);
 
-/*
-typedef err_t (*map_func)(file* o, size_t* out_size, void** out_ptr);
-typedef err_t (*unmap_func)(file* o, void* ptr);
-*/
-
-/*
-typedef struct file_vtable {
-  map_func map;
-  unmap_func unmap;
-} file_vtable;
-*/
-
 typedef struct dir_vtable {
   lookup_func lookup;
   link_func link;
   unlink_func unlink;
 } dir_vtable;
 
+#define KO_BOUND 1
+#define IS_BOUND(e) (FLAGGED((e), KO_BOUND))
+#define KO_RESOLVED 2
+#define IS_RESOLVED(e) (FLAGGED(e, KO_RESOLVED))
 
 #define IS_DIR(e) (KO(e)->type == KO_DIR)
 #define IS_MSG(e) (KO(e)->type == KO_MESSAGE)
-#define IS_BOUND(e) (KO(e)->type == KO_BOUND)
 #define IS_SINKHOLE(e) (KO(e)->type == KO_SINKHOLE)
 #define IS_FUTURE(e) (KO(e)->type == KO_FUTURE)
-#define IS_RESOLVED(e) (KO(e)->type == KO_RESOLVED)
 
 #define KO(e) ((ko*)e)
 #define DIR(e) ((dir*)e)
@@ -94,17 +78,18 @@ typedef struct dir_vtable {
 
 #define SINK(e, s) ((e)->sink((e)->data, KO(s)))
 
-#define RESOLVE(e, o) do { \
-  ((e)->data = (o)); \
-  KO(e)->type = KO_RESOLVED; \
-} while (0);
+#define SET_FLAG(e, f) (KO(e)->flags |= (f))
+#define FLAGGED(e, f) (KO(e)->flags & (f))
+
+void RESOLVE(future * f, ko* o);
 
 #define GET_FUTURE(e) ((e)->data)
 
 typedef ko* (*bound_func)(void*);
-ko* bind(bound_func func, void* data);
+ko* bind(bound_func func, int type, void* data);
 ko* release(ko* bound);
-#define BIND(func, data) bind((bound_func)(func), data)
+#define BIND_MSG(func, data) bind((bound_func)(func), KO_MESSAGE, data)
+#define BIND(func, type, data) bind((bound_func)(func), type, data)
 
 sinkhole* mk_sinkhole(sink_func, void* data);
 #define MK_SINKHOLE(func, data) mk_sinkhole((sink_func)(func), data)

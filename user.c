@@ -78,6 +78,10 @@ void erase_chars(size_t num) {
 void print_dir(int rid) {
   const char* s = view(rid);
   parsed_dir* d = parse_dir(s);
+  if (!d) {
+    println("Dir parse error: %s", s);
+    return;
+  }
   for(size_t i = 0; i < d->size; i++) {
     if (i && i % 3 == 0) printf("\n");
     
@@ -98,10 +102,11 @@ void print_dir(int rid) {
       case 'S':
         printf("%s%s%s  ", CYAN, n, WHITE);
         break;
-      case 'B':
+      case 'N':
         printf("%s%s%s  ", RED, n, WHITE);
         break;
       default:
+        println("lol wat %c", d->entries[i]->type);
         printf("?%s  ", n);
         break;
     }

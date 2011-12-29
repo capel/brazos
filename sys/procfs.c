@@ -15,9 +15,9 @@ ko* stdio(proc *p, ko* sunk) {
 dir* mk_procfs(proc *p) {
   dir* d = mk_dir();
   SAFE_ADD(d, mk_dir(), "rids");
-  SAFE_ADD(d, BIND(get_pid, p), "pid");
-  SAFE_ADD(d, BIND(get_runnable, p), "runnable");
-  SAFE_ADD(d, BIND(get_parent_pid, p), "parent");
+  SAFE_ADD(d, BIND_MSG(get_pid, p), "pid");
+  SAFE_ADD(d, BIND_MSG(get_runnable, p), "runnable");
+  SAFE_ADD(d, BIND_MSG(get_parent_pid, p), "parent");
   SAFE_ADD(d, MK_SINKHOLE(stdio, p), "stdio");
   return d;
 }

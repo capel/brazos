@@ -7,8 +7,8 @@ static ko* fs_mk_queue(ko* o) { return KO(mk_queue()); }
 
 dir* mk_fs(void) {
   dir* fs = mk_dir();
-  SAFE_ADD(fs, BIND(fs_mk_dir, NULL), "mkdir^");
-  SAFE_ADD(fs, BIND(fs_mk_queue, NULL), "queue^");
+  SAFE_ADD(fs, BIND(fs_mk_dir, KO_DIR, NULL), "mkdir");
+  SAFE_ADD(fs, BIND(fs_mk_queue, KO_DIR, NULL), "queue");
   printk("Fs %k", fs);
   return fs;
 }

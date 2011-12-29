@@ -16,6 +16,7 @@ ko* mk_ko(size_t size, cleanup_func cleanup, view_func view, size_t type) {
   o->view = view;
   o->type = type;
   o->rc = 1;
+  o->flags = 0;
   o->id = next_ko_id();
 
   register_ko(o);

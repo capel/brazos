@@ -98,7 +98,7 @@ void setup(void) {
 
   dir* proc = mk_dir();
   LINK(new_root(), proc, "proc");
-  SAFE_ADD(proc, BIND(proc_me, 0), "me");
+  SAFE_ADD(proc, BIND(proc_me, KO_DIR, 0), "me");
   printk("proc %k", proc);
   assert(IS_DIR(proc));
   kput(proc);
@@ -197,7 +197,6 @@ static int sys_wait(int rid) {
 
   return rid; // wait on non-future is a yield basicly
 }
-
 
 
 static int sys_link(int prid, int crid, const char* name) {

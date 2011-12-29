@@ -16,8 +16,10 @@ const char* bound_view(ko* o) {
   return "BOUND!";
 }
 
-ko* bind(bound_func func, void* data) {
-  bound * b = (bound*) mk_ko(sizeof(bound), bound_cleanup, bound_view, KO_BOUND);
+ko* bind(bound_func func, int type, void* data) {
+  bound * b = (bound*) mk_ko(sizeof(bound), bound_cleanup, bound_view, type);
+
+  SET_FLAG(b, KO_BOUND);
 
   b->func = func;
   b->data = data;
