@@ -109,9 +109,9 @@ static dir_vtable idir_vt = {
 #define PRINTC(c) buf[bufpos++] = (c);
 
 static const char * idir_view(ko* dmap) {
-  char buf[1024];
+  char buf[4096];
   size_t bufpos = 0;
-  size_t size = 1024;
+  size_t size = 4096;
   idir* h = (idir*)dmap;
   PRINTC('{');
 

@@ -1,0 +1,52 @@
+Brazos Network Protocol -- the simplest possible reliable network protocol
+  based on IP
+  reliable using timeouts
+  stop-and-wait protocol
+  reorders packets if neccessary
+  has defined chunks -- not a byte stream
+
+
+Packet
+UDP
+---------------------------------
+| 2  Src Port|2  Dst Port       |
+| 2  Length  |2  Checksum       |
+---------------------------------
+BNMP
+---------------------------------
+| 2 Pkt# | 1 Flags | 1 #PktsLeft|
+| Data ...                      |
+---------------------------------
+
+Flags:
+Req: a possibly multi-packet datagram.
+  Pkt# is set to a random 16-bit number.
+  SrcPort must be controlled by the sender until the final AckZ is receved or times out.
+  Length is the size (in bytes) of _this_ packet's payload.
+  #PktsLeft is set to the number of packets in this transmission, and zero if it is a single packet.
+  Flags is set to {Req}
+
+Retransmit: the retransmission of a packet that timed out
+  Pkt#, Src/Dst Ports, and #Pkts left remain the same as the original
+  Flags is set to {Req, Ret}
+  If an reciever sees both an original and retransmitted packet (eg, the ack was lost), it must discard the retransmit.
+
+Ack: an ack of a req.
+  Pkt# is set to the # of the req
+  SrcPort/DstPort are reversed.
+  Length is echoed back.
+  #PktsLeft is echoed back.
+  Flags is set to {Ack}
+
+Operation:
+A         B
+| Req2 -> |
+| <-- Ack |
+| Req1 -> |
+| <-- Ack |
+| Req0 -> |
+| Timeout |
+| Req0 -> |
+| <-- Ack |
+| Done    |
+

@@ -115,9 +115,9 @@ static void khm_cleanup(ko* kmap) {
 #define PRINTC(c) buf[bufpos++] = (c);
 
 static const char * khm_view(ko* dmap) {
-  char buf[1024];
+  char buf[4096];
   size_t bufpos = 0;
-  size_t size = 1024;
+  size_t size = 4096;
   khashmap* h = (khashmap*)dmap;
   PRINTC('{');
 

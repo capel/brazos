@@ -1,7 +1,6 @@
 short term:
   futures
   networking
-  cleanup kihm/khm/kvector/etc.
   make some new data structures (queue and set most notably)
   make userspace not use kernel malloc...
 
