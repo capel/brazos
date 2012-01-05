@@ -19,10 +19,6 @@ static inline int putc(int c) {
     return syscall(PUTC, c, 0, 0);
 }
 
-static inline void* get_pages(size_t num) {
-    return (void*)syscall(GET_PAGES, num, 0, 0);
-}
-
 static inline void halt() {
     syscall(HALT, 0, 0, 0);
 }
@@ -80,9 +76,9 @@ static inline int lookup(const char* path) {
   return ret;
 }
 
-static inline const char* view(int rid) {
-  const char* ret = (const char*) syscall(SYS_VIEW, rid,0, 0);
-  if (ret == 0) {
+static inline int view(int rid, char* buf, size_t len) {
+  int ret = syscall(SYS_VIEW, rid, (int)buf, len);
+  if (ret != 0) {
     perror(E_ERROR);
   }
   return ret;
@@ -107,6 +103,14 @@ static inline int sink(int src_rid, int sh_rid) {
 static inline int type(int rid) {
   int ret = syscall(SYS_TYPE, rid, 0, 0);
   if (ret <0) {
+    perror(ret);
+  }
+  return ret;
+}
+
+static inline int dredge(int rid) {
+  int ret = syscall(SYS_DREDGE, rid, 0, 0);
+  if (ret < 0) {
     perror(ret);
   }
   return ret;

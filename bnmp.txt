@@ -7,15 +7,32 @@ Brazos Network Protocol -- the simplest possible reliable network protocol
 
 
 Packet
+IP
+---------------------------------
+| 4 0x4500
+|
+| 2 Length
+| 2 0
+| 2 0x0
+| 1 64 | 1 0x11 (UDP) 
+| 2 Header Checksum
+| src ip
+|
+| dst ip
+|
+--------------------------------
 UDP
 ---------------------------------
-| 2  Src Port|2  Dst Port       |
-| 2  Length  |2  Checksum       |
+| 2  Src Port
+| 2  Dst Port       
+| 2  Length  
+| 2  Checksum (0 for ease of use)
 ---------------------------------
 BNMP
 ---------------------------------
-| 2 Pkt# | 1 Flags | 1 #PktsLeft|
-| Data ...                      |
+| 2 Pkt# 
+| 1 Flags | 1 #PktsLeft
+| Data ...                      
 ---------------------------------
 
 Flags:

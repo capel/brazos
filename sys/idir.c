@@ -3,7 +3,7 @@
 #include "../kvector.h"
 
 typedef struct _bucket {
-    unsigned key;
+    int key;
     ko * value;
     struct _bucket *next;
 } bucket;
@@ -24,12 +24,12 @@ vector* idir_keys(idir* map) {
 }
 
 
-bool idir_insert(idir* map, unsigned key , ko* value) {
+bool idir_insert(idir* map, int key , ko* value) {
     if (idir_lookup(map, key)) {
         return false;
     }
     
-    unsigned b = key & map->bucket_mask;
+    unsigned b = (unsigned)key & map->bucket_mask;
 
     bucket * buck = kmalloc(sizeof(bucket));
     buck->key = key;
@@ -41,8 +41,8 @@ bool idir_insert(idir* map, unsigned key , ko* value) {
     return true;
 }
 
-ko* idir_lookup(idir* map, unsigned key) {
-    unsigned b = key & map->bucket_mask;
+ko* idir_lookup(idir* map, int key) {
+    unsigned b = (unsigned)key & map->bucket_mask;
     
     for(bucket * buck = map->buckets[b]; buck; buck = buck->next) {
         if (buck->key == key) return buck->value;
@@ -61,8 +61,8 @@ static void free_bucket(bucket* b, bool follow) {
   if (follow) free_bucket(next, true);
 }
 
-bool idir_delete(idir* map, unsigned key) {
-    unsigned b = key & map->bucket_mask;
+bool idir_delete(idir* map, int key) {
+    unsigned b = (unsigned)key & map->bucket_mask;
 
     bucket * prev = 0;
     for(bucket * buck = map->buckets[b]; buck; buck = buck->next) {
@@ -79,7 +79,6 @@ bool idir_delete(idir* map, unsigned key) {
     return false;
 }
 
-
 void idir_cleanup(ko* o) {
   idir* map = (idir*)o;
   for (size_t i = 0; i < map->size; i++) {
@@ -91,12 +90,12 @@ static ko* idir_ext_lookup(dir* d, const char* name) {
   return idir_lookup((idir*)d, atoi(name));
 }
 
-static err_t idir_ext_link(dir* d, ko* child, const char* name) {
-  return idir_insert((idir*)d, atoi(name), child) ? 0 : E_ERROR;
+static ko* idir_ext_link(dir* d, ko* child, const char* name) {
+  return idir_insert((idir*)d, atoi(name), child) ? 0 : get_ko(E_ERROR);
 }
 
-static err_t idir_ext_unlink(dir* d, const char* name) {
-  return idir_delete((idir*)d, atoi(name)) ? 0 : E_NOT_FOUND;
+static ko* idir_ext_unlink(dir* d, const char* name) {
+  return idir_delete((idir*)d, atoi(name)) ? 0 : get_ko(E_NOT_FOUND);
 }
 
 static dir_vtable idir_vt = {
@@ -108,7 +107,7 @@ static dir_vtable idir_vt = {
 #define PRINT(x) bufpos = strrcpy(buf, bufpos, size, (x))
 #define PRINTC(c) buf[bufpos++] = (c);
 
-static const char * idir_view(ko* dmap) {
+static msg* idir_view(ko* dmap) {
   char buf[4096];
   size_t bufpos = 0;
   size_t size = 4096;
@@ -136,7 +135,7 @@ static const char * idir_view(ko* dmap) {
   PRINTC('\0');
 
   cleanup_vector(keys);
-  return kstrclone(buf);
+  return mk_msg(buf);
 }
 
 #undef PRINT

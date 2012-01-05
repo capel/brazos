@@ -4,14 +4,15 @@
 #include "../stdlib.h"
 #include "../syscalls.h"
 
-
-static ko* q_sink(vector* v, ko* o) {
+static ko* q_sink(void* p, ko* o) {
+  vector* v = (vector*)p;
   vector_push(v, (void*)o);
   kget(o);
   return SINK_ASYNC;
 }
 
-static ko* q_pop(vector* v) {
+static ko* q_pop(void* p) {
+  vector* v = (vector*)p;
   if (v->size == 0) return NULL;
 
   ko* o = KO(v->data[0]);
@@ -20,17 +21,13 @@ static ko* q_pop(vector* v) {
   return o;
 }
 
-static ko* q_size(vector* v) {
-  char buf[32];
-  utoa(buf, 32, v->size);
-  return mk_msg(buf);
-}
+IGET_FUNC(q_size, vector, size);
 
 dir* mk_queue() {
   dir* d = mk_dir();
   vector* v = kmake_vector(sizeof(ko*), UNMANAGED_POINTERS);
-  SAFE_ADD(d, MK_SINKHOLE(q_sink, v), "push");
-  SAFE_ADD(d, BIND(q_pop, KO_FOUNTAIN, v), "pop");
-  SAFE_ADD(d, BIND_MSG(q_size, v), "size");
+  SAFE_ADD(d, mk_sinkhole(q_sink, v), "push");
+  SAFE_ADD(d, mk_fountain(q_pop, v), "pop");
+  SAFE_ADD(d, mk_window(q_size, v), "size");
   return d;
 }

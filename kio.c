@@ -134,8 +134,10 @@ int printf(const char* fmt, ...)
 
 //    kputs(buf);
 
+
     int rid = message(buf, strlen(buf)+1);
     sink(rid, lookup("~stdio"));
+    close(rid);
 
     return 0;
 }
@@ -151,8 +153,10 @@ int println(const char* fmt, ...)
     va_end(va);
 
   //  kputs(buf);
+
     int rid = message(buf, strlen(buf)+1);
     sink(rid, lookup("~stdio"));
+    close(rid);
 
 
     return 0;
@@ -191,7 +195,7 @@ const char* ko_str(ko* o) {
   size_t bufpos = 0;
   size_t size = 512;
   if (!o) {
-    return kstrclone("<0,0>");
+    return kstrclone("<0,U>");
   }
 
   PRINTC('<');
@@ -199,7 +203,7 @@ const char* ko_str(ko* o) {
   const int BUFSIZE = 64;
   char tmpbuf[BUFSIZE]; // PLENTY of room for scratch stuff
   //PRINT(MAGENTA);
-  utoa(tmpbuf, BUFSIZE, ID(o));
+  itoa(tmpbuf, BUFSIZE, ID(o));
   PRINT(tmpbuf);
   //PRINT(WHITE);
   PRINTC(',');
@@ -273,9 +277,10 @@ int vprintf(char* buf, size_t size, const char* fmt, va_list va, int newline)
                     break;
                 case 'K':
                     o = va_arg(va, ko*);
-                    cs = VIEW(o);
+                    msg* m = VIEW(o);
+                    cs = get_msg(m);
                     PRINT(cs);
-                    kfree((void*)cs);
+                    kput(m);
                     break;
                 case '%':
                     PRINTC('%');

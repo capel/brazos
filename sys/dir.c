@@ -23,9 +23,9 @@ typedef struct _hashmap {
     kbucket** buckets;
 } khashmap;
 
-static err_t khm_insert(dir* dmap, ko* value, const char* key);
+static ko* khm_insert(dir* dmap, ko* value, const char* key);
 static ko* khm_lookup(dir* dmap, const char* key);
-static err_t khm_delete(dir* dmap, const char* key);
+static ko* khm_delete(dir* dmap, const char* key);
 
 static void add_keys(vector* v, kbucket* b) {
   if (!b) return;
@@ -43,7 +43,7 @@ static vector* khm_keys(khashmap* map) {
 }
 
 
-static err_t khm_insert(dir* dmap, ko* value, const char* key) {
+static ko* khm_insert(dir* dmap, ko* value, const char* key) {
     khashmap* map = (khashmap*)dmap;
     if (khm_lookup(dmap, key)) {
       khm_delete(dmap, key);
@@ -58,7 +58,7 @@ static err_t khm_insert(dir* dmap, ko* value, const char* key) {
     buck->next = map->buckets[b];
     map->buckets[b] = buck;
 
-    return true;
+    return 0;
 }
 
 static ko* khm_lookup(dir* dmap, const char* key) {
@@ -83,7 +83,7 @@ static void free_bucket(kbucket* bucket, bool follow) {
   if (follow) free_bucket(next, true);
 }
 
-static err_t khm_delete(dir* dmap, const char* key) {
+static ko* khm_delete(dir* dmap, const char* key) {
     khashmap* map = (khashmap*)dmap;
     unsigned b = hash(key) & map->bucket_mask;
 
@@ -99,7 +99,7 @@ static err_t khm_delete(dir* dmap, const char* key) {
             return 0;
         }
     }
-    return E_NOT_FOUND;
+    return get_ko(E_NOT_FOUND);
 }
 
 
@@ -114,7 +114,7 @@ static void khm_cleanup(ko* kmap) {
 #define PRINT(x) bufpos = strrcpy(buf, bufpos, size, (x))
 #define PRINTC(c) buf[bufpos++] = (c);
 
-static const char * khm_view(ko* dmap) {
+static msg* khm_view(ko* dmap) {
   char buf[4096];
   size_t bufpos = 0;
   size_t size = 4096;
@@ -142,7 +142,7 @@ static const char * khm_view(ko* dmap) {
   PRINTC('\0');
 
   cleanup_vector(keys);
-  return kstrclone(buf);
+  return mk_msg(buf);
 }
 
 #undef PRINT

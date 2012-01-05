@@ -82,9 +82,11 @@ int update_input() {
 
 }
 
-static dir* proc_me(void * ignore) {
-  return cp()->ko;
+/*
+static ko* proc_me() {
+  return KO(cp()->ko);
 }
+*/
 
 void setup(void) {
   printk("setup");
@@ -92,6 +94,7 @@ void setup(void) {
   printk("after sched");
   setup_ko_registry();
   printk("done with registry");
+  setup_err_ko();
 
   _new_root = mk_dir();
   printk("root %k", _new_root);
@@ -101,7 +104,7 @@ void setup(void) {
 
   dir* proc = mk_dir();
   LINK(new_root(), proc, "proc");
-  SAFE_ADD(proc, BIND(proc_me, KO_DIR, 0), "me");
+  //SAFE_ADD(proc, mk_ctor(proc_me, KO_DIR), "me");
   printk("proc %k", proc);
   assert(IS_DIR(proc));
   kput(proc);
@@ -156,11 +159,6 @@ static int sys_halt(void) {
   khalt();
   return 0;
 }
-static int sys_write_stdout(const char* s) {
-  kputs(s);
-  return 0;
-}
-
 
 static int sys_exit(void) {
   printk("Proc %d exiting", cp()->pid);
@@ -193,7 +191,7 @@ static int sys_forkexec(const char* prog_name) {
 
 static int sys_wait(int rid) {
   ko *o = proc_rid(cp(), rid);
-  if (!o) return E_BAD_FD;
+  if (!o) return E_BAD_RID;
   if (IS_RESOLVED(o)) return proc_add_ko(cp(), GET_FUTURE(FUTURE(o)));
 
   if (IS_FUTURE(o)) return E_ERROR; // do something
@@ -204,22 +202,21 @@ static int sys_wait(int rid) {
 
 static int sys_link(int prid, int crid, const char* name) {
   dir* parent = (dir*)proc_rid(cp(), prid);
-  if (!parent) return E_BAD_FD;
+  if (!parent) return E_BAD_RID;
   if (!IS_DIR(parent)) return E_NOT_DIR;
 
   ko* child = proc_rid(cp(), crid);
-  if (!child) return E_BAD_FD;
-  printk("parent %k child %k", parent, child);
+  if (!child) return E_BAD_RID;
 
-  return LINK(parent, child, name);
+  return proc_add_ko(cp(), LINK(parent, child, name));
 }
 
 static int sys_unlink(int prid, const char* name) {
-  dir* parent = (dir*)proc_rid(cp(), prid);
-  if (!parent) return E_BAD_FD;
+  dir* parent = DIR(proc_rid(cp(), prid));
+  if (!parent) return E_BAD_RID;
   if (!IS_DIR(parent)) return E_NOT_DIR;
   if (!name) return E_BAD_ARG;
-  return UNLINK(parent, name);
+  return proc_add_ko(cp(), UNLINK(parent, name));
 }
 
 
@@ -230,6 +227,14 @@ static int sys_lookup(const char* path) {
   if (!o) return E_BAD_FILENAME;
 
   return proc_add_ko(cp(), o);
+}
+
+static int sys_dredge(int rid) {
+  ko* o = proc_rid(cp(), rid);
+  if (!o) return E_BAD_RID;
+  if (!IS_FOUNTAIN(o)) return E_NOT_FOUNTAIN;
+
+  return proc_add_ko(cp(), DREDGE(FOUNTAIN(o)));
 }
 
 static ko* path_lookup(const char* path) {
@@ -254,7 +259,7 @@ static ko* path_lookup(const char* path) {
 
 static int sys_type(int rid) {
   ko* o = proc_rid(cp(), rid);
-  if (!o) return E_BAD_FD;
+  if (!o) return E_BAD_RID;
   return o->type;
 }
 
@@ -262,11 +267,9 @@ static int sys_sink(int src_rid, int sh_rid) {
   ko* src = proc_rid(cp(), src_rid);
   ko* sh = proc_rid(cp(), sh_rid);
   if (!sh || !src) {
-    printk("Bad fd");
-    return E_BAD_FD;
+    return E_BAD_RID;
   }
   if (!IS_SINKHOLE(sh)) {
-    printk("%k, %d", sh, KO(sh)->type);
     return E_NOT_SINKHOLE;
   }
   ko* ret = SINK(SINKHOLE(sh), src);
@@ -279,15 +282,17 @@ static int sys_message(void* data, size_t size) {
   if (size == 0 || data == 0) {
     return E_BAD_ARG;
   }
-  ko* f = mk_msg(data);
+  ko* f = KO(mk_msg(data));
   return proc_add_ko(cp(), KO(f));
 }
 
-static const char* sys_view(int rid) {
+static int sys_view(int rid, char* buf, size_t len) {
   ko* o = proc_rid(cp(), rid);
   if (!o) return 0;
-  return VIEW(o);
-  // TODO make awesome
+  msg * m = VIEW(o);
+  strlcpy(buf, get_msg(m), len);
+  kput(m);
+  return 0;
 }
 
 int _ksyscall (int code, int r1, int r2, int r3) {
@@ -296,8 +301,6 @@ int _ksyscall (int code, int r1, int r2, int r3) {
       return sys_putc(r1);
     case GETC:
       return sys_getc();
-    case WRITE_STDOUT:
-      return sys_write_stdout((const char*)r1);
     case HALT:
       return sys_halt();
     case EXIT:
@@ -323,7 +326,9 @@ int _ksyscall (int code, int r1, int r2, int r3) {
     case SYS_TYPE:
       return sys_type(r1);
     case SYS_VIEW:
-      return (int)sys_view(r1);
+      return sys_view(r1, (char*)r2, r3);
+    case SYS_DREDGE:
+      return sys_dredge(r1);
     default:
       printk("Bad syscall code %d", code);
       return E_BAD_SYSCALL;

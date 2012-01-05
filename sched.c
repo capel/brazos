@@ -34,11 +34,14 @@ void ksetup_sched()
 }
 
 int proc_add_ko(proc* p, ko* o) {
+  if (!o) return 0;
+  if (ID(o) < 0) return ID(o);
   idir_insert(p->rids, ID(o), o);
   return ID(o);
 }
 
 ko* proc_rid(proc* p, int rid) {
+  if (rid < 0) return get_ko(rid);
   return idir_lookup(p->rids, rid);
 }
 

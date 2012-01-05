@@ -129,4 +129,11 @@ void readline_lib(const char * prompt, readline_func func) {
     }
 }
 
+void close(int rid) {
+  int rids = lookup("~rids");
+  char n[32];
+  itoa(n, 32, rid);
+  unlink(rids, n);
+}
+
 

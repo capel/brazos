@@ -30,43 +30,11 @@ char * strclone(const char * s) {
 
 
 void perror(int error) {
-    switch (error) {
-        case E_ERROR:
-            println("Error: Generic error.");
-            break;
-        case E_NOT_SUPPORTED:
-            println("Error: Operation not supported here.");
-            break;
-        case E_BAD_FILENAME:
-            println("Error: Bad filename.");
-            break;
-        case E_BAD_PROGRAM:
-            println("Error: Bad program name.");
-            break;
-        case E_IS_DIR:
-            println("Error: Is directory.");
-            break;
-        case E_BAD_FD:
-            println("Error: Bad FD.");
-            break;
-        case E_NOT_DIR:
-            println("Error: Isn't a directory.");
-            break;
-        case E_NOT_FILE:
-            println("Error: Isn't a file.");
-            break;
-        case E_BAD_ARG:
-            println("Error: Bad syscall argument.");
-            break;
-        case E_BAD_SYSCALL:
-            println("Error: Bad syscall number.");
-            break;
-        case E_NOT_SINKHOLE:
-            println("Error: Not a sinkhole.");
-            break;
-        default:
-            break;
-    }
+  int newline = message("\n", 2);
+
+  int stdio = lookup("~stdio");
+  sink(error, stdio);
+  sink(newline, stdio);
 }
 
 void erase_chars(size_t num) {
@@ -76,7 +44,8 @@ void erase_chars(size_t num) {
 }
 
 void print_dir(int rid) {
-  const char* s = view(rid);
+  char s[4096];
+  view(rid, s, 4096);
   parsed_dir* d = parse_dir(s);
   if (!d) {
     println("Dir parse error: %s", s);
@@ -135,6 +104,10 @@ bool parse_line(char* line) {
             if (strcmp(v->data[0], "echo") == 0) {
                 char* msg = line + strlen("echo") + 1;
                 println("%s", msg);
+                goto cleanup;
+            }
+            if (strcmp(v->data[0], "echor") == 0) {
+                char* msg = line + strlen("echo") + 1;
                 int rid = message(msg, strlen(msg));
                 println("%d", rid);
                 goto cleanup;
@@ -192,9 +165,12 @@ bool parse_line(char* line) {
                   rid = lookup("/"); 
                 } else { 
                   rid = lookup(ARG(1));
-                  println("rid %d", rid);
                   if (rid < 0) {
                     println("Bad directory");
+                    goto cleanup;
+                  }
+                  if (type(rid) != KO_DIR) {
+                    println("Not a directory");
                     goto cleanup;
                   }
                 }
@@ -208,7 +184,8 @@ bool parse_line(char* line) {
                 println("Bad filename");
                 goto cleanup;
               }
-              const char * s = view(rid);
+              char s[4096];
+              view(rid, s, 4096);
               println("%s", s);
               goto cleanup;
             }
@@ -307,7 +284,7 @@ bool parse_line(char* line) {
               if (found) {
                 prid = lookup(dst);
               } else {
-                prid = lookup(abs ? "/" : "/proc/me/cwd");
+                prid = lookup(abs ? "/" : "~cwd");
               }
 
               if (prid < 0) println("Bad parent");
@@ -320,7 +297,7 @@ bool parse_line(char* line) {
             if (strcmp(v->data[0], "ls") == 0) {
               int rid;
               if (v->size == 1) {
-                rid = lookup("/proc/me/cwd");
+                rid = lookup("~cwd");
               } else {
                 rid = lookup(v->data[1]);
               }

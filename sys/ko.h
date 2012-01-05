@@ -10,9 +10,10 @@
 
 typedef size_t err_t;
 struct ko;
+struct msg;
 
 typedef void (*cleanup_func)(struct ko* o);
-typedef const char* (*view_func)(struct ko* o);
+typedef struct msg* (*view_func)(struct ko* o);
 
 typedef struct ko {
   cleanup_func cleanup;
@@ -20,8 +21,13 @@ typedef struct ko {
   int rc;
   size_t flags;
   size_t type;
-  size_t id;
+  int id;
 } ko;
+
+typedef struct msg {
+  ko o;
+  char* msg;
+} msg;
 
 typedef struct dir {
   ko f;
@@ -37,14 +43,22 @@ typedef struct sinkhole {
   void* data;
 } sinkhole;
 
+typedef ko* (*dredge_func)(void* data);
+typedef struct fountain {
+  ko o;
+  dredge_func dredge;
+  void* data;
+} fountain;
+
 typedef struct future {
   ko o;
   ko *data;
+  sinkhole* listener;
 } future;
 
 typedef ko* (*lookup_func)(dir* o, const char* path);
-typedef err_t (*link_func)(dir* d, ko* child, const char* name);
-typedef err_t (*unlink_func)(dir* d, const char* name);
+typedef ko* (*link_func)(dir* d, ko* child, const char* name);
+typedef ko* (*unlink_func)(dir* d, const char* name);
 
 typedef struct dir_vtable {
   lookup_func lookup;
@@ -52,20 +66,27 @@ typedef struct dir_vtable {
   unlink_func unlink;
 } dir_vtable;
 
-#define KO_BOUND 1
-#define IS_BOUND(e) (FLAGGED((e), KO_BOUND))
+#define KO_WINDOW 1
+#define IS_WINDOW(e) (FLAGGED((e), KO_WINDOW))
 #define KO_RESOLVED 2
 #define IS_RESOLVED(e) (FLAGGED(e, KO_RESOLVED))
+
+#define KO_CTOR 4
+#define IS_CTOR(e) (FLAGGED(e, KO_CTOR))
 
 #define IS_DIR(e) (KO(e)->type == KO_DIR)
 #define IS_MSG(e) (KO(e)->type == KO_MESSAGE)
 #define IS_SINKHOLE(e) (KO(e)->type == KO_SINKHOLE)
 #define IS_FUTURE(e) (KO(e)->type == KO_FUTURE)
+#define IS_ERR(e) (KO(e)->type == KO_ERROR) 
+#define IS_FOUNTAIN(e) (KO(e)->type == KO_FOUNTAIN)
 
+#define MSG(e) ((msg*)e)
 #define KO(e) ((ko*)e)
 #define DIR(e) ((dir*)e)
 #define SINKHOLE(e) ((sinkhole*)e)
 #define FUTURE(e) ((future*)e)
+#define FOUNTAIN(e) ((fountain*)e)
 
 #define PATH(v) ((const char**)(v)->data)
 
@@ -77,6 +98,7 @@ typedef struct dir_vtable {
 #define CLEANUP(e) (KO(e)->cleanup((e)))
 
 #define SINK(e, s) ((e)->sink((e)->data, KO(s)))
+#define DREDGE(e) ((e)->dredge((e)->data))
 
 #define SET_FLAG(e, f) (KO(e)->flags |= (f))
 #define FLAGGED(e, f) (KO(e)->flags & (f))
@@ -85,27 +107,10 @@ void RESOLVE(future * f, ko* o);
 
 #define GET_FUTURE(e) ((e)->data)
 
-typedef ko* (*bound_func)(void*);
-ko* bind(bound_func func, int type, void* data);
-ko* release(ko* bound);
-#define BIND_MSG(func, data) bind((bound_func)(func), KO_MESSAGE, data)
-#define BIND(func, type, data) bind((bound_func)(func), type, data)
+typedef msg* (*window_func)(void*);
+ko* mk_window(window_func func, void* data);
 
 sinkhole* mk_sinkhole(sink_func, void* data);
-#define MK_SINKHOLE(func, data) mk_sinkhole((sink_func)(func), data)
-
-#define IGET_FUNC(name, type, prop) \
-  static ko* name(type * o) { \
-    char n[32]; \
-    itoa(n, 32, o->prop); \
-    return mk_msg(n); \
-  }
-
-#define SAFE_ADD(parent, child, name) do { \
-  ko* o = KO(child); \
-  LINK(parent, o, name); \
-  kput(o);\
-} while(0) 
 
 void _kput(ko* o, const char* file, const char* func);
 #define kput(o) _kput(KO(o), __FILE__, __func__)
@@ -115,7 +120,13 @@ void _kput(ko* o, const char* file, const char* func);
 #define ID(e) (KO(e)->id)
 
 ko* mk_ko(size_t size, cleanup_func cleanup, view_func view, size_t type);
-ko* mk_msg(const char* msg);
+msg* mk_msg(const char* msg);
+const char* get_msg(msg* o);
+
+typedef ko* (*ctor_func)(void);
+ko* mk_ctor(ctor_func func, int type);
+ko* construct(ko* ctor);
+
 dir* mk_dir();
 future * mk_future(void);
 
@@ -125,5 +136,27 @@ void setup_ko_registry(void);
 ko* get_ko(size_t id);
 const char* ko_str(ko* o);
 
+ko* mk_fountain(dredge_func func, void* data);
+
+void setup_err_ko(void);
+
+#define IGET_FUNC(name, type, prop) \
+  static msg* name(void * o) { \
+    type * t = (type*)o; \
+    char n[32]; \
+    itoa(n, 32, t->prop); \
+    return mk_msg(n); \
+  }
+
+#define CS_VIEW_FUNC(name, s) \
+static msg* name(ko * o) { \
+  return mk_msg(s); \
+}
+
+#define SAFE_ADD(parent, child, name) do { \
+  ko* o = KO(child); \
+  LINK(parent, o, name); \
+  kput(o);\
+} while(0) 
 
 #endif

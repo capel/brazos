@@ -19,4 +19,6 @@ int getline(char* buf, size_t size);
 typedef bool (*readline_func)(char*);
 void readline_lib(const char * prompt, readline_func func); 
 
+void close(int rid);
+
 #endif

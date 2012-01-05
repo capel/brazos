@@ -6,8 +6,9 @@ ko* walk(dir* start, const char* path) {
   for (size_t i = 0; i < v->size; i++) {
     o = LOOKUP(start, v->data[i]);
     if (!o) return 0;
-    if (IS_BOUND(o)) {
-      o = release(o);
+
+    if (IS_CTOR(o)) {
+      o = construct(o);
     }
 
     if (i+1 == v->size) {

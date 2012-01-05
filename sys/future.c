@@ -1,7 +1,7 @@
 #include "ko.h"
 
-static const char* view_future(ko* o) {
-  return "IMPOSSIBLE";
+static msg* view_future(ko* o) {
+  return mk_msg("IMPOSSIBLE");
 }
 
 static void cleanup(ko* o) {}
@@ -16,4 +16,5 @@ future* mk_future() {
 void RESOLVE(future* f, ko* o) {
   f->data = o;
   SET_FLAG(f, KO_RESOLVED);
+  SINK(f->listener, o);
 }

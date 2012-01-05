@@ -40,13 +40,13 @@ idir* mk_idir();
 
 // The key is assumed to already be hashed.
 // True on insert, false on failure (the key already exists)
-bool idir_insert(idir* map, unsigned key, ko* val);
+bool idir_insert(idir* map, int key, ko* val);
 
 // Returns 0 if the key is not found. Store 0 at your own risk.
-ko* idir_lookup(idir* map, unsigned key);
+ko* idir_lookup(idir* map, int key);
 
 // The data is returned if the key is found, otherwise 0 is returned.
 // It is your job to free the data, if necessary.
-bool idir_delete(idir* map, unsigned key);
+bool idir_delete(idir* map, int key);
 
 #endif

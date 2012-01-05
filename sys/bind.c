@@ -4,40 +4,34 @@
 
 typedef struct {
   ko o;
-  bound_func func;
+  window_func func;
   void* data;
-} bound;
+} window;
 
-static void bound_cleanup(ko* o) {
-  // ???
+static void window_cleanup(ko* o) {}
+
+static msg* window_view(ko* o) {
+  assert(IS_WINDOW(o));
+  window * w = (window*) o;
+  return w->func(w->data);
 }
 
-const char* bound_view(ko* o) {
-  return "BOUND!";
-}
+ko* mk_window(window_func func, void* data) {
+  window * w = (window*) mk_ko(sizeof(window), window_cleanup, window_view, KO_MESSAGE);
 
-ko* bind(bound_func func, int type, void* data) {
-  bound * b = (bound*) mk_ko(sizeof(bound), bound_cleanup, bound_view, type);
+  SET_FLAG(w, KO_WINDOW);
 
-  SET_FLAG(b, KO_BOUND);
-
-  b->func = func;
-  b->data = data;
-  return KO(b);
-}
-
-ko* release(ko* o) {
-  assert(IS_BOUND(o));
-  bound * b = (bound*) o;
-  return b->func(b->data);
+  w->func = func;
+  w->data = data;
+  return KO(w);
 }
 
 static void sinkhole_cleanup(ko* sh) {
   printk("sinkhole cleaned up %k", sh);
 }
 
-static const char* sinkhole_view(ko* sh) {
-  return "SINKHOLE";
+static msg* sinkhole_view(ko* sh) {
+  return mk_msg("SINKHOLE");
 }
 
 sinkhole* mk_sinkhole(sink_func func, void* data) {
@@ -46,4 +40,38 @@ sinkhole* mk_sinkhole(sink_func func, void* data) {
   b->sink = func;
   b->data = data;
   return b;
+}
+
+typedef struct ctor {
+  ko o;
+  ctor_func construct;
+} ctor;
+
+ko* construct(ko * o) {
+  assert(IS_CTOR(o));
+  ctor* c = (ctor*)o;
+  return c->construct();
+}
+
+static void ctor_cleanup(ko* o) {}
+static msg* ctor_view(ko* o) { assert(false); }
+
+ko* mk_ctor(ctor_func func, int type) {
+  ctor * b = (ctor*) mk_ko(sizeof(ctor), ctor_cleanup, 
+      ctor_view, type);
+  b->construct = func;
+  SET_FLAG(b, KO_CTOR);
+  return KO(b);
+}
+
+static void f_cleanup(ko* o) {}
+static msg* f_view(ko* o) { return mk_msg("FOUNTAIN"); }
+
+ko* mk_fountain(dredge_func func, void* data) {
+  fountain * b = (fountain*) mk_ko(sizeof(ctor), f_cleanup, 
+      f_view, KO_FOUNTAIN);
+
+  b->dredge = func;
+  b->data = data;
+  return KO(b);
 }
