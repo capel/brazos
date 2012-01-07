@@ -43,12 +43,23 @@ static inline unsigned get_mem_size(void) {
 extern void* _kstart;
 extern void* _kend;
 
+#define DEV_RTC_ADDRESS     0x0000000015000000
+#define DEV_RTC_LENGTH      0x0000000000000200
+
+#define DEV_RTC_TRIGGER_READ    0x0000
+#define DEV_RTC_SEC    0x0010
+#define DEV_RTC_USEC    0x0020
+
+#define DEV_RTC_HZ    0x0100
+#define DEV_RTC_INTERRUPT_ACK    0x0110
+
+
 #define DEV_IRQC_ADDRESS    0x0000000016000000
 #define DEV_IRQC_LENGTH     0x12
 
 #define DEV_IRQC_IRQ        0x0
-#define DEV_IRQC_MASK       0x1
-#define DEV_IRQC_UNMASK     0x2
+#define DEV_IRQC_MASK       0x4
+#define DEV_IRQC_UNMASK     0x8
 
 
 #define IRQ_MP 6
@@ -57,6 +68,15 @@ extern void* _kend;
 #define IRQ_CONS 2
 
 #define USER_STACK_SIZE 10
+
+static inline void enable_rtc_irq(void)
+{
+	*(volatile unsigned *) (DEV_IRQC_ADDRESS + DEV_IRQC_UNMASK) = IRQ_RTC;
+}
+
+static inline void set_timer(unsigned usec) {
+  *(volatile int*)(DEV_RTC_ADDRESS + DEV_RTC_HZ) = usec;
+}
 
 static inline unsigned __get_CPSR(void) { 
     unsigned temp;
@@ -150,17 +170,18 @@ static inline void restore_interrupt(unsigned saved_CPSR){
 
 static inline void enable_cons_irq(void)
 {
-	*((volatile unsigned *) DEV_IRQC_ADDRESS + DEV_IRQC_UNMASK) = IRQ_CONS;
+  printk("%p", DEV_IRQC_ADDRESS + DEV_IRQC_MASK);
+	*(volatile unsigned *)(DEV_IRQC_ADDRESS + DEV_IRQC_UNMASK) = IRQ_CONS;
 }
 
 static inline void disable_cons_irq(void)
 {
-	*((volatile unsigned *) DEV_IRQC_ADDRESS + DEV_IRQC_MASK) = IRQ_CONS;
+	*(volatile unsigned *)(DEV_IRQC_ADDRESS + DEV_IRQC_MASK) = IRQ_CONS;
 }
 
 static inline unsigned get_irq_mask()
 {
-	return *((volatile unsigned *) DEV_IRQC_ADDRESS + DEV_IRQC_IRQ);
+	return *(volatile unsigned *)( DEV_IRQC_ADDRESS + DEV_IRQC_IRQ);
 }
 
 

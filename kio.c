@@ -70,6 +70,7 @@ void kputc(int c) {
     *((volatile unsigned char *) PUTCHAR_ADDRESS) = c;
 }
 
+
 void kputs(const char *s)
 {
 	//kputch('<');

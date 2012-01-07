@@ -13,7 +13,7 @@ LD=arm-elf-ld
 
 .PHONY: all clean distclean 
 all: ${TARGET} 
-	gxemul -K  -VT -d disk -E testarm kernel
+	gxemul -K -v  -VT -d disk -E testarm kernel
 
 ${TARGET}: ${OBJS} ${AOBJS}
 	${LD} ${LDFLAGS} -o ${TARGET} start.o ${OBJS}

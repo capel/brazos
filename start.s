@@ -9,24 +9,43 @@ ivt:
     b khalt @ prefetch abort 
     b khalt @ dab_handler @ data abort
     b khalt
-    b irq_handler @ irq
+    b kirq @ irq
     b khalt @fiq
 
 .comm stack, 0x10000 @ Reserve 64k stack in the BSS
+.comm irq_stack, 0x10000 @ stack for IRQ
 
 _start:
     .globl _start
     ldr r1, =null_ptr_func
     ldr r0, =0
     str r1, [r0]
+
+    @ go into IRQ mode
+    ldr r1, =0x12
+    msr CPSR_c, r1
+
+    @ setup IRQ stack
+    ldr sp, =irq_stack+0x10000
+
+    @return to system mode
+    ldr r1, =0x13
+    msr CPSR_c, r1
     
+    @ setup swi/kernel stack
     ldr sp, =stack+0x10000 @ Set up the stack
     bl kmain @ Jump to the main function
 1: 
     b 1b @ Halt
 
-
-
+.text
+.align 2
+.global enable_irq
+enable_irq:
+  mrs r1, CPSR
+  bic r1, #0x80
+  msr CPSR_c, r1
+  bx lr
 
 .text
 .align 2
@@ -75,13 +94,15 @@ swi_handler:
 .align 2
 .global irq_handler
 irq_handler:
-    stmfd sp!, {lr}
+    @stmfd sp!, {lr}
     
-    bl save_pcb
+    @ bl save_pcb
     
-    bl kirq
+    mov r1, #0x0000000010000000
+    mov r0, #0x33
+    str r1, [r0]
 
-    bl restore_pcb
+     @bl restore_pcb
 
 .text
 .align 2
