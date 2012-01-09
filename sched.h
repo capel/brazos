@@ -60,8 +60,8 @@ void kfree_proc(proc* p);
 proc* kfork_proc(proc* p);
 void kexec_proc(proc *p, void* main, void* exit);
 
-//void ksleep_proc(proc *p, future* f);
-//void kwake_proc(proc *p, future* f);
+void ksleep_proc(proc *p);
+void kwake_proc(proc *p);
 
 // implicitly the current proc
 void kcopy_pcb(PCB * pcb);

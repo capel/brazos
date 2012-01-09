@@ -64,6 +64,7 @@ vector* ksplit_to_vector(const char * str, const char* seps);
 // that it is prepared for whatever datatype is in the vector. 
 void print_vector(vector* v, const char* format_string, size_t start);
 
+void* vector_pop_front(vector* v);
 
 const char* vector_join(vector* v, const char* joiner);
 #endif

@@ -5,36 +5,48 @@
 #include "../syscalls.h"
 #include "../mach.h"
 
+typedef struct {
+  vector* q;
+  vector* futures;
+} qdir;
+
 static ko* q_sink(void* p, ko* o) {
-  vector* v = (vector*)p;
-  vector_push(v, (void*)o);
+  qdir* q = (qdir*)p;
+
+  if (q->futures->size > 0) {
+    future * f = vector_pop_front(q->futures);
+    RESOLVE(f, o);
+    return SINK_ASYNC;
+  }
+
+  vector_push(q->q, (void*)o);
   kget(o);
   return SINK_ASYNC;
 }
 
 static ko* q_pop(void* p) {
- // klock_t l = KLOCK_INIT;
- // klock(&l);
+  qdir* q = (qdir*)p;
+  if (q->q->size == 0) {
+    future* f = mk_future();
+    vector_push(q->futures, (void*)f);
+    return KO(f);
+  }
 
-  vector* v = (vector*)p;
-  if (v->size == 0) return NULL;
-
-  ko* o = KO(v->data[0]);
-  vector_remove(v, 0);
-  kput(o);
-
- // kunlock(&l);
+  ko* o = KO(vector_pop_front(q->q));
 
   return o;
 }
 
-IGET_FUNC(q_size, vector, size);
+IGET_FUNC(q_size, qdir, q->size);
 
 dir* mk_queue() {
   dir* d = mk_dir();
-  vector* v = kmake_vector(sizeof(ko*), UNMANAGED_POINTERS);
-  SAFE_ADD(d, mk_sinkhole(q_sink, v), "push");
-  SAFE_ADD(d, mk_fountain(q_pop, v), "pop");
-  SAFE_ADD(d, mk_window(q_size, v), "size");
+  qdir* q = kmalloc(sizeof(qdir));
+  
+  q->q = kmake_vector(sizeof(ko*), UNMANAGED_POINTERS);
+  q->futures = kmake_vector(sizeof(ko*), UNMANAGED_POINTERS);
+  SAFE_ADD(d, mk_sinkhole(q_sink, q), "push");
+  SAFE_ADD(d, mk_fountain(q_pop, q), "pop");
+  SAFE_ADD(d, mk_window(q_size, q), "size");
   return d;
 }

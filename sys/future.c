@@ -18,3 +18,7 @@ void RESOLVE(future* f, ko* o) {
   SET_FLAG(f, KO_RESOLVED);
   SINK(f->listener, o);
 }
+
+void set_listener(future *f, sinkhole* sh) {
+  f->listener = sh;
+}

@@ -43,15 +43,27 @@ static int sys_forkexec(const char* prog_name) {
 }
 
 
+static ko* wake_future_sleep(void* v, ko* o) {
+  proc *p = (proc*)v;
+  p->pcb.r0 = proc_add_ko(cp(), o);
+  kwake_proc(p);
+  return SINK_ASYNC;
+}
+
+
 static int sys_wait(int rid) {
   if (rid == 0) return 0; // basicly a yield
   ko *o = proc_rid(cp(), rid);
   if (!o) return E_BAD_RID;
+  if (!IS_FUTURE(o)) return rid; // wait on non-future is a no op
   if (IS_RESOLVED(o)) return proc_add_ko(cp(), GET_FUTURE(FUTURE(o)));
 
-  if (IS_FUTURE(o)) return E_ERROR; // do something
-
-  return rid; // wait on non-future is a no op
+  // we now have a non-resolved future. Let's put it to sleep.
+  future * f = FUTURE(o);
+  sinkhole* wake = mk_sinkhole(wake_future_sleep, cp());
+  set_listener(f, wake);
+  ksleep_proc(cp());
+  return 0;
 }
 
 
@@ -189,6 +201,7 @@ PCB* ksyscall (void* stacked_pcb) {
   kcopy_pcb(stacked_pcb);
   PCB* pcb = &cp()->pcb;
   reset_kernel_vm();
+  enable_interrupt();
   int ret = _ksyscall(pcb->r0, pcb->r1, pcb->r2, pcb->r3);
   // ret == -255 means that the process doesn't exist anymore
   // or something else went wildly wrong

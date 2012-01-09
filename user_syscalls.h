@@ -108,7 +108,7 @@ static inline int dredge(int rid) {
   if (ret < 0) {
     perror(ret);
   }
-  return ret;
+  return wait(ret);
 }
 
 

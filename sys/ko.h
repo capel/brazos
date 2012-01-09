@@ -129,6 +129,7 @@ ko* construct(ko* ctor);
 
 dir* mk_dir();
 future * mk_future(void);
+void set_listener(future* f, sinkhole* sh);
 
 struct work;
 typedef void (*work_func)(void*);

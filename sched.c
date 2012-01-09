@@ -127,18 +127,17 @@ void kfree_proc(proc *p)
     }
 }
 
-/*
+
 void ksleep_proc(proc* p) {
     num_runnable_procs--;
     p->runnable = 0;
 }
 
 void kwake_proc(proc* p) {
-  printk("waking proc %d", p->pid);
     num_runnable_procs++;
     p->runnable = 1;
 }
-*/
+
 
 void kcopy_pcb(PCB *pcb) {
     if (&current->pcb == pcb) {
@@ -149,8 +148,8 @@ void kcopy_pcb(PCB *pcb) {
 
 proc* ksched(void)
 {
-    if (num_runnable_procs == 0) {
-        panic("No procs. Goodbye world!");
+    while (num_runnable_procs == 0) {
+      // wait for interrupt
     }
 
     select:

@@ -9,6 +9,12 @@
 #include "vector.h"
 #include "kio.h"
 
+void* vector_pop_front(vector* v) {
+  void* p = (void*)v->data[0];
+  vector_remove(v, 0);
+  return p;
+}
+
 void vector_push(vector* v, char* object)
 {
 		if (!v) // null objects are allowed, so we don't bother checking the object.
