@@ -141,6 +141,7 @@ void kirq (){
   // fiddle with malloc
   vm_data* d = get_vm_base();
   reset_kernel_vm();
+//  kputc('!');
   handle();
   // restore original data
   set_vm_base(d);

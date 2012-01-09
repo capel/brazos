@@ -13,14 +13,18 @@ static ko* q_sink(void* p, ko* o) {
 }
 
 static ko* q_pop(void* p) {
-  disable_irq(0);
+ // klock_t l = KLOCK_INIT;
+ // klock(&l);
+
   vector* v = (vector*)p;
   if (v->size == 0) return NULL;
 
   ko* o = KO(v->data[0]);
   vector_remove(v, 0);
   kput(o);
-  enable_irq(0);
+
+ // kunlock(&l);
+
   return o;
 }
 

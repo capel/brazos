@@ -78,12 +78,13 @@ static inline void set_timer(unsigned usec) {
   *(volatile int*)(DEV_RTC_ADDRESS + DEV_RTC_HZ) = usec;
 }
 
-static inline unsigned __get_CPSR(void) { 
+static inline unsigned __get_CPSR(void) {
     unsigned temp;
     asm volatile ("mrs %0,CPSR":"=r" (temp):) ;
     return temp;
 }
-static inline void __set_CPSR(unsigned save_cpsr) {
+static inline void __set_CPSR(unsigned save_cpsr) 
+{
     asm volatile (" msr CPSR_c,%0"::"r"(save_cpsr) );
 }
 
@@ -136,6 +137,23 @@ static inline unsigned disable_irq(void){
     __set_CPSR(temp | 0x80);
     return temp;
 }*/
+
+typedef unsigned klock_t;
+#define KLOCK_INIT 0
+
+static inline void klock(klock_t* l) {
+  if (*l & 128) {
+ //   printk("l %x", *l & 128);
+  }
+  *l = disable_interrupt();
+}
+
+static inline void kunlock(klock_t* l) {
+  __set_CPSR(*l);
+  *l = 0;
+}
+  
+
 
 void enable_irq(int clobber);
 void disable_irq(int clobber);

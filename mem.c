@@ -10,15 +10,24 @@ static size_t mpages;
 static size_t mcurrent;
 
 void* kmalloc(size_t size) {
-    return malloc(size);
+    klock_t l = KLOCK_INIT;
+    klock(&l);
+
+    void* p = malloc(size);
+    kunlock(&l);
+    return p;
 }
 void* kcalloc(size_t size, size_t obj_size) {
-    void* p = malloc(size * obj_size);
+    void* p = kmalloc(size * obj_size);
     memset(p, 0, size* obj_size);
     return p;
 }
 void kfree(void *ptr) {
+    klock_t l = KLOCK_INIT;
+    klock(&l);
+
     free(ptr);
+    kunlock(&l);
 }
 static void setup_mem_bounds(void)
 {
