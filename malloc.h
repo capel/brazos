@@ -34,6 +34,8 @@
 #include "types.h"
 #include "stdlib.h"
 
+#define DEBUG_MALLOC
+
 #define MALLOC_MAGIC    (int)0xBAADF00D /* "bad food" from LocalAlloc :) */
 
 #if 0
@@ -56,6 +58,14 @@ struct header {
         int magic;
 #endif
 };
+
+typedef struct vm_data {
+  struct header free_list;
+  struct header *scan_head;
+} vm_data;
+
+void set_vm_base(vm_data *data);
+vm_data* get_vm_base(void);
 
 void* malloc(size_t size);
 void free(void* p);

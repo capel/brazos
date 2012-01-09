@@ -10,40 +10,25 @@
 
 void erase_chars(size_t size);
 
-int getline(char* buf, size_t size) 
-{
-    size_t i;
-    for(i = 0; i < size-1; ) {
-        int c = getc();
-        if (isspecial(c)) {
-            buf[i+1] = '\0';
-            return c;
-        }
-        switch(c) { 
-            case '\n':
-                buf[i] = '\n';
-                buf[i+1] = '\0';
-                return NEWLINE;
-            case '\b':
-                if (i == 0 ) {
-                    buf[0] = '\0';
-                    continue;
-                } else {
-                    i -= 1; // remove a character
-                    buf[i] = '\0';
-                    printf("\b \b");
-                }
-                break;
-            default:
-                buf[i] = (char) c;
-                i++;
-        }
-    }
-    buf[i] = '\0';
-    return OUT_OF_SPACE;
-}
 
 void readline_lib(const char * prompt, readline_func func) {
+  char buf[4096];
+  int stdin = lookup("/stdin");
+  println("stdin %d", stdin);
+
+  int rid;
+  for (;;) {
+    printf("%s", prompt);
+    while ((rid = dredge(stdin)) == 0);
+    view(rid, buf, 4096);
+    func(buf);
+  }
+}
+
+/*
+
+
+
     vector * history = kmake_vector(sizeof(char*), MANAGED_POINTERS);
     size_t history_pos = 0;
     size_t len;
@@ -59,7 +44,8 @@ void readline_lib(const char * prompt, readline_func func) {
             line_offset = 0;
         }
 
-        int reason = getline(line + line_offset, 100);
+        // TODO;
+        int reason = line_offset; // getline(line + line_offset, 100);
        
 
         switch (reason) {
@@ -128,6 +114,7 @@ void readline_lib(const char * prompt, readline_func func) {
         }
     }
 }
+*/
 
 void close(int rid) {
   int rids = lookup("~rids");

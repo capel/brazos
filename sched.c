@@ -5,21 +5,19 @@
 #include "syscalls.h"
 #include "sys/ko.h"
 
-proc *proc_table[PROC_TABLE_SIZE];
-size_t proc_table_pos;
-size_t cur_pid;
-size_t num_procs;
-size_t num_runnable_procs;
+static proc *proc_table[PROC_TABLE_SIZE];
+//static size_t proc_table_pos;
+static size_t cur_pid;
+static size_t num_procs;
+static size_t num_runnable_procs;
 
-proc * current;
+static proc * current;
 
 proc * proc_by_pos(size_t pos) {
     return proc_table[pos];
 }
 
 extern void exit(void);
-
-dir* new_root(void);
 
 void ksetup_sched()
 {
@@ -56,17 +54,18 @@ proc * knew_proc(void* main, void* exit)
 
     proc *p = kmalloc(sizeof(*p));
     assert(p);
-    printk("%p", p);
     p->pid = cur_pid++;
     p->stride = 0;
     p->runnable = 1;
     p->ko = mk_procfs(p);
     p->rids = mk_idir();
+    printk("rids %p, %k", p->rids, p->rids);
+    printk("proc %p", p);
 
     LINK(p->ko, p->rids, "rids");
-    LINK(p->ko, new_root(), "cwd"); 
+    LINK(p->ko, root(), "cwd"); 
     
-    dir* procdir = DIR(LOOKUP(new_root(), "proc"));
+    dir* procdir = DIR(LOOKUP(root(), "proc"));
     printk("dir %k");
     assert(IS_DIR(procdir));
 
@@ -88,6 +87,9 @@ proc * knew_proc(void* main, void* exit)
     p->pcb.lr = exit;
     p->stack = kget_pages(USER_STACK_SIZE) + USER_STACK_SIZE * PAGE_SIZE;
     p->pcb.sp = p->stack;
+
+    p->vm = kmalloc(sizeof(vm_data));
+    memset((void*)p->vm, 0, sizeof(vm_data));
 
     // look for table gaps
     // we know there is enough space
@@ -185,6 +187,12 @@ proc* proc_by_pid(int pid) {
     return 0;
 }
 
-proc * cp(void) {
+proc * cp() {
     return current;
+}
+
+static vm_data kvm_data;
+
+void reset_kernel_vm(void) {
+  set_vm_base(&kvm_data);
 }

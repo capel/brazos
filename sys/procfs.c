@@ -8,6 +8,7 @@ IGET_FUNC(get_parent_pid, proc, parent_pid);
 ko* stdio(void *v, ko* sunk) {
   //proc *p = (proc*)v;
   msg * m = VIEW(sunk);
+  //printk("%k %s", m, get_msg(m));
   kputs(get_msg(m));
   kput(m);
   return SINK_ASYNC;

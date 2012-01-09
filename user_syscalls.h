@@ -11,14 +11,6 @@
 
 void perror(int error);
 
-static inline int getc() {
-    return syscall(GETC, 0, 0, 0);
-}
-
-static inline int putc(int c) {
-    return syscall(PUTC, c, 0, 0);
-}
-
 static inline void halt() {
     syscall(HALT, 0, 0, 0);
 }
@@ -31,10 +23,6 @@ static inline void exec(char* name) {
     syscall(EXEC, (int)name, 0, 0);
 }
 
-static inline void yield() {
-    syscall(YIELD, 0, 0, 0);
-}
-
 static inline int forkexec(char* name) {
     int ret = syscall(FORKEXEC, (int)name, 0, 0);
     if (ret < 0) {
@@ -44,13 +32,20 @@ static inline int forkexec(char* name) {
 }
 
 static inline int wait(int rid) {
-  int ret = syscall(WAIT, rid, 0, 0);
+  int ret = syscall(SYS_WAIT, rid, 0, 0);
   if (ret < 0) {
     perror(ret);
   }
   return ret;
 
 }
+
+// wait 0 is defined to do nothing at all
+// so basicly just a yield
+static inline void yield() {
+  wait(0);
+}
+
 
 static inline int link(int prid, int crid, const char* name) {
     int ret = syscall(SYS_LINK, prid, crid, (int)name);

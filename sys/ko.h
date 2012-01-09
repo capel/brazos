@@ -130,7 +130,17 @@ ko* construct(ko* ctor);
 dir* mk_dir();
 future * mk_future(void);
 
+struct work;
+typedef void (*work_func)(void*);
+struct work* mk_work(work_func func, void* data);
+void do_work(struct work* w);
+
+struct wq;
+void push_work(struct wq* q, struct work* w);
+struct work* pop_work(struct wq* q);
+
 ko* walk(dir* start, const char* path);
+dir* root();
 
 void setup_ko_registry(void);
 ko* get_ko(size_t id);

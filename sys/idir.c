@@ -43,6 +43,7 @@ bool idir_insert(idir* map, int key , ko* value) {
 
 ko* idir_lookup(idir* map, int key) {
     unsigned b = (unsigned)key & map->bucket_mask;
+
     
     for(bucket * buck = map->buckets[b]; buck; buck = buck->next) {
         if (buck->key == key) return buck->value;
@@ -147,7 +148,6 @@ idir* mk_idir() {
   map->bucket_mask = (1 << power2_num_buckets) - 1;
   map->size = (1 << power2_num_buckets);
   map->buckets = kcalloc(sizeof(bucket), map->size);
-  printk("mask %d size %d buckest %d", map->bucket_mask, map->size, map->buckets);
 
 
   DIR(map)->v = &idir_vt;

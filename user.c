@@ -37,11 +37,6 @@ void perror(int error) {
   sink(newline, stdio);
 }
 
-void erase_chars(size_t num) {
-    for(; num > 0; num--) {
-        printf("\b \b");
-    }
-}
 
 void print_dir(int rid) {
   char s[4096];
@@ -84,6 +79,7 @@ void print_dir(int rid) {
     }
   }
   printf("\n");
+  cleanup_parsed_dir(d);
 }
 
 bool parse_line(char* line) {
@@ -128,6 +124,26 @@ bool parse_line(char* line) {
             }
             goto unknown;
         case 'd':
+            if (strcmp(v->data[0], "dredge") == 0) {
+              if (v->size < 2) {
+                println("dredge: dredge <fountain>");
+                goto cleanup;
+              }
+
+              int rid = lookup(ARG(1));
+              if (type(rid) != KO_FOUNTAIN) {
+                println("Not a fountain.");
+                close(rid);
+                goto cleanup;
+              }
+              int ret = dredge(rid);
+              close(rid);
+              if (ret < 0) {
+                perror(ret);
+              }
+              println("%d", ret);
+              goto cleanup;
+            }
             if (strcmp(v->data[0], "dummy") == 0) {
                 int pid = forkexec("dummy");
                 if (pid < 0) {
@@ -325,6 +341,8 @@ bool parse_line(char* line) {
 
 void kputs(const char* s);
 
+void kprintf(const char* s, ...);
+void* cp(void);
 int sh_main()
 {
     printf("Hello world!\n");

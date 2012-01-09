@@ -1,30 +1,26 @@
 #ifndef SYSCALLS_H
 #define SYSCALLS_H
 
-#define HALT 1
-#define EXIT 2
+#define HALT 20
+#define EXIT 21
 
-#define PUTC 4
-#define GETC 5
+#define EXEC 22
+#define FORKEXEC 23
 
-#define YIELD 6
-#define EXEC 7
-#define FORKEXEC 8
-#define WAIT 9
-
-#define SYS_VIEW 12
+#define SYS_VIEW 1
 
 // directory ops
-#define SYS_LOOKUP 24
-#define SYS_LINK 17
-#define SYS_UNLINK 18
+#define SYS_LOOKUP 2
+#define SYS_LINK 3
+#define SYS_UNLINK 4
 
 // sinkhole operations
-#define SYS_SINK 25
-#define SYS_MESSAGE 26
-#define SYS_DREDGE 27
+#define SYS_SINK 5
+#define SYS_MESSAGE 6
+#define SYS_DREDGE 7
+#define SYS_WAIT 8
 
-#define SYS_TYPE 28
+#define SYS_TYPE 9
 
 // types
 #define KO_UNKNOWN 'U'

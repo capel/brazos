@@ -28,12 +28,23 @@
  */
 
 #include "malloc.h"
+#include "kio.h"
 #define PAGE_SIZE 4096
 
 static struct header *more_core(size_t size);
 
-static struct header free_list;         /* start of free list */
-static struct header *scan_head;        /* start point to scan */
+static vm_data *d;
+
+//static struct header* free_list;         /* start of free list */
+//static struct header *scan_head;        /* start point to scan */
+
+void set_vm_base(vm_data *_d) {
+  d = _d;
+}
+
+vm_data* get_vm_base() {
+  return d;
+}
 
 /*
  * Simple memory allocator from K&R
@@ -49,14 +60,14 @@ malloc(size_t size)
 
         MALLOC_LOCK();
 
-        if (scan_head == NULL) {
+        if (d->scan_head == NULL) {
                 /* Initialize */
-                free_list.next = &free_list;
-                free_list.size = 0;
-                free_list.vm_size = 0;
-                scan_head = &free_list;
+                d->free_list.next = &d->free_list;
+                d->free_list.size = 0;
+                d->free_list.vm_size = 0;
+                d->scan_head = &d->free_list;
         }
-        prev = scan_head;
+        prev = d->scan_head;
         for (p = prev->next;; prev = p, p = p->next) {
                 if (p->size >= size) {  /* big enough */
                         if (p->size == size)    /* exactly */
@@ -70,10 +81,10 @@ malloc(size_t size)
 #ifdef DEBUG_MALLOC
                         p->magic = MALLOC_MAGIC;
 #endif
-                        scan_head = prev;
+                        d->scan_head = prev;
                         break;
                 }
-                if (p == scan_head) {
+                if (p == d->scan_head) {
                         if ((p = more_core(10)) == NULL)
                                 break;
                 }
@@ -82,7 +93,7 @@ malloc(size_t size)
 
         if (p == NULL) {
 #ifdef DEBUG_MALLOC
-                sys_panic("malloc: out of memory");
+                panic("malloc: out of memory");
 #endif
                 return NULL;
         }
@@ -104,13 +115,13 @@ static struct header *more_core(size_t pages)
         p->vm_size = size;
 
         /* Insert to free list */
-        for (prev = scan_head; !(p > prev && p < prev->next); prev = prev->next) {
+        for (prev = d->scan_head; !(p > prev && p < prev->next); prev = prev->next) {
                 if (prev >= prev->next && (p > prev || p < prev->next))
                         break;
         }
         p->next = prev->next;
         prev->next = p;
-        scan_head = prev;
+        d->scan_head = prev;
         return prev;
 }
 
@@ -129,7 +140,7 @@ free(void *addr)
                 panic("free: invalid pointer");
         p->magic = 0;
 #endif
-        for (prev = scan_head; !(p > prev && p < prev->next); prev = prev->next) {
+        for (prev = d->scan_head; !(p > prev && p < prev->next); prev = prev->next) {
                 if (prev >= prev->next && (p > prev || p < prev->next))
                         break;
         }
@@ -151,7 +162,7 @@ free(void *addr)
         if (p->size == p->vm_size) {
                 prev->next = p->next;
         }
-        scan_head = prev;
+        d->scan_head = prev;
         MALLOC_UNLOCK();
 }
 
@@ -161,7 +172,7 @@ mstat(void)
 {
         struct header *p;
 
-        for (p = free_list.next; p != &free_list; p = p->next) {
+        for (p = d->free_list.next; p != &d->free_list; p = p->next) {
                 printk("mstat: addr=%x size=%d next=%x\n", p, p->size, p->next);
         }
 }

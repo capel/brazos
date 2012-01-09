@@ -36,6 +36,14 @@ void memcpy(char* dst,const char * src, size_t len)
         *dst++ = *src++;
     }
 }
+void memmove(char* dst,const char * src, size_t len)
+{
+  if (dst == src) return;
+  assert(len < 2048);
+  char buf[2048];
+  memcpy(buf, src, 2048);
+  memcpy(dst, buf, 2048);
+}
 
 int memcmp(const char* a, const char* b, size_t bytes) 
 {
@@ -84,6 +92,7 @@ bool islower(char c)
     return (c >= 'a' && c <= 'z');
 }
 
+
 size_t strlen(const char* str) 
 {
     size_t r = 0;
@@ -91,6 +100,7 @@ size_t strlen(const char* str)
 
     return r;
 }
+
 
 size_t strlcpy(char* dst, const char* src, size_t len)
 {
@@ -107,6 +117,7 @@ size_t strlcpy(char* dst, const char* src, size_t len)
     return len;
 }
 
+
 int strcmp(const char* a, const char* b)
 {
     int r;
@@ -121,6 +132,7 @@ int strcmp(const char* a, const char* b)
     }
     return 0;
 }
+
 
 int strncmp(const char* a, const char* b, size_t len)
 {
@@ -262,7 +274,7 @@ int atoi(const char* buf) {
 bool lock(lock_t* l)
 {
     while(*l == 1) {
-        yield();
+      yield();
     }
     *l = 1;
     return true;

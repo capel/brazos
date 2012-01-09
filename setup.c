@@ -17,9 +17,14 @@ dir* mk_proc(void);
 ko* mk_sched(void);
 dir* mk_queue(void);
 
-static dir* _new_root;
-dir* new_root(void) {
-  return _new_root;
+static dir* _root;
+dir* root(void) {
+  return _root;
+}
+
+static sinkhole* _raw_stdin;
+sinkhole* raw_stdin() {
+  return _raw_stdin;
 }
 
 void setup(void) {
@@ -30,60 +35,61 @@ void setup(void) {
   printk("done with registry");
   setup_err_ko();
 
-  _new_root = mk_dir();
-  printk("root %k", _new_root);
-  KO(new_root())->rc = 99;
+  _root = mk_dir();
+  printk("root %k", _root);
+  KO(root())->rc = 99;
 
-  SAFE_ADD(new_root(), mk_fs(), "fs");
+  SAFE_ADD(root(), mk_fs(), "fs");
 
+  dir* stdin = mk_queue();
+  _raw_stdin = SINKHOLE(LOOKUP(stdin, "push"));
+  kget(_raw_stdin);
+  assert(IS_SINKHOLE(_raw_stdin));
+
+  fountain* f = FOUNTAIN(LOOKUP(stdin, "pop"));
+  assert(IS_FOUNTAIN(f));
+  printk("linked %k", f);
+
+  LINK(root(), f, "stdin");
+
+  
   dir* proc = mk_dir();
-  LINK(new_root(), proc, "proc");
+  LINK(root(), proc, "proc");
   //SAFE_ADD(proc, mk_ctor(proc_me, KO_DIR), "me");
   printk("proc %k", proc);
   assert(IS_DIR(proc));
   kput(proc);
 
-  //SAFE_ADD(new_root(), mk_sched(), "sch");
+  printk("done");
+
+  //SAFE_ADD(root(), mk_sched(), "sch");
 
 }
 
-void enable_irq(int clobber);
+void setup_irq(void);
 
 void kmain(void) {
   ksetup_memory();
-  printk("Starting main");
-  printk("begin cspr %x", __get_CPSR());
-//enable_interrupt();
-  enable_irq(0);
-  printk("end cspr %x", __get_CPSR());
-  printk("begin mask %x", get_irq_mask());
-  enable_rtc_irq();
-  set_timer(100);
-  enable_cons_irq();
-  printk("end mask %x", get_irq_mask());
-  
-  for (;;) {}
+  reset_kernel_vm();
 
   //enable_mmu();
 
+  char* irq_stack = kget_pages(10);
+  set_irq_stack(irq_stack+10*PAGE_SIZE, 0,0,0);
 
-  printk("setup mem done");
-
-  char* swi_stack = kget_pages(10);
-  set_swi_stack(swi_stack+10*PAGE_SIZE, 0,0,0);
 
   setup();
 
-  memset(input, 0, 500);
-  inputpos = 0;
+  enable_irq(0);
+ // enable_rtc_irq();
+//  set_timer(100);
+  enable_cons_irq();
 
   knew_proc(sh_main, exit);
   //knew_proc(main2, exit);
   proc *p = ksched();
   p->parent_pid = p->pid;
-  printk("here");
 
-  // kflush_file(root());
   restore_pcb(&p->pcb);
 }
 

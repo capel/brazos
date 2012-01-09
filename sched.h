@@ -8,6 +8,7 @@
 #include "types.h"
 #include "sys/ko.h"
 #include "sys/idir.h"
+#include "malloc.h"
 
 #define NUM_FDS 4
 #define PROC_TABLE_SIZE 4
@@ -43,6 +44,7 @@ typedef struct _proc {
     void* next_future;
     dir* ko;
     idir* rids;
+    vm_data* vm;
 } proc;
 
 int proc_add_ko(proc* p, ko* o);
@@ -73,5 +75,7 @@ proc * proc_by_pos(size_t pos);
 
 proc * proc_by_pid(int pid);
 proc * cp(void);
+
+void reset_kernel_vm(void);
 
 #endif

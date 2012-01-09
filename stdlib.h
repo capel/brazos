@@ -17,6 +17,7 @@ typedef __builtin_va_list va_list;
 
 void memset(char* start, char fill, size_t bytes);
 void memcpy(char* dst, const char * src, size_t len);
+void memmove(char* dst, const char * src, size_t len);
 int memcmp(const char* a, const char* b, size_t bytes);
 
 size_t strlen(const char* str);

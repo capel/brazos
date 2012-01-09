@@ -13,7 +13,6 @@ ivt:
     b khalt @fiq
 
 .comm stack, 0x10000 @ Reserve 64k stack in the BSS
-.comm irq_stack, 0x10000 @ stack for IRQ
 
 _start:
     .globl _start
@@ -21,16 +20,6 @@ _start:
     ldr r0, =0
     str r1, [r0]
 
-    @ go into IRQ mode
-    ldr r1, =0x12
-    msr CPSR_c, r1
-
-    @ setup IRQ stack
-    ldr sp, =irq_stack+0x10000
-
-    @return to system mode
-    ldr r1, =0x13
-    msr CPSR_c, r1
     
     @ setup swi/kernel stack
     ldr sp, =stack+0x10000 @ Set up the stack
@@ -49,6 +38,15 @@ enable_irq:
 
 .text
 .align 2
+.global disable_irq
+disable_irq:
+  mrs r1, CPSR
+  orr r1, #0x80
+  msr CPSR_c, r1
+  bx lr
+
+.text
+.align 2
 .global syscall
 syscall:
     swi 0x0
@@ -56,14 +54,14 @@ syscall:
 
 .text
 .align 2
-.global set_swi_stack
-set_swi_stack:
+.global set_irq_stack
+set_irq_stack:
     mrs r1,CPSR
     @ save for later
     mov r2, r1
     mov r3, sp
 
-    @ change mode to 0x12 (swi)
+    @ change mode to 0x12 (irq)
     bic r1, #0x1f
     orr r1, #0x12
     msr CPSR,r1
@@ -74,7 +72,6 @@ set_swi_stack:
     msr CPSR, r2
     mov sp, r3
     bx lr
-
 
 .text
 .align 2

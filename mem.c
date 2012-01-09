@@ -4,11 +4,10 @@
 #include "malloc.h"
 
 
-void* mstart;
-size_t msize;
-size_t mpages;
-char *bitmap;
-size_t mcurrent;
+static void* mstart;
+static size_t msize;
+static size_t mpages;
+static size_t mcurrent;
 
 void* kmalloc(size_t size) {
     return malloc(size);

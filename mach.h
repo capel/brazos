@@ -129,13 +129,16 @@ static inline unsigned disable_interrupt(void){
     __set_CPSR(temp | 128);
     return temp;
 }
-/* Disable IRQ interrupt and save CPSR */
+/*
 static inline unsigned disable_irq(void){
     unsigned temp;
     temp = __get_CPSR();
     __set_CPSR(temp | 0x80);
     return temp;
-}
+}*/
+
+void enable_irq(int clobber);
+void disable_irq(int clobber);
 
 static inline unsigned change_mode(unsigned mode)
 {
@@ -147,7 +150,7 @@ static inline unsigned change_mode(unsigned mode)
 }
 void switch_to_user(void* stack, void* retptr, void *start, int d3);
 
-void set_swi_stack(void* stack, int dummy, int dummy2, int dummy3);
+void set_irq_stack(void* stack, int dummy, int dummy2, int dummy3);
 
 static inline void enable_mmu(void)
 {

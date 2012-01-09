@@ -11,20 +11,6 @@
 #include "kexec.h"
 #include "sys/ko.h"
 
-
-static int sys_getc(void) {
-  for (;;) {
-    //int c = update_input();
-    //if (c) return c;
-  }
-  return 0;
-}
-
-
-static int sys_putc(int c) {
-  kputc(c);
-  return 0;
-}
 static int sys_halt(void) {
   khalt();
   return 0;
@@ -45,8 +31,6 @@ static int sys_exec(const char * prog_name) {
   return 0;
 }
 
-
-
 static int sys_forkexec(const char* prog_name) {
   void* prog_addr = program_lookup(prog_name);
   printk("Proc %d execing %s (%p)", cp()->pid, prog_name, prog_addr);
@@ -60,13 +44,14 @@ static int sys_forkexec(const char* prog_name) {
 
 
 static int sys_wait(int rid) {
+  if (rid == 0) return 0; // basicly a yield
   ko *o = proc_rid(cp(), rid);
   if (!o) return E_BAD_RID;
   if (IS_RESOLVED(o)) return proc_add_ko(cp(), GET_FUTURE(FUTURE(o)));
 
   if (IS_FUTURE(o)) return E_ERROR; // do something
 
-  return rid; // wait on non-future is a yield basicly
+  return rid; // wait on non-future is a no op
 }
 
 
@@ -113,11 +98,11 @@ static ko* path_lookup(const char* path) {
     return o;
   }
 
-  if (strcmp(path, "/") == 0) return KO(new_root()); 
+  if (strcmp(path, "/") == 0) return KO(root()); 
   if (strcmp(path, "~") == 0) return KO(cp()->ko);
 
   if (path[0] == '/') {
-    return walk(new_root(), path+1);
+    return walk(root(), path+1);
   } else if (path[0] == '~') {
     return walk(cp()->ko, path+1);
   } else {
@@ -167,21 +152,15 @@ static int sys_view(int rid, char* buf, size_t len) {
 
 int _ksyscall (int code, int r1, int r2, int r3) {
   switch (code) {
-    case PUTC:
-      return sys_putc(r1);
-    case GETC:
-      return sys_getc();
     case HALT:
       return sys_halt();
     case EXIT:
       return sys_exit();
-    case YIELD:
-      return 0;
     case EXEC:
       return sys_exec((const char*)r1);
     case FORKEXEC:
       return sys_forkexec((const char*)r1);
-    case WAIT:
+    case SYS_WAIT:
       return sys_wait(r1);
     case SYS_LINK:
       return sys_link(r1, r2, (const char*)r3);
@@ -209,6 +188,7 @@ int _ksyscall (int code, int r1, int r2, int r3) {
 PCB* ksyscall (void* stacked_pcb) {
   kcopy_pcb(stacked_pcb);
   PCB* pcb = &cp()->pcb;
+  reset_kernel_vm();
   int ret = _ksyscall(pcb->r0, pcb->r1, pcb->r2, pcb->r3);
   // ret == -255 means that the process doesn't exist anymore
   // or something else went wildly wrong
@@ -216,5 +196,6 @@ PCB* ksyscall (void* stacked_pcb) {
     pcb->r0 = ret;
   }
   proc *p = ksched();
+  set_vm_base(p->vm);
   return &p->pcb;
 }
