@@ -9,12 +9,14 @@ static size_t msize;
 static size_t mpages;
 static size_t mcurrent;
 
-void* kmalloc(size_t size) {
-    klock_t l = KLOCK_INIT;
-    klock(&l);
+static vm_data kvm_data;
 
+void reset_kernel_vm(void) {
+  set_vm_base(&kvm_data);
+}
+
+void* kmalloc(size_t size) {
     void* p = malloc(size);
-    kunlock(&l);
     return p;
 }
 void* kcalloc(size_t size, size_t obj_size) {
@@ -23,11 +25,7 @@ void* kcalloc(size_t size, size_t obj_size) {
     return p;
 }
 void kfree(void *ptr) {
-    klock_t l = KLOCK_INIT;
-    klock(&l);
-
     free(ptr);
-    kunlock(&l);
 }
 static void setup_mem_bounds(void)
 {
