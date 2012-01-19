@@ -1,4 +1,4 @@
-Brazos Network Protocol -- the simplest possible reliable network protocol
+ Network Protocol -- the simplest possible reliable network protocol
   based on IP
   reliable using timeouts
   stop-and-wait protocol
@@ -28,42 +28,44 @@ UDP
 | 2  Length  
 | 2  Checksum (0 for ease of use)
 ---------------------------------
-BNMP
+BNMP (Msg)
 ---------------------------------
-| 2 Pkt# 
-| 1 Flags | 1 #PktsLeft
-| Data ...                      
+| 2 Message# 
+| 1 Flags{Message} | 1 #PktsLeft
+| Data ...                  
 ---------------------------------
+
+BNMP (Ack)
+---------------------------------
+| 2 Message#
+| 1 Flags{Ack} | 1 #PktsReceived
 
 Flags:
-Req: a possibly multi-packet datagram.
-  Pkt# is set to a random 16-bit number.
-  SrcPort must be controlled by the sender until the final AckZ is receved or times out.
+Msg: a possibly multi-packet datagram. If no ack is received after the final message pkt is send, the entire message is sent again.
+  Msg# is set to a random 16-bit number.
+  SrcPort must be controlled by the sender until the Ack is receved or times out.
   Length is the size (in bytes) of _this_ packet's payload.
-  #PktsLeft is set to the number of packets in this transmission, and zero if it is a single packet.
-  Flags is set to {Req}
+  #PktsLeft is set to the number of packets left this transmission, and zero if it is a single packet.
+  Flags is set to {Msg}
 
-Retransmit: the retransmission of a packet that timed out
-  Pkt#, Src/Dst Ports, and #Pkts left remain the same as the original
-  Flags is set to {Req, Ret}
-  If an reciever sees both an original and retransmitted packet (eg, the ack was lost), it must discard the retransmit.
-
-Ack: an ack of a req.
-  Pkt# is set to the # of the req
+Ack: an ack of a message, sent after a message with #PktsLeft == 0 is recieved.
+  Msg# is echoed
   SrcPort/DstPort are reversed.
-  Length is echoed back.
-  #PktsLeft is echoed back.
+  Length is length of this ack
+  #PktsReceived is the number of packets received (for sanity checking)
   Flags is set to {Ack}
 
 Operation:
 A         B
-| Req2 -> |
-| <-- Ack |
-| Req1 -> |
-| <-- Ack |
-| Req0 -> |
+| Msg2 -> |
+| Msg1 -> |
+| Msg0 -> |
+| <- Ack3 |
+| Msg0 -> |
+| Msg1 -> |
 | Timeout |
-| Req0 -> |
-| <-- Ack |
-| Done    |
+| Msg1 -> |
+| Msg0 -> |
+| <- Ack3 |
+
 
