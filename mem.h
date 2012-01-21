@@ -20,6 +20,5 @@ void* kmalloc(size_t size);
 void* kcalloc(size_t size, size_t obj_size);
 void kfree(void *ptr);
 
-void reset_kernel_vm(void);
 
 #endif

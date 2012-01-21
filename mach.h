@@ -74,6 +74,11 @@ static inline void enable_rtc_irq(void)
 	*(volatile unsigned *) (DEV_IRQC_ADDRESS + DEV_IRQC_UNMASK) = IRQ_RTC;
 }
 
+static inline void enable_net_irq(void)
+{
+	*(volatile unsigned *) (DEV_IRQC_ADDRESS + DEV_IRQC_UNMASK) = IRQ_ETHER;
+}
+
 static inline void set_timer(unsigned usec) {
   *(volatile int*)(DEV_RTC_ADDRESS + DEV_RTC_HZ) = usec;
 }

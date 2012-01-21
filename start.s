@@ -84,6 +84,9 @@ swi_handler:
     bl save_pcb
     bl ksyscall
 
+    @ no return
+    bl restore_pcb
+
 .text
 .align 2
 .global irq_handler
@@ -111,20 +114,6 @@ save_pcb:
     @ r0 = address of PCB on stack (the top)
     mov r0, sp
     mov pc, lr
-
-.text
-.align 2
-.global save_state
-save_state:
-  stmfd sp!, {lr}
-  bl save_pcb
-  bl ksave_state
-
-.text
-.align 2
-.global raw_jump
-  mov pc, r0
-
 
 .text
 .align 2

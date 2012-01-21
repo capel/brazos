@@ -8,9 +8,9 @@
 #include "user.h"
 #include "mach.h"
 #include "mem.h"
+#include "sched.h"
 #include "kexec.h"
 #include "sys/ko.h"
-#include "task.h"
 
 dir* mk_fs(void);
 dir* mk_proc(void);
@@ -29,7 +29,7 @@ sinkhole* raw_stdin() {
 
 void setup(void) {
   printk("setup");
-  setup_sched();
+  ksetup_sched();
   printk("after sched");
   setup_ko_registry();
   printk("done with registry");
@@ -85,8 +85,11 @@ void kmain(void) {
 //  set_timer(100);
   enable_cons_irq();
 
-  task* t = mk_user_task(sh_main);
-  enqueue_task(t);
-  sched();
+  knew_proc(sh_main, exit);
+  //knew_proc(main2, exit);
+  proc *p = ksched();
+  p->parent_pid = p->pid;
+
+  restore_pcb(&p->pcb);
 }
 

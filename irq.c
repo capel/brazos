@@ -4,9 +4,9 @@
 #include "user.h"
 #include "mach.h"
 #include "mem.h"
+#include "sched.h"
 #include "kexec.h"
 #include "sys/ko.h"
-#include "task.h"
 
 #define min(a, b) (((a) < (b)) ? (a) : (b))
 
@@ -20,6 +20,9 @@ static void clear() {
   max_pos = pos = 0;
 }
 
+void setup_irq() {
+  clear();
+}
 
 static void erase_chars(size_t num) {
     for(; num > 0; num--) {
@@ -32,31 +35,6 @@ sinkhole* raw_stdin(void);
 static void dispatch() {
   SINK(raw_stdin(), mk_msg(input));
   clear();
-}
-
-static volatile bool happened;
-bool interrupt_happened() {
-  if (happened) {
-    happened = false;
-    return true;
-  }
-  return false;
-}
-
-void idle_task() {
-  enable_interrupt();
-  for(;;) {
-    if (interrupt_happened()) {
-      disable_interrupt();
-      sched();
-      enable_interrupt();
-    }
-  }
-}
-
-void setup_irq() {
-  clear();
-  happened = false;
 }
 
 static int cook() {
@@ -86,7 +64,7 @@ static int cook() {
   }
 }
 
-static void handle() 
+static void cons_handle() 
 {
     int c = cook();
     if (isspecial(c)) {
@@ -163,9 +141,15 @@ void kirq (){
   // fiddle with malloc
   vm_data* d = get_vm_base();
   reset_kernel_vm();
-//  kputc('!');
-  handle();
+
+  unsigned irq = get_irq_mask();
+
+  if (irq & (1<< IRQ_CONS)) {
+    cons_handle();
+  }
+  if (irq & (1 << IRQ_ETHER)) {
+      printk("ETHER");
+  }
   // restore original data
   set_vm_base(d);
-  happened = true;
 }

@@ -74,9 +74,6 @@ typedef struct dir_vtable {
 #define KO_CTOR 4
 #define IS_CTOR(e) (FLAGGED(e, KO_CTOR))
 
-#define KO_TASK 8
-#define IS_TASK(e) (FLAGGED(e, KO_TASK))
-
 #define IS_DIR(e) (KO(e)->type == KO_DIR)
 #define IS_MSG(e) (KO(e)->type == KO_MESSAGE)
 #define IS_SINKHOLE(e) (KO(e)->type == KO_SINKHOLE)
@@ -90,7 +87,6 @@ typedef struct dir_vtable {
 #define SINKHOLE(e) ((sinkhole*)e)
 #define FUTURE(e) ((future*)e)
 #define FOUNTAIN(e) ((fountain*)e)
-#define TAKS(e) ((task*)e)
 
 #define PATH(v) ((const char**)(v)->data)
 
