@@ -20,7 +20,6 @@ _start:
     ldr r0, =0
     str r1, [r0]
 
-    
     @ setup swi/kernel stack
     ldr sp, =stack+0x10000 @ Set up the stack
     bl kmain @ Jump to the main function
@@ -35,6 +34,22 @@ enable_irq:
   bic r1, #0x80
   msr CPSR_c, r1
   bx lr
+
+.text
+.align 2
+.global swap16
+swap16:
+  bx lr
+  rev16 r0, r0
+
+.text
+.align 2
+.global swap32
+swap32:
+  bx lr
+  rev r0, r0
+
+
 
 .text
 .align 2

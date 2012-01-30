@@ -69,6 +69,10 @@ extern void* _kend;
 
 #define USER_STACK_SIZE 10
 
+static inline unsigned rand() {
+  return *(volatile unsigned*) (DEV_MP_ADDRESS + DEV_MP_HARDWARE_RANDOM);
+}
+
 static inline void enable_rtc_irq(void)
 {
 	*(volatile unsigned *) (DEV_IRQC_ADDRESS + DEV_IRQC_UNMASK) = IRQ_RTC;

@@ -7,7 +7,7 @@
 #include <assert.h>
 
 #define BUFLEN 4096
-#define PORT 3333
+#define PORT 4567
 
 #define MTU 20
 

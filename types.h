@@ -5,6 +5,10 @@
 
 #include <stddef.h>
  
+typedef unsigned uint32_t;
+typedef unsigned short uint16_t;
+typedef unsigned char uint8_t;
+
 typedef unsigned char byte;
 
 //typedef unsigned size_t;

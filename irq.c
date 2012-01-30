@@ -7,6 +7,8 @@
 #include "sched.h"
 #include "kexec.h"
 #include "sys/ko.h"
+#include "inet.h"
+
 
 #define min(a, b) (((a) < (b)) ? (a) : (b))
 
@@ -14,6 +16,7 @@
 static char input[INPUTBUFSIZE];
 static size_t max_pos = 0;
 static size_t pos = 0;
+static vector* inet = 0;
 
 static void clear() {
   memset(input, 0, INPUTBUFSIZE);
@@ -21,6 +24,7 @@ static void clear() {
 }
 
 void setup_irq() {
+  inet = kmake_vector(sizeof(void*), UNMANAGED_POINTERS);
   clear();
 }
 
@@ -135,7 +139,6 @@ void null_ptr_func() {
   panic("NULL PTR FUNC HIT.");
 }
 
-
 void kirq (void) __attribute__((interrupt ("IRQ")));
 void kirq (){
   // fiddle with malloc
@@ -148,7 +151,10 @@ void kirq (){
     cons_handle();
   }
   if (irq & (1 << IRQ_ETHER)) {
-      printk("ETHER");
+    inet_pkt* pkt = inet_recv();
+    assert(pkt);
+    printk("<PKT>");
+    vector_push(inet, (void*)pkt);
   }
   // restore original data
   set_vm_base(d);

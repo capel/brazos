@@ -1,5 +1,5 @@
 TARGET  := kernel
-SRCS    := malloc.c sys/sched.c sys/procfs.c sys/message.c sys/fs.c sys/dir.c sys/bind.c sys/idir.c rand.c  kio.c stdlib.c mem.c sched.c user.c vector.c stdio.c kexec.c sys/queue_dir.c sys/future.c sys/ko.c sys/walk.c parse_dir.c irq.c setup.c swi.c 
+SRCS    := malloc.c sys/sched.c sys/procfs.c sys/message.c sys/fs.c sys/dir.c sys/bind.c sys/idir.c rand.c  kio.c stdlib.c mem.c sched.c user.c vector.c stdio.c kexec.c sys/queue_dir.c sys/future.c sys/ko.c sys/walk.c parse_dir.c irq.c setup.c swi.c inet.c 
 ASRCS   := start.s
 OBJS    := ${SRCS:.c=.o} 
 AOBJS   := ${ASRCS:.s=.o}
@@ -13,7 +13,7 @@ LD=arm-elf-ld
 
 .PHONY: all clean distclean 
 all: ${TARGET} 
-	gxemul -K -VT -d disk -E testarm kernel
+	./gxemul -K -VT -d disk -E testarm kernel
 
 ${TARGET}: ${OBJS} ${AOBJS}
 	${LD} ${LDFLAGS} -o ${TARGET} start.o ${OBJS}
