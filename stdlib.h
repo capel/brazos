@@ -3,6 +3,7 @@
 
 #include "types.h"
 #include "chars.h"
+#include "malloc.h"
 
 #define PAGE_SIZE 4096
 
@@ -24,6 +25,7 @@ size_t strlen(const char* str);
 size_t strlcpy(char* dst, const char* src, size_t len);
 int strncmp(const char* a, const char* b, size_t len);
 int strcmp(const char* a, const char* b);
+char* strclone(const char *s);
 
 const char* skip_spaces(const char* s);
 

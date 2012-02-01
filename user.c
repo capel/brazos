@@ -12,6 +12,7 @@
 #include "chars.h"
 
 #include "parse_dir.h"
+#include "variant.h"
 
 void exit(void) {
     _exit();
@@ -19,15 +20,6 @@ void exit(void) {
 
 #define ARG(x) v->data[(x)]
 #define IARG(x) atoi(v->data[(x)])
-
-
-char * strclone(const char * s) {
-  size_t len = strlen(s);
-  char * news = malloc(len+2);
-  strlcpy(news, s, len);
-  return news;
-}
-
 
 void perror(int error) {
   int newline = message("\n", 2);
@@ -85,6 +77,12 @@ void print_dir(int rid) {
 bool parse_line(char* line) {
     if (strlen(line) == 0)
         return false;
+
+    variant vv = parse(line);
+    println("%v", vv);
+    //println("%v", parse(serialize(vv).s));
+    dec(vv);
+    return true;
 
     vector * v = ksplit_to_vector(line, " ");
     switch (((char*)v->data[0])[0]) {

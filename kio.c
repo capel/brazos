@@ -5,6 +5,7 @@
 #include "mem.h"
 #include "sys/ko.h"
 #include "vector.h"
+#include "variant.h"
 
 #define DEV_CONS_ADDRESS        0x0000000010000000
 #define DEV_CONS_LENGTH         0x0000000000000020
@@ -223,7 +224,7 @@ int vprintf(char* buf, size_t size, const char* fmt, va_list va, int newline)
     unsigned u;
     char *s;
     const char * cs;
-    vector* v;
+    variant v;
     ko* o;
 
     size_t fmtpos, bufpos;
@@ -234,6 +235,13 @@ int vprintf(char* buf, size_t size, const char* fmt, va_list va, int newline)
         } else {
             fmtpos++;
             switch (fmt[fmtpos]) {
+                case 'v':
+                  v = va_arg(va, variant);
+                  v = serialize(v);
+                  PRINT(v.s);
+                  dec(v);
+                  break;
+                    
                 case 'k':
                     o = va_arg(va, ko*);
                     cs = ko_str(o); 
@@ -264,6 +272,7 @@ int vprintf(char* buf, size_t size, const char* fmt, va_list va, int newline)
                     d = va_arg(va, int);
                     PRINTC((char)d);
                     break;
+                    /*
                 case 'v':
                     v = va_arg(va, vector*);
                     if (v->size == 0) {
@@ -276,6 +285,7 @@ int vprintf(char* buf, size_t size, const char* fmt, va_list va, int newline)
                     kfree((char*)cs);
                     PRINTC(']');
                     break;
+                    */
                 case 'K':
                     o = va_arg(va, ko*);
                     msg* m = VIEW(o);

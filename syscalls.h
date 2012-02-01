@@ -16,21 +16,26 @@
 
 // sinkhole operations
 #define SYS_SINK 5
-#define SYS_MESSAGE 6
-#define SYS_DREDGE 7
-#define SYS_WAIT 8
 
-#define SYS_TYPE 9
+#define SYS_PACK 6
+#define SYS_UNPACK 7
+
+#define SYS_DREDGE 8
+#define SYS_WAIT 9
+
+#define SYS_TYPE 10
+
+#define SYS_MESSAGE 11
 
 // types
-#define KO_UNKNOWN 'U'
-#define KO_MESSAGE 'M'
+#define KO_UNKNOWN 'K'
+#define KO_TUPLE 'T'
 #define KO_DIR 'D'
 #define KO_SINKHOLE 'S'
 #define KO_FOUNTAIN 'N'
 #define KO_FUTURE 'F'
 #define KO_ERROR 'E'
-
+#define KO_MESSAGE 'M'
 
 #define SINK_ASYNC 0
 

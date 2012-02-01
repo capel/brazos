@@ -20,6 +20,12 @@ const char* skip_spaces(const char* s) {
   return s;
 }
 
+char* strclone(const char* s) {
+    size_t len = strlen(s)+1;
+    char* tmp = malloc(len);
+    strlcpy(tmp, s, len);
+    return tmp;
+}
 
 void memset(char* start, char fill, size_t bytes)
 {
