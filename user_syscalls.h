@@ -8,6 +8,7 @@
 #include "types.h"
 #include "syscalls.h"
 #include "stdio.h"
+#include "variant.h"
 
 void perror(int error);
 
@@ -109,6 +110,13 @@ static inline int dredge(int rid) {
     perror(ret);
   }
   return wait(ret);
+}
+
+static inline int send(const char* s) {
+  return syscall(SYS_SEND, (int)s, strlen(s), 0);
+}
+static inline int recv(const char* id, char* buf, size_t size) {
+  return syscall(SYS_RECV, (int)id, (int)buf, size);
 }
 
 

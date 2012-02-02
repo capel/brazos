@@ -27,6 +27,9 @@
 
 #define SYS_MESSAGE 11
 
+#define SYS_SEND 90
+#define SYS_RECV 91
+
 // types
 #define KO_UNKNOWN 'K'
 #define KO_TUPLE 'T'
@@ -51,6 +54,8 @@
 #define E_IS_FUTURE -10
 #define E_NOT_FOUND -11
 #define E_NOT_FOUNTAIN -12
+#define E_MALFORMED -13
+#define E_NO_SPACE -14
 
 #ifndef EXTERNAL
 int syscall(int r0, int r1, int r2, int r3);

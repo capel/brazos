@@ -9,6 +9,7 @@
 #include "sys/ko.h"
 #include "sys/idir.h"
 #include "malloc.h"
+#include "variant.h"
 
 #define NUM_FDS 4
 #define PROC_TABLE_SIZE 4
@@ -45,6 +46,7 @@ typedef struct _proc {
     dir* ko;
     idir* rids;
     vm_data* vm;
+    variant handles;
 } proc;
 
 int proc_add_ko(proc* p, ko* o);

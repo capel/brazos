@@ -69,6 +69,8 @@ proc * knew_proc(void* main, void* exit)
     printk("dir %k");
     assert(IS_DIR(procdir));
 
+    p->handles = Map(10);
+
     char n[32];
     itoa(n, 32, p->pid);
     LINK(DIR(procdir), p->ko, n); // dont kput because we have a reference

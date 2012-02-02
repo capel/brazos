@@ -11,6 +11,9 @@
 #include "kexec.h"
 #include "sys/ko.h"
 
+int sys_recv(const char * id, char *buf, size_t size);
+int sys_send(const char * s, size_t len);
+
 static int sys_halt(void) {
   khalt();
   return 0;
@@ -190,6 +193,10 @@ int _ksyscall (int code, int r1, int r2, int r3) {
       return sys_view(r1, (char*)r2, r3);
     case SYS_DREDGE:
       return sys_dredge(r1);
+    case SYS_SEND:
+      return sys_send((const char*)r1, r2);
+    case SYS_RECV:
+      return sys_recv((const char*)r1, (char*)r2, r3);
     default:
       printk("Bad syscall code %d", code);
       return E_BAD_SYSCALL;
