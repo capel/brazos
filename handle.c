@@ -12,75 +12,149 @@ static void reg(variant name, variant func) {
   set(*registry, name, func);
 }
 
-#define ARGS(n) do { if (len(args) != 2) { \
-  printk("Need more args %d", len(args)); return Null(); } } while (0)
+#define ARGS(n) do { if (len(args) != n) { \
+  printk("Func needs exactly %n arg, got %d", n, len(args)); return Null(); } } while (0)
+
+#define A(n) idx(args, n)
 
 VFUNC(f_get) {
   ARGS(2);
-  return get(idx(args,0), idx(args,1));
+  return get(A(0), A(1));
 }
 
+VFUNC(f_set) {
+  ARGS(3);
+  set(A(0), A(1), A(2));
+  return Null();
+}
+
+VFUNC(f_id) {
+  ARGS(1);
+  return A(0);
+}
+
+VFUNC(f_idx) {
+  ARGS(2);
+  if (!IS_I(A(1))) { return Null(); }
+  return idx(A(0), A(1).i);
+}
+
+VFUNC(f_len) {
+  ARGS(1);
+  return Int(len(A(0)));
+}
+
+VFUNC(f_slice) {
+  ARGS(3);
+  if (!IS_I(A(1))) { return Null(); }
+  if (!IS_I(A(2))) { return Null(); }
+  return slice(A(0), A(1).i, A(2).i);
+}
+
+VFUNC(f_eq) {
+  ARGS(2);
+  return Int(eq(A(0), A(1)));
+}
+
+VFUNC(f_tuple) {
+  return args; // heh
+}
+
+#define REG(func, name) do { V(f) = Func(func, name); reg(CStr(name), f); } while(0)
+
 void init_calls() {
+  printk("INIT");
   registry = malloc(sizeof(variant));
   *registry = Map(4);
 
-  reg(CStr("get"), Handle(f_get, H_F));
+  REG(f_get, "get");
+  REG(f_set, "set");
+  REG(f_idx, "idx");
+  REG(f_len, "len");
+  REG(f_slice, "slice");
+  REG(f_eq, "eq");
+  REG(f_id, "id");
+  REG(f_tuple, "tuple");
+  printk("%v", *registry);
 }
 
-static PARSE(call_inner_parse) {
-  CONSUME('[');
+variant Func(vfunc f, const char* name) {
+  variant v = Variant(V_F);
+  v.f = f;
 
-  VV(v) = Vv(5); // a decent guess
-  do {
-    V(tmp) = _parse(s, pos, die);
-    HOPE(*die);
-
-    push(v, tmp);
-  } while(*s && s[*pos] != ']');
-  CONSUME(']');
-
-  return Tvv(v);
+  v.fname = malloc(sizeof(variant));
+  *v.fname = Str(name);
+  return v;
 }
+
+void func_cleanup(variant f) {
+  dec(*f.fname);
+}
+
+variant func_serialize(variant f) {
+  return *f.fname;
+}
+
+variant call_eval(variant t) {
+  if (len(t) == 0) return t;
+
+  variant s = idx(t, 0);
+  if (!IS_S(s)) { 
+    printk("not s... %v", s);
+    return Null(); // bad news bears
+  }
+  variant f = dispatch(s);
+  if (!IS_F(f)) {
+    printk("not f... %v", f);
+    return Null();
+  }
+  V(args) = sslice(t, 1);
+  printk("%v %v", t, args);
+
+  return f.f(args);
+}
+
+#include "parse_macro.h"
 
 PARSE(call_parse) {
-  variant c = call_inner_parse(s, pos, die);
-  if (*die) { dec(c); return Null(); }
+  CONSUME('[');
+  NOM_SPACE();
+  if (s[*pos] == ']') {
+    CONSUME(']');
+    return Tuple(0);
+  }
 
-  printk("done");
-  printk("%v", c);
+  VV(v) = Vv(5); // a decent guess
+  V(tmp);
+  do {
+    tmp = _parse(s, pos, die);
+    if (*die) DIE();
 
-  HOPE(IS_T(c));
-  HOPE(len(c) >= 1);
-  HOPE(IS_S(idx(c, 0)));
+    push(v, tmp);
+    NOM_SPACE();
+    if (s[*pos] != ']') {
+      CONSUME(',');
+    }
+  } while(s[*pos] != ']');
 
-  c.type = V_C;
-  return c;
+  CONSUME(']');
+
+  variant t = Tvv(v);
+  t.type = V_C; // they are calls if they are literals
+
+  return t;
 }
 
 variant call_serialize(variant t) {
-  assert(IS_C(t));
-
-  vv * v = Vv(len(t));
+  VV(v) = Vv(len(t));
   foreach(x, t) {
     push(v, x);
   }
 
-  variant s = join(v, ' ', '[', ']', true);
-  vvdec(v);
+  variant s = join(v, ',', '[', ']', true);
   return s;
 }
 
-variant eval(variant call) {
-  assert(IS_C(call));
-  
-  variant h = dispatch(idx(call, 0));
-  if (IS_N(h)) return Null();
-
-  assert(IS_H(h));
-  assert(IS_HF(h));
-  
-  return h.f(sslice(call, 1));
-}
 
 variant Handle(void* h, htype subtype) {
   variant v = Variant(V_H);

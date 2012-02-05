@@ -12,23 +12,23 @@ typedef enum {
   V_T = 'T',
   V_H = 'H',
   V_I = 'I',
+  V_F = 'F',
   V_C = 'C',
   V_N = '\0',
 } vtype;
 
 typedef enum {
   H_H,
-  H_F
 } htype;
 
 #define IS_S(x) ((x).type == V_S)
 #define IS_M(x) ((x).type == V_M)
 #define IS_T(x) ((x).type == V_T)
-#define IS_K(x) ((x).type == V_K)
+#define IS_C(x) ((x).type == V_C)
 #define IS_H(x) ((x).type == V_H)
 #define IS_I(x) ((x).type == V_I)
 #define IS_N(x) ((x).type == V_N)
-#define IS_C(x) ((x).type == V_C)
+#define IS_F(x) ((x).type == V_F)
 
 #define IS_HF(x) ((x).subtype == H_F)
 #define IS_HH(x) ((x).subtype == H_H)
@@ -49,6 +49,7 @@ typedef struct variant {
     size_t len;
     htype subtype;
     size_t bucket_power;
+    struct variant* fname;
   };
 } variant;
 
@@ -60,21 +61,10 @@ inline static void inc(variant v) {
 }
 
 void _dec(variant v);
-static inline void pdec(variant * v) {
-  if (!v->rc) return;
-  *v->rc -= 1;
-  if (*(v->rc) == 0) {
-    _dec(*v);
-  }
-}
+void pdec(variant * v);
+//void dec(variant v);
 
-inline static void dec(variant v) {
-  if (!v.rc) return;
-  *(v.rc) -= 1;
-  if (*(v.rc) == 0) {
-    _dec(v);
-  }
-}
+#define dec(v) do { if (!(v).rc) break; if (--*((v).rc) == 0) _dec(v); } while(0)
 
 size_t len(variant v);
 variant idx(variant v, size_t pos);
@@ -87,6 +77,7 @@ variant get(variant m, variant key);
 
 bool eq(variant a, variant b);
 unsigned hash(variant v);
+variant eval(variant v);
 
 variant parse(const char* s);
 variant serialize(const variant v);
@@ -106,6 +97,7 @@ variant Str(const char* s);
 variant RStr(const char* s);
 variant CStr(const char* s);
 variant Int(int i);
+variant Func(vfunc f, const char *name);
 
 #define Null() Variant(V_N)
 

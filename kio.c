@@ -225,6 +225,7 @@ int vprintf(char* buf, size_t size, const char* fmt, va_list va, int newline)
     char *s;
     const char * cs;
     variant v;
+    variant vs;
     ko* o;
 
     size_t fmtpos, bufpos;
@@ -237,9 +238,9 @@ int vprintf(char* buf, size_t size, const char* fmt, va_list va, int newline)
             switch (fmt[fmtpos]) {
                 case 'v':
                   v = va_arg(va, variant);
-                  v = serialize(v);
-                  PRINT(v.s);
-                  dec(v);
+                  vs = serialize(v);
+                  PRINT(vs.s);
+        //          dec(vs);
                   break;
                     
                 case 'k':

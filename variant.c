@@ -9,6 +9,13 @@ variant tuple_serialize(variant t);
 void map_cleanup(variant m);
 variant map_serialize(variant m);
 
+void func_cleanup(variant t);
+variant func_serialize(variant t);
+
+void call_cleanup(variant t);
+variant call_serialize(variant t);
+variant call_eval(variant t);
+
 static unsigned str_hash(const char* s) {
   unsigned h = 0;
   unsigned m = 1;
@@ -40,6 +47,8 @@ unsigned hash(variant v) {
     case V_T:
     case V_C:
       return tuple_hash(v);
+    case V_F:
+      return (unsigned)v.f;
     case V_N:
       return 0;
     default:
@@ -57,14 +66,16 @@ bool eq(variant a, variant b) {
     case V_I:
       return a.i = b.i;
     case V_S:
-      return a.len == b.len && strcmp(a.s, b.s);
+      return a.len == b.len && !strcmp(a.s, b.s);
     case V_H:
       return a.h == b.h;
     case V_M:
       return a.t == b.t;
     case V_T:
     case V_C:
-      return tuple_eq(a, b);
+      return tuple_eq(a,b);
+    case V_F:
+      return a.f == b.f;
     case V_N:
       return true;
     default:
@@ -84,7 +95,11 @@ void _dec(variant v) {
       map_cleanup(v);
       break;
     case V_T:
+    case V_C:
       tuple_cleanup(v);
+      break;
+    case V_F:
+      func_cleanup(v);
       break;
     default:
       break;
@@ -103,6 +118,10 @@ variant serialize(variant v) {
       return map_serialize(v);
     case V_T:
       return tuple_serialize(v);
+    case V_C:
+      return call_serialize(v);
+    case V_F:
+      return func_serialize(v);
     case V_I:
       itoa(buf, 48, v.i);
       return Str(buf);
@@ -119,7 +138,7 @@ variant serialize(variant v) {
 variant Variant(vtype type) {
   variant v;
   v.type = type;
-  if (type == V_I || type == V_H || type == V_N) {
+  if (type == V_I || type == V_N) {
     v.rc = 0;
   } else {
     v.rc = malloc(sizeof(size_t));
@@ -132,9 +151,11 @@ size_t len(variant v) {
   switch (v.type) {
     case V_S:
     case V_T:
+    case V_C:
       return v.len;
     case V_I:
     case V_H:
+    case V_F:
       return 1;
     case V_M:
     case V_N:
@@ -153,12 +174,14 @@ variant idx(variant v, size_t pos) {
       buf[1] = '\0';
       return Str(buf);
     case V_T:
+    case V_C:
       if (pos >= len(v)) return Null();
       return v.t[pos];
     case V_M:
       return Null();
     case V_I:
     case V_H:
+    case V_F:
       if (pos != 0) return Null();
       return v;
     case V_N:
@@ -176,11 +199,12 @@ variant eslice(variant v, size_t e) {
 }
 
 variant slice(variant v, size_t s, size_t e) {
+  printk("%v %c %d - %d", v, v.type, s, e);
   char * buf;
   vv* t;
 
-  if (s == e) return idx(v, s);
-  if (s > e || e >= len(v)) { return Null(); }
+  if (s == e) return Null();
+  if (s > e || e > len(v)) return Null();
   switch (v.type) {
     case V_S:
       buf = malloc(e - s + 1);
@@ -188,8 +212,9 @@ variant slice(variant v, size_t s, size_t e) {
       buf[e - s + 1] = '\0';
       return RStr(buf);
     case V_T:
-      t = Vv(s - e);
-      for(size_t i = s; i <= e; i++) {
+    case V_C:
+      t = Vv(e- s);
+      for(size_t i = s; i < e; i++) {
         push(t, idx(v, i));
       }
       variant r = Tvv(t);
@@ -199,6 +224,7 @@ variant slice(variant v, size_t s, size_t e) {
       return Null();
     case V_I:
     case V_H:
+    case V_F:
       return Null();
     case V_N:
       return v;
@@ -207,6 +233,12 @@ variant slice(variant v, size_t s, size_t e) {
   }
 }
 
+variant tuple_eval(variant t);
+
+variant eval(variant v) {
+  if (v.type == V_C) return call_eval(v);
+  return v;
+}
 
 variant RStr(const char * s) {
   variant v = Variant(V_S);
@@ -237,3 +269,6 @@ variant Str(const char *s) {
   return v;
 }
   
+void pdec(variant *v ) { 
+  dec(*v);
+}

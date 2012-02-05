@@ -7,20 +7,6 @@
 
 #define HOPE(x,y) do { if (!x) { dec(v); return y; } } while(0)
 
-variant dispatch(variant t) {
-  if (!IS_T(t)) return Null();
-
-  variant s = idx(t, 0);
-  if (!IS_S(s)) return Null();
-
-  if (!strcmp(s.s, "id")) {
-    return idx(t, 1);
-  }
-  return Null();
-
-}
-
-
 int sys_send(const char * s, size_t size) {
   if (!s) return E_BAD_ARG;
 

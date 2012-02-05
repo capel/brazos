@@ -80,6 +80,8 @@ bool parse_line(char* line) {
 
     V(vvv) = parse(line);
     println("%v", vvv);
+    V(e) = eval(vvv);
+    println("%v", e);
     return true;
 
     char buf[4096];

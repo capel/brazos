@@ -36,6 +36,8 @@ bool tuple_eq(variant a, variant b) {
 }
 
 variant Tuple(size_t len, ...) {
+  if (len == 0) return null_tuple();
+
   variant t = _tuple(len);
 
   va_list va;
@@ -50,8 +52,6 @@ variant Tuple(size_t len, ...) {
 }
 
 void tuple_cleanup(variant t) {
-  assert(IS_T(t));
-
   foreach(x, t) {
     dec(x);
   }
@@ -59,7 +59,9 @@ void tuple_cleanup(variant t) {
 }
 
 variant tuple_serialize(variant t) {
-  VV(v) = Vv(len(t));
+  if (len(t) == 0) return CStr("[]");
+  VV(v) = Vv(len(t) + 1);
+  push(v, CStr("tuple"));
   foreach(x, t) {
     push(v, x);
   }
@@ -68,34 +70,6 @@ variant tuple_serialize(variant t) {
   return s;
 }
 
-#include "parse_macro.h"
-
-PARSE(tuple_parse) {
-  CONSUME('[');
-  NOM_SPACE();
-  if (s[*pos] == ']') {
-    return null_tuple();
-  }
-
-  VV(v) = Vv(5); // a decent guess
-  V(tmp);
-  do {
-    tmp = _parse(s, pos, die);
-    if (*die) DIE();
-
-    push(v, tmp);
-    NOM_SPACE();
-    if (s[*pos] != ']') {
-      CONSUME(',');
-    }
-  } while(s[*pos] != ']');
-
-  CONSUME(']');
-
-  variant t = Tvv(v);
-
-  return t;
-}
 
 variant Tvv(vv * v) {
   if (vvlen(v) == 0) {

@@ -65,7 +65,6 @@ PARSE(null_parse) {
 }
 
 PARSE(call_parse);
-PARSE(tuple_parse);
 PARSE(map_parse);
 
 PARSE(_parse) {
@@ -73,7 +72,7 @@ PARSE(_parse) {
 
   switch (s[*pos]) {
     case '[': 
-      return tuple_parse(s, pos, die);
+      return call_parse(s, pos, die);
     case '{':
       return map_parse(s, pos, die);
     case 'n':

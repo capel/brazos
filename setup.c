@@ -27,6 +27,8 @@ sinkhole* raw_stdin() {
   return _raw_stdin;
 }
 
+void init_calls();
+
 void setup(void) {
   printk("setup");
   ksetup_sched();
@@ -52,6 +54,7 @@ void setup(void) {
 
   LINK(root(), f, "stdin");
 
+  init_calls();
   
   dir* proc = mk_dir();
   LINK(root(), proc, "proc");
