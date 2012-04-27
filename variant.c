@@ -1,7 +1,5 @@
 #include "variant.h"
-
 #include "stdlib.h"
-#include "vv.h"
 
 void tuple_cleanup(variant t);
 variant tuple_serialize(variant t);
@@ -25,10 +23,11 @@ static unsigned str_hash(const char* s) {
   return h;
 }
 
-static unsigned tuple_hash(variant t) {
+static unsigned list_hash(variant t) {
   unsigned r = 0;
+  int i = 1;
   foreach(x, t) {
-    r ^= hash(x);
+    r += i++ * hash(x);
   }
   return r;
 }
@@ -40,13 +39,10 @@ unsigned hash(variant v) {
       return (unsigned)v.i;
     case V_S:
       return str_hash(v.s);
-    case V_H:
-      return (unsigned)v.h;
     case V_M:
       return (unsigned)v.t;
-    case V_T:
-    case V_C:
-      return tuple_hash(v);
+    case V_L:
+      return list_hash(v);
     case V_F:
       return (unsigned)v.f;
     case V_N:
@@ -57,7 +53,7 @@ unsigned hash(variant v) {
   return false;
 }
 
-bool tuple_eq(variant a, variant b);
+bool list_eq(variant a, variant b);
 
 bool eq(variant a, variant b) {
   if (a.type != b.type) return false;
@@ -67,13 +63,10 @@ bool eq(variant a, variant b) {
       return a.i = b.i;
     case V_S:
       return a.len == b.len && !strcmp(a.s, b.s);
-    case V_H:
-      return a.h == b.h;
     case V_M:
       return a.t == b.t;
-    case V_T:
-    case V_C:
-      return tuple_eq(a,b);
+    case V_L:
+      return list_eq(a,b);
     case V_F:
       return a.f == b.f;
     case V_N:
@@ -84,6 +77,7 @@ bool eq(variant a, variant b) {
   return false;
 }
 
+void list_cleanup(variant v);
 void _dec(variant v) {
   assert(v.rc && *v.rc == 0);
   free(v.rc);
@@ -94,9 +88,8 @@ void _dec(variant v) {
     case V_M:
       map_cleanup(v);
       break;
-    case V_T:
-    case V_C:
-      tuple_cleanup(v);
+    case V_L:
+      list_cleanup(v);
       break;
     case V_F:
       func_cleanup(v);
@@ -106,6 +99,7 @@ void _dec(variant v) {
   }
 }
 
+variant list_serialize(variant v);
 variant serialize(variant v) {
   char buf[48];
   char * s;
@@ -116,17 +110,12 @@ variant serialize(variant v) {
       return RStr(s);
     case V_M:
       return map_serialize(v);
-    case V_T:
-      return tuple_serialize(v);
-    case V_C:
-      return call_serialize(v);
+    case V_L:
+      return list_serialize(v);
     case V_F:
       return func_serialize(v);
     case V_I:
       itoa(buf, 48, v.i);
-      return Str(buf);
-    case V_H:
-      snprintf(buf, 48, "<%c %d>", v.subtype, v.h);
       return Str(buf);
     case V_N:
       return Str("null");
@@ -150,11 +139,10 @@ variant Variant(vtype type) {
 size_t len(variant v) {
   switch (v.type) {
     case V_S:
-    case V_T:
-    case V_C:
       return v.len;
+    case V_L:
+      return v.l->len;
     case V_I:
-    case V_H:
     case V_F:
       return 1;
     case V_M:
@@ -173,14 +161,12 @@ variant idx(variant v, size_t pos) {
       buf[0] = v.s[pos];
       buf[1] = '\0';
       return Str(buf);
-    case V_T:
-    case V_C:
+    case V_L:
       if (pos >= len(v)) return Null();
-      return v.t[pos];
+      return v.l->t[pos];
     case V_M:
       return Null();
     case V_I:
-    case V_H:
     case V_F:
       if (pos != 0) return Null();
       return v;
@@ -199,9 +185,8 @@ variant eslice(variant v, size_t e) {
 }
 
 variant slice(variant v, size_t s, size_t e) {
-  printk("%v %c %d - %d", v, v.type, s, e);
   char * buf;
-  vv* t;
+  variant t;
 
   if (s == e) return Null();
   if (s > e || e > len(v)) return Null();
@@ -211,19 +196,15 @@ variant slice(variant v, size_t s, size_t e) {
       memcpy(buf, v.s + s, e - s);
       buf[e - s + 1] = '\0';
       return RStr(buf);
-    case V_T:
-    case V_C:
-      t = Vv(e- s);
+    case V_L:
+      t = List(e- s);
       for(size_t i = s; i < e; i++) {
         push(t, idx(v, i));
       }
-      variant r = Tvv(t);
-      vvdec(t);
-      return r;
+      return t;
     case V_M:
       return Null();
     case V_I:
-    case V_H:
     case V_F:
       return Null();
     case V_N:
@@ -233,10 +214,10 @@ variant slice(variant v, size_t s, size_t e) {
   }
 }
 
-variant tuple_eval(variant t);
+variant list_eval(variant v);
 
 variant eval(variant v) {
-  if (v.type == V_C) return call_eval(v);
+  if (v.type == V_L) return list_eval(v);
   return v;
 }
 

@@ -1,5 +1,4 @@
 #include "variant.h"
-#include "vv.h"
 #include "stdlib.h"
 #include "stdio.h"
 
@@ -17,13 +16,16 @@ void set(variant m, variant key, variant value) {
   inc(key);
   inc(value);
 
-  m.t[b] = T3(key, value, m.t[b]);
+  variant l = List(3);
+  push(l, key);
+  push(l, value);
+  push(l, m.t[b]);
+  m.t[b] = l;
 }
 
 static variant delve(variant t, variant key) {
   if (IS_N(t)) return Null();
 
-  assert(IS_T(t));
   if (eq(KEY(t), key)) {
     return VALUE(t);
   } else {
@@ -38,7 +40,7 @@ variant get(variant m, variant key) {
   return delve(m.t[b], key);
 }
 
-static void pushv(vv* v, variant b) {
+static void pushv(variant v, variant b) {
   if (IS_N(b)) return;
 
   V(key) = serialize(KEY(b));
@@ -53,8 +55,8 @@ static void pushv(vv* v, variant b) {
   pushv(v, NEXT(b));
 }
 
-static vv* toList(variant m) {
-  vv * v = Vv(SIZE(m) * 3);
+static variant toList(variant m) {
+  variant v = List(SIZE(m) * 3);
   for(size_t i = 0; i < SIZE(m); i++) {
     pushv(v, m.t[i]);
   }
@@ -69,7 +71,7 @@ void map_cleanup(variant m) {
 }
 
 variant map_serialize(variant m) {
-  VV(v) = toList(m);
+  V(v) = toList(m);
   return join(v, ',', '{', '}', false);
 }
 

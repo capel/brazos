@@ -1,5 +1,4 @@
 #include "variant.h"
-#include "vv.h"
 #include "stdlib.h"
 
 #include "parse_macro.h"
@@ -22,18 +21,6 @@ static int get_int(const char * s, size_t *pos, bool* die) {
 
 static PARSE(int_parse) {
   return Int(get_int(s, pos, die));
-}
-
-static PARSE(handle_parse) {
-  CONSUME('<');
-  NOM_SPACE();
-  (*pos)++; // nom subtype
-  NOM_SPACE();
-  int i = get_int(s, pos, die);
-  NOM_SPACE();
-  CONSUME('>');
-
-  return Handle((void*)i, H_H);
 }
 
 static PARSE(str_parse) {

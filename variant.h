@@ -4,28 +4,19 @@
 #include "types.h"
 #include "stdlib.h"
 
-typedef struct vv vv;
-
 typedef enum {
   V_S = 'S',
   V_M = 'M',
-  V_T = 'T',
-  V_H = 'H',
+  V_L = 'L',
   V_I = 'I',
   V_F = 'F',
-  V_C = 'C',
   V_N = '\0',
 } vtype;
-
-typedef enum {
-  H_H,
-} htype;
 
 #define IS_S(x) ((x).type == V_S)
 #define IS_M(x) ((x).type == V_M)
 #define IS_T(x) ((x).type == V_T)
-#define IS_C(x) ((x).type == V_C)
-#define IS_H(x) ((x).type == V_H)
+#define IS_C(x) (IS_L(x) && (x).call)
 #define IS_I(x) ((x).type == V_I)
 #define IS_N(x) ((x).type == V_N)
 #define IS_F(x) ((x).type == V_F)
@@ -35,6 +26,12 @@ typedef enum {
 
 typedef struct variant (*vfunc)(struct variant argst);
 
+typedef struct {
+  size_t len;
+  size_t alloced;
+  struct variant* t;
+} ldata;
+
 typedef struct variant {
   vtype type;
   size_t* rc;
@@ -42,12 +39,12 @@ typedef struct variant {
     int i;
     const char * s;
     struct variant * t;
-    void* h;
     vfunc f;
+    bool callable;
   };
   union {
+    ldata* l;
     size_t len;
-    htype subtype;
     size_t bucket_power;
     struct variant* fname;
   };
@@ -55,9 +52,10 @@ typedef struct variant {
 
 #define V(x) variant x __attribute__((cleanup(pdec))) 
 
-inline static void inc(variant v) {
-  if (!v.rc) return;
+inline static variant inc(variant v) {
+  if (!v.rc) return v;
   *v.rc += 1;
+  return v;
 }
 
 void _dec(variant v);
@@ -72,6 +70,9 @@ variant slice(variant v, size_t start, size_t end);
 variant sslice(variant v, size_t start);
 variant eslice(variant v, size_t end);
 
+void push(variant list, variant a);
+variant join(variant v, char sep, char start, char end, bool serialize_strings);
+
 void set(variant m, variant key, variant v);
 variant get(variant m, variant key);
 
@@ -82,15 +83,10 @@ variant eval(variant v);
 variant parse(const char* s);
 variant serialize(const variant v);
 
-
-variant Tuple(size_t len, ...);
-#define T2(x,y) Tuple(2, (x), (y))
-#define T3(x,y,z) Tuple(3, (x), (y), (z))
-variant Tvv(vv* v);
+variant List(size_t len);
 
 variant Variant(vtype type); 
 
-variant Handle(void* h, htype subtype);
 
 variant Map(size_t power2_num_buckets);
 variant Str(const char* s);
@@ -101,7 +97,8 @@ variant Func(vfunc f, const char *name);
 
 #define Null() Variant(V_N)
 
-#define VFUNC(func) variant func(variant args)
+
+#define fori(x, n) for(size_t i = 0; i < n; i++)
 
 #define foreach(x, v) \
   size_t __i_##x = 0; \

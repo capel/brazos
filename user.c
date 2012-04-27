@@ -80,27 +80,20 @@ bool parse_line(char* line) {
 
     V(vvv) = parse(line);
     println("%v", vvv);
-    V(e) = eval(vvv);
-    println("%v", e);
-    return true;
+    send(line);
+    if (ret < 0) {
+      println("%d", ret);
+      return true;
+    }
 
     char buf[4096];
     size_t size = 4096;
-
-    if (line[0] == '(') {
-      int ret = send(line);
-      if (ret < 0) {
-        println("%d", ret);
-      }
-      return true;
-    } else {
-      int ret = recv(line, buf, size);
-      if (ret < 0) {
-        println("%d", ret);
-      }
-      println(buf);
-      return true;
+    int ret = recv(line, buf, size);
+    if (ret < 0) {
+      println("%d", ret);
     }
+    println(buf);
+    return true;
 
     vector * v = ksplit_to_vector(line, " ");
     switch (((char*)v->data[0])[0]) {
