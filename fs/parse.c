@@ -4,31 +4,24 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-Directory* parse_directory(char *s, size_t *pos) {
+
+static Directory* parse_directory(char *s, size_t *pos) {
   assert(s[*pos] == 'D');
   *pos += 2;
 
   Directory* dir = ctor_directory();
 
-  dir->nodes[0] = parse(s, pos);
-  assert(s[*pos] == ',');
-  *pos += 1;
-  
-  dir->nodes[1] = parse(s, pos);
-  assert(s[*pos] == ',');
-  *pos += 1;
+  for(size_t i = 0; i < NODES_PER_DIR && s[*pos] != ')'; i++) {
+    dir->nodes[i] = parse(s, pos);
+    assert(s[*pos] == ',');
+    *pos += 1;
+  }
 
-  dir->nodes[2] = parse(s, pos);
-  assert(s[*pos] == ',');
-  *pos += 1;
-
-  dir->nodes[3] = parse(s, pos);
-
-  *pos += 1;
+  *pos += 1; // eat )
   return dir;
 }
 
-Block* parse_block(char *s, size_t *pos) {
+static Block* parse_block(char *s, size_t *pos) {
   assert(s[*pos] == 'B');
   *pos += 2;
 
@@ -46,8 +39,7 @@ Block* parse_block(char *s, size_t *pos) {
 }
 
 
-Link* parse_link(char *s, size_t *pos) {
-  //printf("l:: %s", s + *pos);
+static Link* parse_link(char *s, size_t *pos) {
   assert(s[*pos] == 'L');
   *pos += 2;
 
@@ -71,15 +63,22 @@ Node* parse(char * s, size_t *pos) {
     return NULL;
   }
 
-  char name[NAME_LEN];
-  char* buf = name;
-  memset(name, 0, NAME_LEN);
+  char name[NAME_LEN + 1];
+  memcpy(name, s + *pos, NAME_LEN + 1);
 
-  while(s[*pos] != ':') {
-    *buf++ = s[*pos];
+  for (int i = 0; i < NAME_LEN + 1; i++) {
+    if (name[i] == ':') {
+      *pos += 1;
+      memset(name + i, 0, NAME_LEN + 1 - i);
+      goto good;
+    }
     *pos += 1;
   }
-  *pos += 1; // eat the :
+  // bad news, didn't find one.
+  printf("Name too long: %s", name);
+  assert(0);
+
+good:
 
   switch(s[*pos]) {
     case 'D':
