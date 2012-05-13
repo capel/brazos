@@ -124,3 +124,4 @@ int block_write(Block* b, size_t pos, const void *buf, size_t nbytes);
 int block_sync(Block* b);
 
 Node* link_resolve(Link* l);
+Directory* root(void);

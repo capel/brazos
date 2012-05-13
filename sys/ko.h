@@ -4,7 +4,7 @@
 
 #include <types.h>
 #include <stdlib.h>
-#include "../kvector.h"
+#include "../vector.h"
 #include "../kio.h"
 #include "../syscalls.h"
 

@@ -1,7 +1,7 @@
 #ifndef CAPEL_VECTOR_H
 #define CAPEL_VECTOR_H
 
-#include "malloc.h"
+#include <stdlib.h>
 
 
 // Pass one of the to make_vector.

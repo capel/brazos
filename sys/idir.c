@@ -1,6 +1,6 @@
 #include "idir.h"
 #include "../mem.h"
-#include "../kvector.h"
+#include "../vector.h"
 
 typedef struct _bucket {
     int key;

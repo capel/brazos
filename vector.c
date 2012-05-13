@@ -2,12 +2,12 @@
 
 // Implementation of the auto-expanding array data structure.
 
-#include "stdlib.h"
-#include "stdio.h"
-#include "mem.h"
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+#include <stdbool.h>
 
 #include "vector.h"
-#include "kio.h"
 
 void* vector_pop_front(vector* v) {
   void* p = (void*)v->data[0];
@@ -156,9 +156,9 @@ vector* ksplit_to_vector(const char * str, const char* seps)
 void print_vector(vector* v, const char* format_string, size_t start)
 {
 	for	(size_t i = start; i < v->size; ++i) {
-		kprintf(format_string, v->data[i]);	
+		printf(format_string, v->data[i]);	
 	}
-	kprintf("\n");
+	printf("\n");
 }
 
 const char* vector_join(vector* v, const char* joiner) {

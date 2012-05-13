@@ -5,8 +5,8 @@ OBJS    := ${SRCS:.c=.o}
 AOBJS   := ${ASRCS:.s=.o}
 DEPS    := ${SRCS:.c=.dep} 
 
-CCFLAGS=-Wall -Werror -Wextra -nostartfiles -nostdlib -ffreestanding -std=gnu99 -Wno-unused-parameter -Wno-unused-function -I include
-CC=arm-elf-gcc-4.6
+CCFLAGS= -arch arm -Wall -Werror -Wextra -nostartfiles -nostdlib -ffreestanding -std=gnu99 -Wno-unused-parameter -Wno-unused-function -I include
+CC=clang
 AS=arm-elf-as
 LDFLAGS=-T link.ld
 LD=arm-elf-ld

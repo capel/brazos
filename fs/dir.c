@@ -1,6 +1,34 @@
 #include "fs.h"
 #include <assert.h>
 #include <string.h>
+#include "../vector.h"
+
+Node* walk(Directory* start, const char* path) {
+  Node * o;
+  vector* v = ksplit_to_vector(path, "/");
+  for (size_t i = 0; i < v->size; i++) {
+    o = dir_lookup(start, v->data[i]);
+    if (!o) {
+      cleanup_vector(v);
+      return 0;
+    }
+
+    if (i+1 == v->size) {
+      cleanup_vector(v);
+      return o;
+    }
+
+    if (o->type == DIRECTORY) {
+      start = o->dir;
+    } else {
+      cleanup_vector(v);
+      return 0;
+    }
+  }
+
+  cleanup_vector(v);
+  return o; 
+}
 
 int dir_slots_free(Directory* dir) {
   size_t n = 0;
