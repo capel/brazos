@@ -3,8 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "fs.h"
-
-
+#include "file.h"
 
 /*
 void mk(Node *n, int argc, char** argv) {
@@ -28,7 +27,23 @@ void rm(Node *n, int argc, char** argv) {
 }
 */
 
+
+void file_init();
+void file_shutdown();
+
 int main(int argc, char** argv) {
+  file_init();
+  
+  /*
+  char * o = "D(E('a',1),E('b',B(1)),)";
+  //Node * n = parse("D(E('a', 1),E('b',1))");
+  Node *n = parse(o);
+  char * s = serialize(n);
+  printf("%s \n %s", o, s);
+  */
+
+
+  /*
   {
     char * s;
     {
@@ -61,6 +76,25 @@ int main(int argc, char** argv) {
 
     free(s);
   }
+
+  */
+  
+  int fd = _open("doom", _O_CREAT | _O_RDWR);
+  int r = _write(fd, "hey", strlen("hey") + 1);
+  assert(r > 0);
+
+  _sync(fd);
+
+  char buf2[PAGE_SIZE + 1];
+  memset(buf2, 0, PAGE_SIZE + 1);
+  r = _seek(fd, 0, _SEEK_SET);
+  assert(r >= 0);
+  r = _read(fd, buf2, PAGE_SIZE);
+  assert(r > 0);
+  assert(!strncmp("hey", buf2, strlen("hey")));
+  printf("Hey: %s\n", buf2);
+
+  file_shutdown();
 
 /*
   if (0 == strcmp("mk", argv[1])) {

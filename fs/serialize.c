@@ -4,16 +4,23 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+#include "../chars.h"
+
+#define printk(x, args...) printf(GREEN "pk: " WHITE __FILE__ ":%d  [" LIGHT_BLUE "%s" WHITE "] " x "\n", __LINE__, __func__, ## args)
+
 static char* serialize_entry(Entry * e) {
   char *n = serialize(e->n);
+  printk("%s", n);
 
-  int needed = 0;
+  int needed = 1;
   needed += strlen(n);
   needed += strlen("E('',)");
   needed += strlen(e->name);
 
   char *s = malloc(needed);
   snprintf(s, needed, "E('%s',%s)", e->name, n);
+  free(n);
+
   return s;
 }
 
@@ -34,26 +41,28 @@ char* serialize_directory(Directory* dir) {
 
   for(size_t i = 0; i < ENTRIES_PER_DIR; i++) {
     if (strs[i]) {
-      snprintf(s, strlen(s), "%s,", strs[i]);
+      snprintf(s, needed - (s - orig), "%s,", strs[i]);
       s += strlen(strs[i]) + 1;
       free(strs[i]);
     }
   }
-
-  snprintf(s, strlen(s), ")");
+  snprintf(s, needed - (s - orig), ")");
 
   return orig;
 }
 
 static char* serialize_block(Block * b) {
-  char *s = malloc(strlen("B()" + 32));
-  snprintf(s, strlen(s), "B(%zd)", b->bid);
+  int needed = strlen("B()" + 33);
+  char *s = malloc(needed);
+  snprintf(s, needed, "B(%zd)", b->bid);
   return s;
 }
 
 static char* serialize_link(Link * l) {
-  char *s = malloc(strlen("L('')" + strlen(l->path) + 1));
-  snprintf(s, strlen(s), "L('%sr')", l->path);
+  int needed = strlen("L('')" + strlen(l->path) + 1);
+  printk("%d", needed);
+  char *s = malloc(needed);
+  snprintf(s, needed, "L('%s')", l->path);
   return s;
 }
 
@@ -103,6 +112,7 @@ void pretty_print(Node* n, int indent) {
 }
 
 char* serialize(Node* node) {
+  char *s;
   switch (node->type) {
     case DIRECTORY:
       return serialize_directory(node->dir);
@@ -112,6 +122,14 @@ char* serialize(Node* node) {
       return serialize_link(node->link);
     case ENTRY:
       return serialize_entry(node->e);
+    case INTEGER:
+      s = malloc(35);
+      snprintf(s, 35, "%d", node->i);
+      return s;
+    case STRING:
+      s = malloc(strlen(node->s) + 3);
+      snprintf(s, strlen(node->s) + 3, "'%s'", node->s);
+      return s;
     default:
       assert(0);
   }

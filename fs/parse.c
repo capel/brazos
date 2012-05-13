@@ -140,7 +140,9 @@ Node* parse(const char * s) {
   size_t pos = 0;
   Node* n = _parse(s, &pos, &die);
   if (s[pos] && s[pos] != '\n') {
-    printf("Parse error: trailing bullshit \"%s\"\n", s + pos);
+    
+    printf("%s\n", s);
+    printf("Parse error: trailing bullshit: %s :\n", s + pos);
   }
   return n;
 }
