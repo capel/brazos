@@ -1,93 +1,146 @@
 #include "fs.h"
-#include <assert.h>
-#include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <stdbool.h>
+#include <ctype.h>
+#include <string.h>
+#include "../chars.h"
+
+#define CONSUME(c) do { if(s[*pos] != c) { DIE(); } (*pos)++; } while (0)
+#define NOM() s[(*pos)++]
+
+#define NOM_SPACE() while (isspace(s[*pos])) { (*pos)++; }
+
+#define PARSE(name) Node* name(const char * s, size_t *pos, bool* die)
+
+PARSE(_parse);
+
+#define printk(x, args...) printf(GREEN "pk: " WHITE __FILE__ ":%d  [" LIGHT_BLUE "%s" WHITE "] " x, __LINE__, __func__, ## args)
+
+#define DIE() do { *die = true; printk("Parse error\n"); return 0; } while(0)
+
+#define HOPE(cond) if (!(cond)) { DIE(); }
 
 
-static Directory* parse_directory(char *s, size_t *pos) {
-  assert(s[*pos] == 'D');
-  *pos += 2;
-
-  Directory* dir = ctor_directory();
-
-  for(size_t i = 0; i < NODES_PER_DIR && s[*pos] != ')'; i++) {
-    dir->nodes[i] = parse(s, pos);
-    assert(s[*pos] == ',');
-    *pos += 1;
+static PARSE(int_parse) {
+  char buf[64];
+  size_t bufpos = 0;
+  if (s[*pos] == '-') {
+    buf[bufpos++] = NOM();
   }
 
-  *pos += 1; // eat )
-  return dir;
+  while(isdigit(s[*pos])) {
+    buf[bufpos++] = NOM(); 
+  }
+  buf[bufpos++] = '\0';
+
+  return NODE(atoi(buf));
 }
 
-static Block* parse_block(char *s, size_t *pos) {
-  assert(s[*pos] == 'B');
-  *pos += 2;
-
-  char bid[32];
-  memset(bid, 0, 32);
-  char *buf = bid;
-
-  while(s[*pos] != ')') {
-    *buf++ = s[*pos];
-    *pos += 1;
+static PARSE(str_parse) {
+  CONSUME('\'');
+  if (s[*pos] == '\'') {
+    CONSUME('\'');
+    char *s = malloc(1);
+    s[0] = '\0';
+    return NODE(s);
   }
-  *pos += 1;
+  size_t len = 0;
+  while(s[*pos+len] != '\'') { len++; }
+  char * b = malloc(len + 2);
+  memcpy(b, s + *pos, len);
+  b[len] = '\0';
+  *pos += len;
 
-  return ctor_block(atoi(bid));
+  if (NOM() != '\'') {
+    free(b);
+    DIE();
+  }
+  return NODE(b);
 }
 
+static int argslist_parse(const char *s, size_t *pos, bool* die, Node** args) {
+  CONSUME('(');
 
-static Link* parse_link(char *s, size_t *pos) {
-  assert(s[*pos] == 'L');
-  *pos += 2;
+  NOM_SPACE()
 
-  char path[PATH_LEN];
-  memset(path, 0, 32);
-  char *buf = path;
+  int num_args = 0;
 
-  while(s[*pos] != ')') {
-    *buf++ = s[*pos];
-    *pos += 1;
-  }
-  *pos += 1;
-  
-  return ctor_link(path);
-}
+  for(;;) {
+    HOPE(num_args < MAX_ARGS);
+    args[num_args++] = _parse(s, pos, die);
 
+    NOM_SPACE();
 
-Node* parse(char * s, size_t *pos) {
-  if (s[*pos] == '(' && s[*pos+1] == ')') {
-    *pos += 2;
-    return NULL;
-  }
-
-  char name[NAME_LEN + 1];
-  memcpy(name, s + *pos, NAME_LEN + 1);
-
-  for (int i = 0; i < NAME_LEN + 1; i++) {
-    if (name[i] == ':') {
-      *pos += 1;
-      memset(name + i, 0, NAME_LEN + 1 - i);
-      goto good;
+    char c = NOM();
+    if (c == ')') {
+      return num_args;
+    } else if (c ==',') {
+      NOM_SPACE();
+      if (s[*pos] == ')') {
+        *pos += 1;
+        return num_args;
+      }
+      continue;
+    } else {
+      printf("char: %c (%d)\n", c, c);
+      DIE();
     }
-    *pos += 1;
   }
-  // bad news, didn't find one.
-  printf("Name too long: %s", name);
-  assert(0);
+}
 
-good:
+static PARSE(ctor_parse) {
+  char ctor = s[*pos];
+  *pos += 1;
 
-  switch(s[*pos]) {
+  Node* args[MAX_ARGS];
+  memset(args, 0, sizeof(args));
+
+  int num_args = argslist_parse(s, pos, die, args);
+
+  switch(ctor) {
     case 'D':
-      return dir2Node(name, parse_directory(s, pos));
-    case 'L':
-      return link2Node(name, parse_link(s, pos));
+      return NODE(ctor_directory(args));
     case 'B':
-      return block2Node(name, parse_block(s, pos));
+      HOPE(num_args == 1 && args[0]->type == INTEGER);
+      return NODE(ctor_block(args[0]));
+    case 'L':
+      HOPE(num_args == 1 || args[0]->type == STRING);
+      return NODE(ctor_link(args[0]));
+    case 'E':
+      HOPE(num_args == 2 || args[0]->type == STRING);
+      return NODE(ctor_entry(args[0], args[1]));
     default:
-      assert(0);
+      DIE();
   }
+}
+
+PARSE(_parse) {
+  NOM_SPACE();
+
+  switch (s[*pos]) {
+    case '\'':
+      return str_parse(s, pos, die);
+    case '0' ... '9':
+    case '-':
+      return int_parse(s, pos, die);
+    case 'D':
+    case 'B':
+    case 'L':
+    case 'E':
+      return ctor_parse(s, pos, die);
+    default:
+      printf("%c (%d)\n", s[*pos], s[*pos]);
+      DIE();
+  }
+}
+
+Node* parse(const char * s) {
+  bool die = 0;
+  size_t pos = 0;
+  Node* n = _parse(s, &pos, &die);
+  if (s[pos] && s[pos] != '\n') {
+    printf("Parse error: trailing bullshit \"%s\"\n", s + pos);
+  }
+  return n;
 }

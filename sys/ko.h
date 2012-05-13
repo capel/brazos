@@ -2,10 +2,10 @@
 #ifndef KO_H
 #define KO_H
 
-#include "../types.h"
+#include <types.h>
+#include <stdlib.h>
 #include "../kvector.h"
 #include "../kio.h"
-#include "../mem.h"
 #include "../syscalls.h"
 
 typedef size_t err_t;

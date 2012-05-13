@@ -24,7 +24,7 @@ void vector_push(vector* v, char* object)
         {
                 v->__allocated_size *= 2;
                 void* old = v->data;
-                v->data = kmalloc(v->__allocated_size * sizeof(char*));
+                v->data = malloc(v->__allocated_size * sizeof(char*));
                 memcpy((char*)v->data, old, v->__allocated_size * sizeof(char*));
         }
         
@@ -34,7 +34,7 @@ void vector_push(vector* v, char* object)
 
 vector* kmake_vector(int data_type_size, enum cleanup_type type)
 {
-        vector* v = kmalloc(sizeof(vector));
+        vector* v = malloc(sizeof(vector));
         v->__allocated_size = 8;
         v->data = malloc(8 * sizeof(char*));
         v->size = 0;
@@ -50,15 +50,15 @@ void cleanup_vector(vector* v)
 		return;
 
 	if (v->__type == __SPLIT_TO_VECTOR) {
-	    kfree(v->__source);
+	    free(v->__source);
 	} else if (v->__type == MANAGED_POINTERS) {
       for(size_t i = 0; i < v->size; ++i) {	
-         kfree(v->data[i]);
+         free(v->data[i]);
       }
 	}
   
-  kfree(v->data);
-  kfree(v);
+  free(v->data);
+  free(v);
 }
 
 void* vector_remove(vector* v, size_t i)
@@ -71,7 +71,7 @@ void* vector_remove(vector* v, size_t i)
 		
 	void* item = v->data[i];
 	if (v->__type == MANAGED_POINTERS)
-		kfree(item);
+		free(item);
 		
 		
 	// copy stuff over
@@ -111,7 +111,7 @@ vector* ksplit_to_vector(const char * str, const char* seps)
   vector * v = kmake_vector(sizeof(char*), __SPLIT_TO_VECTOR);
 
   size_t len = strlen(str);
-  v->__source = kmalloc(len+1);
+  v->__source = malloc(len+1);
   strlcpy(v->__source, str, len+1);
 
   // for ease of use
@@ -175,7 +175,7 @@ const char* vector_join(vector* v, const char* joiner) {
     needed += strlen(v->data[i]) + joiner_len;
   }
 
-  char* s = kmalloc(needed + 3);
+  char* s = malloc(needed + 3);
 
   for(size_t i = 0; i < v->size; i++) {
     size_t len = strlen(v->data[i]);

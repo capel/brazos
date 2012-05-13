@@ -81,10 +81,10 @@ bool parse_line(char* line) {
     V(vvv) = parse(line);
     println("%v", vvv);
     send(line);
-    if (ret < 0) {
+    /*if (ret < 0) {
       println("%d", ret);
       return true;
-    }
+    }*/
 
     char buf[4096];
     size_t size = 4096;

@@ -2,42 +2,68 @@
 #include <assert.h>
 #include <string.h>
 #include <stdlib.h>
-#include <stdio.h>
 
-Directory* ctor_directory() {
+void nop(int i) {}
+
+Directory* ctor_directory(Node** args) {
   Directory* d = malloc(sizeof(Directory));
-  memset(d->nodes, 0, sizeof(d->nodes));
+  memset(d->entries, 0, sizeof(d->entries));
+
+  for(int i = 0; i < ENTRIES_PER_DIR; i++) {
+    if (!args[i]) break;
+
+    assert(args[i]->type == ENTRY);
+
+    d->entries[i] = args[i]->e;
+
+    args[i]->type = EMPTY;
+    DTOR(args[i]);
+  }
   return d;
 }
 
-Link* ctor_link(char* path) {
+Entry* ctor_entry(Node* name, Node* n) {
+  Entry* e = malloc(sizeof(Entry));
+  strncpy(e->name, name->s, NAME_LEN);
+  e->n = n;
+
+  DTOR(name);
+
+  return e;
+}
+
+void dtor_entry(Entry *e) {
+  DTOR(e->n);
+  free(e);
+}
+
+Link* ctor_link(Node * path) {
   Link *l = malloc(sizeof(Link));
-  memset(l->path, 0, sizeof(l->path));
-  strcpy(l->path, path);
-  l->resolved = 0;
+  l->path = path->s;
+  path->type = EMPTY;
+  DTOR(path);
+
   return l;
 }
 
-Block* ctor_block(size_t bid) {
+Block* ctor_block(Node* bid) {
   Block *b = malloc(sizeof(Block));
-  b->bid = bid;
+  b->bid = bid->i;
   b->data = 0;
+
+  DTOR(bid);
   return b;
 }
 
 void dtor_directory(Directory* dir) {
-  for(size_t i = 0; i < NODES_PER_DIR; i++) {
-    if (dir->nodes[i]) {
-      dtor_node(dir->nodes[i]);
-    }
+  for(size_t i = 0; i < ENTRIES_PER_DIR; i++) {
+    DTOR(dir->entries[i]);
   }
   free(dir);
 }
 
 void dtor_link(Link * link) {
-  if (link->resolved) {
-    dtor_node(link->resolved);
-  }
+  free(link->path);
   free(link);
 }
 
@@ -48,46 +74,37 @@ void dtor_block(Block* b) {
   free(b);
 }
 
-Node* ctor_node(char* name) {
-  Node* n = malloc(sizeof(Node));
-  strncpy(n->name, name, NAME_LEN);
-  n->type = INVALID;
-  return n;
-}
-
-Node* dir2Node(char* name, Directory* dir) {
-  Node * n = ctor_node(name);
-  n->type = DIRECTORY;
-  n->dir = dir;
-  return n;
-}
-
-Node* block2Node(char* name, Block* block) {
-  Node * n = ctor_node(name);
-  n->type = BLOCK;
-  n->block = block;
-  return n;
-}
-
-Node* link2Node(char* name, Link* link) {
-  Node * n = ctor_node(name);
-  n->type = LINK;
-  n->link = link;
+Node* ctor_node(void* d, int type) {
+  Node * n = malloc(sizeof(Node));
+  n->type = type;
+  n->dir = d; // its a union anyway, we can just assign away
   return n;
 }
 
 void dtor_node(Node* node) {
   switch (node->type) {
+    case EMPTY: // nothing to do here
+      break;
     case DIRECTORY:
-      dtor_directory(node->dir);
-      return;
+      DTOR(node->dir);
+      break;
     case BLOCK:
-      dtor_block(node->block);
-      return;
+      DTOR(node->block);
+      break;
     case LINK:
-      dtor_link(node->link);
-      return;
+      DTOR(node->link);
+      break;
+    case ENTRY:
+      DTOR(node->e);
+      break;
+    case STRING:
+      DTOR(node->s);
+      break;
+    case INTEGER:
+      DTOR(node->i);
+      break;
     default:
       assert(0);
   }
+  free(node);
 }

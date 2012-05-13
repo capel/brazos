@@ -3,7 +3,9 @@
 
 #include "types.h"
 #include "chars.h"
+
 #include "malloc.h"
+#include <string.h>
 
 #define PAGE_SIZE 4096
 
@@ -16,33 +18,6 @@ typedef __builtin_va_list va_list;
 #define va_end __builtin_va_end
 #define va_arg __builtin_va_arg
 
-void memset(char* start, char fill, size_t bytes);
-void memcpy(char* dst, const char * src, size_t len);
-void memmove(char* dst, const char * src, size_t len);
-int memcmp(const char* a, const char* b, size_t bytes);
-
-size_t strlen(const char* str);
-size_t strlcpy(char* dst, const char* src, size_t len);
-int strncmp(const char* a, const char* b, size_t len);
-int strcmp(const char* a, const char* b);
-char* strclone(const char *s);
-
-const char* skip_spaces(const char* s);
-
-/*
-void* malloc(size_t bytes);
-void free(void* addr);
-*/
-
-bool isspace(char c);
-bool isupper(char c);
-bool islower(char c);
-bool isalpha(char c);
-bool isdigit(char c);
-
-bool isdigits(const char* c);
-
-
 void itoa(char* buf, size_t size, int s);
 void utoa(char* buf, size_t size, unsigned s);
 void utoa16(char* buf, size_t size, unsigned x);
@@ -51,13 +26,10 @@ int atoi(const char* buf);
 
 int power(int a, int b);
 
-bool lock(lock_t* l);
-bool unlock(lock_t* l);
-
 #ifdef USER
 #define assert(x) do { if (!(x)) { debug("Assert (%s) in %s at " __FILE__ ":%d failed.", #x, __func__, __LINE__); _exit(); } } while(0)
 #else
-#include "kio.h"
+#include "../kio.h"
 #define assert(x) do { if (!(x)) { panic("Assert (%s) in %s at " __FILE__ ":%d failed.", #x, __func__, __LINE__); } } while(0)
 #endif
 

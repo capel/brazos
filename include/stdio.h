@@ -1,10 +1,6 @@
 #ifndef STDIO_H
 #define STDIO_H
 
-#ifdef KERNEL
-#error __FILE__ " included from kernel code."
-#endif
-
 #include "types.h"
 #include "chars.h"
 

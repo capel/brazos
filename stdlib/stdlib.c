@@ -1,6 +1,4 @@
-#include "stdlib.h"
-#include "user_syscalls.h"
-#include "stdio.h"
+#include <stdlib.h>
 
 char hexchars[] = {
     '0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
@@ -27,28 +25,26 @@ char* strclone(const char* s) {
     return tmp;
 }
 
-void memset(char* start, char fill, size_t bytes)
+void* memset(void* p, int fill, size_t bytes)
 {
-    for( ; bytes ; bytes--) {
-        *start++ = fill;
-    }
+  char* start = p;
+  for( ; bytes ; bytes--) {
+      *start++ = fill;
+  }
+  return p;
 }
 
-void memcpy(char* dst,const char * src, size_t len)
+void* memcpy(void* _dst,const void * _src, size_t len)
 {
-    if (dst == src)
-        return;
-    for ( ; len; len--) {
-        *dst++ = *src++;
-    }
-}
-void memmove(char* dst,const char * src, size_t len)
-{
-  if (dst == src) return;
-  assert(len < 2048);
-  char buf[2048];
-  memcpy(buf, src, 2048);
-  memcpy(dst, buf, 2048);
+  char* dst = _dst;
+  const char* src = _src;
+
+  if (dst == src)
+      return;
+  for ( ; len; len--) {
+      *dst++ = *src++;
+  }
+  return _dst;
 }
 
 int memcmp(const char* a, const char* b, size_t bytes) 
@@ -277,6 +273,7 @@ int atoi(const char* buf) {
     return i;
 }
 
+/*
 bool lock(lock_t* l)
 {
     while(*l == 1) {
@@ -294,3 +291,4 @@ bool unlock(lock_t* l)
     *l = 0;
     return true;
 }
+*/
