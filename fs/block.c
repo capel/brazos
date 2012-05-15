@@ -39,7 +39,8 @@ int block_write(Block* b, size_t pos, const void *buf, size_t nbytes) {
 }
 
 int block_sync(Block* b) {
-  assert(b->data);
+  if (!b->data) return 0;
+
   bsync(b->bid, b->data);
   free(b->data);
   b->data = 0;

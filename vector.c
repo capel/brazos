@@ -111,7 +111,7 @@ vector* ksplit_to_vector(const char * str, const char* seps)
   vector * v = kmake_vector(sizeof(char*), __SPLIT_TO_VECTOR);
 
   size_t len = strlen(str);
-  v->__source = malloc(len+1);
+  v->__source = malloc(len+2);
   strlcpy(v->__source, str, len+1);
 
   // for ease of use

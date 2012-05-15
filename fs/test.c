@@ -3,36 +3,18 @@
 #include <stdlib.h>
 #include <string.h>
 #include "fs.h"
-#include "file.h"
+#include <file.h>
 
-/*
-void mk(Node *n, int argc, char** argv) {
-  assert(argc >= 4);
-
-  switch (*argv[3]) {
-    case 'D':
-      LINK(n->dir, argv[2], ctor_directory());
-      break;
-    case 'B':
-      LINK(n->dir, argv[2], ctor_block(5));
-      break;
-    default:
-      assert(0);
-  }
-}
-
-void rm(Node *n, int argc, char** argv) {
-  assert(argc >= 3);
-  unlink(n->dir, argv[2]);
-}
-*/
-
+int cat_main(int argc, char** argv);
 
 void file_init();
 void file_shutdown();
 
 int main(int argc, char** argv) {
   file_init();
+
+  cat_main(argc, argv);
+  return 0;
   
   /*
   char * o = "D(E('a',1),E('b',B(1)),)";

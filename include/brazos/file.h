@@ -31,6 +31,8 @@ const char* path_parent(const char * path);
 // If the path is /, it returns "/"
 const char * path_name(const char * path);
 
+void set_cwd(const char * path);
+const char * get_cwd();
 
 // File Operations
 // Opens a filename and returns a file handle.
@@ -78,5 +80,10 @@ int _sync(int fd);
 // Returns 0 on success
 // E_BADFD fd is bad
 int _close(int fd);
+
+// Returns the size of a file
+// E_BADFD fd is bad
+int _stat(int fd);
+
 
 #endif

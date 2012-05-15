@@ -1,4 +1,4 @@
-#include "file.h"
+#include <file.h>
 #include "fs.h"
 #include "io.h"
 #include <stdlib.h>
@@ -48,12 +48,19 @@ void file_init() {
   block_read(superblock, 0, sb, PAGE_SIZE);
 
   _root = parse(sb);
-  pretty_print(_root,0);
+  //pretty_print(_root,0);
   assert(_root->type == DIRECTORY);
+
+  set_cwd("/");
 }
 
 void file_shutdown() {
-  // sync all files here
+  for(size_t i = 0; i < MAX_FDS; i++) {
+    if (fd_table[i]) {
+      _sync(i);
+      _close(i);
+    }
+  }
   
   printk("shutdown");
   pretty_print(_root, 0);
@@ -62,15 +69,16 @@ void file_shutdown() {
   printf(":: %s\n", s);
   assert(strlen(s) < PAGE_SIZE);
 
-  block_write(superblock, 0, s, strlen(s) + 2);
+  block_write(superblock, 0, s, strlen(s) + 1);
   block_sync(superblock);
 
   free(s);
+  DTOR(superblock);
   DTOR(root());
 }
 
 int allocate_fd() {
-  for (int i = 0; i < MAX_FDS; i++) {
+  for (int i = 1; i < MAX_FDS; i++) {
     if (fd_table[i] == 0) {
       return i;
     }
@@ -78,9 +86,30 @@ int allocate_fd() {
   return E_FULL;
 }
 
-int _open(const char *path, int flags) {
+
+static char * _cwd = 0;
+const char * get_cwd() {
+  return _cwd;
+}
+
+void set_cwd(const char* cwd) {
+  assert(cwd);
+  if (_cwd) free(_cwd);
+
+  _cwd = malloc(strlen(cwd) + 1);
+  strcpy(_cwd, cwd);
+}
+
+const char * path_normalize(const char * cwd, const char* path);
+
+int _open(const char *orig_path, int flags) {
   int fd = allocate_fd();
   if (fd == E_FULL) return E_FULL;
+
+  // the new value must be freed
+  // we can just ignore the old value
+  const char* path = path_normalize(get_cwd(), orig_path);
+  assert(path);
 
   Node * n = walk(root(), path);
   if (!n) {
@@ -104,13 +133,15 @@ int _open(const char *path, int flags) {
     }
   }
 
+  free((char*)path);
+
   File * f = malloc(sizeof(File));
   char * s = malloc(strlen(path) + 1);
   strcpy(s, path);
   f->link = ctor_link(NODE(s));
 
   f->offset = 0;
-  f->size = 4096;
+  f->size = 0;
   f->flags = flags & (_O_RDWR); // mask out O_CREAT
 
   fd_table[fd] = f;
@@ -126,6 +157,8 @@ int _close(int fd) {
   Node * n = link_resolve(f->link);
   assert(n->type == BLOCK);
   block_sync(n->block);
+
+  DTOR(f->link);
 
   free(f);
   fd_table[fd] = 0;
@@ -159,6 +192,7 @@ int _seek(int fd, int offset, int whence) {
       return f->offset;
     case _SEEK_END:
       f->offset = valid(f->size + offset);
+      f->size = f->offset;
       return f->offset;
     default:
       return E_INVAL;
@@ -200,7 +234,16 @@ int _write(int fd, const void *buf, size_t nbyte) {
   assert(n && n->type == BLOCK);
   int i = block_write(n->block, f->offset, buf, nbyte);
   f->offset += i;
+  f->size = (f->size > f->offset) ? f->size : f->offset;
   return i;
+}
+
+int _stat(int fd) {
+  if (fd > MAX_FDS) return E_BADFD;
+  File* f = fd_table[fd];
+  if (!f) return E_BADFD;
+
+  return PAGE_SIZE; //f->size;
 }
 
 
@@ -241,3 +284,19 @@ const char* path_parent(const char * path)  {
   return s;
 }
   
+const char * path_normalize(const char * cwd, const char * path) {
+  if (!path || !cwd) return 0;
+
+  if (path[0] == '/') return path;
+
+  if (!strcmp(cwd, ".")) {
+    char * s = malloc(strlen(cwd) + 1);
+    strcpy(s, cwd);
+    return s;
+  }
+
+  char * s = malloc(strlen(cwd) + strlen(path) + 1);
+  strcpy(s, cwd);
+  strcat(s, path);
+  return s;
+}
