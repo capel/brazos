@@ -1,84 +1,57 @@
 #define NAME_LEN 8
-#define ENTRIES_PER_DIR 8
 #define PATH_LEN 32
-#define MAX_ARGS ENTRIES_PER_DIR
+#define MAX_ARGS 32
 
 #include <stdlib.h>
 
-typedef struct Node {
-  enum { EMPTY, DIRECTORY, BLOCK, LINK, ENTRY, INTEGER, STRING } type;
-  union {
-    struct Block *block;
-    struct Directory *dir;
-    struct Link *link;
-    struct Entry *e;
-    char* s;
-    int i;
-  };
-} Node;
-
-typedef struct Entry {
-  char name[NAME_LEN];
-  Node * n;
-} Entry;
-
-typedef struct Directory { 
-  Entry* entries[ENTRIES_PER_DIR];
-} Directory;
-
-typedef struct Block {
-  size_t bid;
-  char* data;
-} Block;
-
-typedef struct Link {
-  char* path;
-} Link;
+typedef struct Block Block;
+typedef const char Link;
+typedef struct Directory Directory;
+typedef struct Entry Entry;
+typedef struct File File;
+typedef struct Node Node;
 
 
-Directory* ctor_directory(Node** args);
-Link* ctor_link(Node* path);
-Block* ctor_block(Node* n);
-Entry* ctor_entry(Node* name, Node* n);
-Node* ctor_node(void* data, int type);
+Directory* directory_ctor(Block * b);
+File* file_ctor(int size, Block** blocks, int num_args);
+Link* link_ctor(const char* path);
+Block* block_ctor(int bid);
+Entry* entry_ctor(const char* path, Node* n);
 
 // Should be called using DTOR()
-void dtor_directory(Directory* d);
-void dtor_link(Link* l);
-void dtor_block(Block* b);
-void dtor_entry(Entry* e);
-void dtor_node(Node* node);
+void dir_dtor(Directory* d);
+void link_dtor(Link* l);
+void block_dtor(Block* b);
+void entry_dtor(Entry* e);
+void file_dtor(File* f);
+void node_dtor(Node* n);
 
-char* serialize(Node* n);
-Node* parse(const char* s);
-void pretty_print(Node * n, int indent);
-void nop(int i);
+char* serialize_directory(Node* n);
+char* serialize_link(Link* n);
+char* serialize_block(Block* n);
+char* serialize_entry(Entry* n);
+char* serialize_file(File* n);
+
+void pretty_print(Directory *d, int indent);
 
 #define DTOR(o) do { if (o)  _Generic((o), \
     Directory*: dtor_directory, \
     Link*: dtor_link, \
     Block*: dtor_block, \
     Node*: dtor_node, \
-    char*: free, \
-    int: nop, \
     Entry*: dtor_entry) \
       (o); } while(0)
 
-#define TAG(o) _Generic((o), \
-    Directory*: DIRECTORY,\
-    Link*: LINK,\
-    Block*: BLOCK,\
-    Entry*: ENTRY,\
-    char*: STRING,\
-    int: INTEGER)
+Node* dir2Node(Directory* d);
+Node* link2Node(Link* l);
+Node* file2Node(File* f);
 
-// This creates a Node* from the given data.
-// The new node takes exclusive ownership of the data, 
-// and will destory it when it is destroyed.
-#define NODE(o) ctor_node((void*)(o), TAG((o)))
+#define NODE(o) _Generic((o), \
+    Directory*: dir2Node, \
+    Link*: link2Node, \
+    File*: file2Node)(o)
 
-char* serialize_directory(Directory* dir);
-Node* walk(Directory* d, const char * path);
+Node* walk(const char * path);
 
 #define SUCCESS 0
 #define E_EXISTS -50
@@ -104,7 +77,6 @@ int dir_add(Directory* dir, const char* name, Node* n);
 // SUCCESS
 int dir_remove(Directory* dir, const char* name);
 
-
 // Transfers ownership of the node with the given name from src to dst.
 // E_NOTFOUND: No node by that name was found in src
 // Returns
@@ -118,10 +90,42 @@ int dir_move(Directory* src, Directory* dst, const char* name);
 // Returns Node* on success
 Node* dir_lookup(Directory* dir, const char* name);
 
+#define Read(b, pos, buf, nbtes) (_Generic((b), \
+    Directory*: dir_read, \
+    File*: file_read, \
+    Block*: block_read, \
+    Link*: link_read,\
+    Node*: node_read))(b, pos, buf, nbytes)
 
+#define Write(b, pos, buf, nbtes) (_Generic((b), \
+    File*: file_write, \
+    Block*: block_write, \
+    Link*: link_write,\
+    Node*: node_write))(b, pos, buf, nbytes)
+
+#define Sync(o) (_Generic((o), \
+    File*: file_sync, \
+    Block*: block_sync, \
+    Directory*: dir_sync,\
+    Link*: link_sync,\
+    Node*: node_sync))(o)
+
+int file_read(File* b, size_t pos, void *buf, size_t nbytes);
+int dir_read(Directory* d, size_t pos, void *buf, size_t nbytes);
+int link_read(Link* b, size_t pos, void *buf, size_t nbytes);
 int block_read(Block* b, size_t pos, void *buf, size_t nbytes);
-int block_write(Block* b, size_t pos, const void *buf, size_t nbytes);
-int block_sync(Block* b);
+int node_read(Node* b, size_t pos, void *buf, size_t nbytes);
 
-Node* link_resolve(Link* l);
-Directory* root(void);
+int block_write(Block* b, size_t pos, const void *buf, size_t nbytes);
+int file_write(File* b, size_t pos, const void *buf, size_t nbytes);
+int link_write(Link* b, size_t pos, const void *buf, size_t nbytes);
+int node_write(Node* b, size_t pos, const void *buf, size_t nbytes);
+// always fails
+int dir_write(Directory* b, size_t pos, const void *buf, size_t nbytes);
+
+int dir_sync(Directory* d);
+int block_sync(Block* b);
+int file_sync(File* b);
+int link_sync(Link* b);
+int node_sync(Node* b);
+

@@ -1,5 +1,15 @@
 #include "fs.h"
+#include <assert.h>
+#include <string.h>
 
-Node* link_resolve(Link* l) {
-  return walk(root(), l->path);
+static Node* resolve(Link* l) {
+  return walk(l);
+}
+
+Link* ctor_link(const char* s) {
+  return s;
+}
+
+void dtor_link(Link * link) {
+  free((char*)link);
 }

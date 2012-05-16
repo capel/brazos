@@ -3,7 +3,59 @@
 #include <string.h>
 #include "../vector.h"
 
-Node* walk(Directory* start, const char* path) {
+struct Entry {
+  char name[NAME_LEN];
+  Node* n;
+};
+
+struct Directory { 
+  Block * b;
+  vector* v;
+};
+
+Entry* ctor_entry(const char* name, Node* n) {
+  Entry* e = malloc(sizeof(Entry));
+  strncpy(e->name, name, NAME_LEN);
+  e->n = n;
+
+  return e;
+}
+
+void dtor_entry(Entry *e) {
+  DTOR(e->n);
+  free(e);
+}
+
+
+static Directory* _root = 0;
+
+void set_root(Directory* root) {
+  assert(!_root && root);
+  _root = root;
+}
+
+Directory* ctor_directory(Block * b) {
+  Directory* d = malloc(sizeof(Directory));
+  d->b = b;
+  d->v = make_vector(8);
+  return d;
+}
+
+void dtor_directory(Directory* dir) {
+  foreach(Entry*,e,idx,dir->v) {
+    DTOR(e);
+  }
+  DTOR(dir->b);
+  free(dir);
+}
+
+int dir_read(Directory* d, size_t pos, void *buf, size_t nbytes) {
+  dir_sync(d);
+  return block_read(d->b, pos, buf, nbytes);
+}
+
+Node* walk(const char* path) {
+  Directory* start = _root;
   Node * o;
   vector* v = ksplit_to_vector(path, "/");
   for (size_t i = 0; i < v->size; i++) {
@@ -30,44 +82,23 @@ Node* walk(Directory* start, const char* path) {
   return o; 
 }
 
-int dir_slots_free(Directory* dir) {
-  size_t n = 0;
-  for(int i = 0; i < ENTRIES_PER_DIR; i++) {
-    if (!dir->entries[i]) {
-      n++;
-    }
-  }
-  return n;
-}
-
 Node* dir_lookup(Directory* dir, const char* name) {
-  for(int i = 0; i < ENTRIES_PER_DIR; i++) {
-    if (dir->entries[i] && !strcmp(dir->entries[i]->name, name)) {
-      return dir->entries[i]->n;
+  foreach(Entry*, e, i, dir->v) {
+    assert(e);
+    if (!strcmp(e->name, name)) {
+      return e->n;
     }
   }
   return 0;
 }
 
 int dir_add(Directory* dir, const char* name, Node* n) {
-  if (dir_slots_free(dir) == 0) {
-    return E_FULL;
-  }
-
   if (dir_lookup(dir, name)) {
     return E_EXISTS;
   }
 
-  for(int i = 0; i < ENTRIES_PER_DIR; i++) {
-    if (dir->entries[i] == 0) {
-      char * s = malloc(strlen(name));
-      strncpy(s, name, NAME_LEN);
-      dir->entries[i] = ctor_entry(NODE(s), n);
-      return SUCCESS;
-    }
-  }
-
-  assert(0);
+  vector_push(dir->v, (char*)ctor_entry(name, n));
+  return 0;
 }
 
 int dir_remove(Directory* dir, const char* name) {
@@ -75,10 +106,11 @@ int dir_remove(Directory* dir, const char* name) {
     return E_NOTFOUND;
   }
 
-  for(int i = 0; i < ENTRIES_PER_DIR; i++) {
-    if (dir->entries[i] && !strcmp(dir->entries[i]->name, name)) {
-      DTOR(dir->entries[i]);
-      dir->entries[i] = 0;
+  foreach(Entry*, e, idx, dir->v) {
+    assert(e);
+    if (!strcmp(e->name, name)) {
+      DTOR(e);
+      vector_remove(dir->v, idx);
       return SUCCESS;
     }
   }
@@ -96,15 +128,12 @@ int dir_move(Directory* src, Directory* dst, const char* name) {
     return E_EXISTS;
   }
 
-  if (dir_slots_free(dst) == 0) {
-    return E_FULL;
-  }
-
   dir_add(dst, name, n);
 
-  for(size_t i = 0; i < ENTRIES_PER_DIR; i++) {
-    if (src->entries[i] && !strcmp(src->entries[i]->name, name)) {
-      src->entries[i] = 0;
+  foreach(Entry*, e, idx, dst->v) {
+    assert(e);
+    if (!strcmp(e->name, name)) {
+      vector_remove(dst->v, idx);
       return SUCCESS;
     }
   }

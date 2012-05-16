@@ -3,17 +3,11 @@
 
 #include <stdlib.h>
 
+#define foreach(type, x, idx, v) \
+  size_t idx = 0; \
+  for(type x = (type)v->data[0]; idx < v->size; x = (type)v->data[++idx])
 
-// Pass one of the to make_vector.
-// If you want to manually manage memory, use UNMANAGED_POINTERS.
-// If you want it to free its items when it is cleaned up, use MANAGED_POINTERS.
-enum cleanup_type
-{
-  MANAGED_POINTERS, // It is a vector of pointers that will be freed by the vector on cleanup.
-  UNMANAGED_POINTERS, // It is a vector of pointers that the vector does not attempt to free on cleanup.
-  __SPLIT_TO_VECTOR // A vector produced by split_to_vector. Internal use only: do not use directly.
-};
-
+#define fori(x, n) for(size_t i = 0; i < n; i++)
 
 // An auto-expanding array. You must use make_vector(data_type_size) to make it 
 // and vector_push to add items to it. When you are finished, call cleanup_vector.
@@ -21,25 +15,20 @@ enum cleanup_type
 // example: vector* v = make_vector(sizeof(whatever*));
 typedef struct
 {
-		// Public data -- use these and the provided vector functions.
-        char** data;
-        size_t size;
-        
-        // Private data -- do not use them.
-        enum cleanup_type __type;
-        size_t __allocated_size;
-        size_t __data_type_size;
-		// This is used for the split_to_vector function.
-		char* __source;
+  // Public data -- use these and the provided vector functions.
+  char** data;
+  size_t size;
+
+  // Private data -- do not use them.
+  size_t __allocated_size;
+  // This is used for the split_to_vector function.
+  char* __source;
 } vector;
 
 // Use this function to add an object to a vector.
 void vector_push(vector* v, char* s);
 
-// Use this function to create a vector. data_type_size should be
-// the sizeof() what you want to store in the vector.
-// example: vector* v = make_vector(sizeof(whatever*));
-vector* kmake_vector(int data_type_size, enum cleanup_type type);
+vector* make_vector(int init_size);
 
 // Used to remove an item from a vector. It removes the item at i and returns 
 // it if cleanup_type is UNMANAGED_POINTERS; if it is anything else, it frees it

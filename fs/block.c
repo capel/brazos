@@ -3,6 +3,25 @@
 #include <assert.h>
 #include <string.h>
 
+struct Block {
+  size_t bid;
+  char* data;
+};
+
+Block* ctor_block(int bid) {
+  Block *b = malloc(sizeof(Block));
+  b->bid = bid;
+  b->data = 0;
+  return b;
+}
+
+void dtor_block(Block* b) {
+  if (b->data) {
+    free(b->data);
+  }
+  free(b);
+}
+
 static void init_block(Block* b) {
   if (b->data == NULL) {
     b->data = calloc(PAGE_SIZE, 1);
