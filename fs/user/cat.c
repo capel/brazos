@@ -12,6 +12,10 @@ int cat_main(int argc, char** argv) {
   }
 
   int fd = _open(path, _O_RDONLY);
+  if (fd == E_NOTFOUND) {
+    printf("%s not found", path);
+    return -1;
+  }
   assert(fd > 0);
 
   int size = _stat(fd);

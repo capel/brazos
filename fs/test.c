@@ -5,15 +5,26 @@
 #include "fs.h"
 #include <file.h>
 
-int cat_main(int argc, char** argv);
+int sh_main(int argc, char** argv);
 
-void file_init();
+void root_init();
+void root_shutdown();
 void file_shutdown();
+void set_cwd(const char* s);
 
 int main(int argc, char** argv) {
-  file_init();
+  root_init();
+  set_cwd("/");
 
-  cat_main(argc, argv);
+  /*
+  int fd = _open("/woot", _O_CREAT);
+  assert(fd > 0);
+  _close(fd);
+  */
+  sh_main(argc, argv);
+
+  file_shutdown();
+  root_shutdown();
   return 0;
   
   /*
@@ -61,6 +72,7 @@ int main(int argc, char** argv) {
 
   */
   
+  /*
   int fd = _open("doom", _O_CREAT | _O_RDWR);
   int r = _write(fd, "hey", strlen("hey") + 1);
   assert(r > 0);
@@ -77,7 +89,8 @@ int main(int argc, char** argv) {
   printf("Hey: %s\n", buf2);
 
   file_shutdown();
-
+  root_shutdown();
+*/
 /*
   if (0 == strcmp("mk", argv[1])) {
     mk(n, argc, argv);

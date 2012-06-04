@@ -85,5 +85,10 @@ int _close(int fd);
 // E_BADFD fd is bad
 int _stat(int fd);
 
+// Removes a file from a directory
+// Returns 0 on success
+// E_NOTFOUND if the path does not indicate a file
+int _remove(const char* path);
+int _rename(const char* old, const char* new_path);
 
 #endif

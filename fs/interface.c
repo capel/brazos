@@ -1,17 +1,18 @@
 #include <file.h>
-#include "fs.h"
-#include "io.h"
+#include <mach/io.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 #include <assert.h>
 
-#include "../chars.h"
+#include <extras.h>
 
-#define printk(x, args...) printf(GREEN "pk: " WHITE __FILE__ ":%d  [" LIGHT_BLUE "%s" WHITE "] " x "\n", __LINE__, __func__, ## args)
-
+#include "path_util.h"
+#include "fs.h"
 
 #define MAX_FDS 64
+
+void set_root(Directory* root);
 
 int valid(int off) {
   if (off < 0) return 0;
@@ -28,18 +29,9 @@ typedef struct file_desc {
   Link* link;
   size_t offset;
   int flags;
-  size_t size;
 } file_desc;
 
 static file_desc* fd_table[MAX_FDS];
-
-static Directory* _root_dir;
-
-
-void file_init() {
-  _root_dir = ctor_directory(0);
-  set_cwd("/");
-}
 
 void file_shutdown() {
   for(size_t i = 0; i < MAX_FDS; i++) {
@@ -50,13 +42,9 @@ void file_shutdown() {
   }
   
   printk("shutdown");
-  pretty_print(_root_dir, 0);
-  Sync(_root_dir);
-
-  DTOR(_root_dir);
 }
 
-int allocate_fd() {
+static int allocate_fd() {
   for (int i = 1; i < MAX_FDS; i++) {
     if (fd_table[i] == 0) {
       return i;
@@ -79,8 +67,6 @@ void set_cwd(const char* cwd) {
   strcpy(_cwd, cwd);
 }
 
-const char * path_normalize(const char * cwd, const char* path);
-
 int _open(const char *orig_path, int flags) {
   int fd = allocate_fd();
   if (fd == E_FULL) return E_FULL;
@@ -93,31 +79,34 @@ int _open(const char *orig_path, int flags) {
   Node * n = walk(path);
   if (!n) {
     if (!(flags & _O_CREAT)) {
+      free((char*) path);
       return E_NOTFOUND;
     } else {
-      File * f = ctor_file(0,0,0);
+      File * f = file_ctor(0,0,0);
       const char * parent = path_parent(path);
       const char * name = path_name(path);
 
       Node * n = walk(parent);
       free((char*)parent);
-      assert(n->type == DIRECTORY);
-
-      dir_add(n->dir, name, NODE(f));
+      Directory* dir = get_dir(n);
+      dir_add(dir, name, NODE(f));
     }
   }
 
+  if (is_dir(n)) {
+    free((char*) path);
+    return E_INVAL;
+  }
+
   file_desc * f = malloc(sizeof(file_desc));
-  char * s = malloc(strlen(path) + 1);
-  strcpy(s, path);
-  free((char*)path);
-  f->link = ctor_link(s);
+  f->link = link_ctor(strclone(path));
 
   f->offset = 0;
-  f->size = 0;
   f->flags = flags & (_O_RDWR); // mask out O_CREAT
 
   fd_table[fd] = f;
+
+  free((char*) path);
   return fd;
 }
 
@@ -160,9 +149,17 @@ int _seek(int fd, int offset, int whence) {
       f->offset = valid(f->offset + offset);
       return f->offset;
     case _SEEK_END:
-      f->offset = valid(f->size + offset);
-      f->size = f->offset;
+      /*
+      n = resolve(f->link);
+      if (is_file(n)) {
+        File * file = get_file(n);
+        f->offset = valid(file->size + offset);
+        file->size = f->offset;
+      } else { 
+        return E_INVAL;
+      }
       return f->offset;
+      */
     default:
       return E_INVAL;
   }
@@ -199,7 +196,7 @@ int _write(int fd, const void *buf, size_t nbytes) {
 
   int i = Write(f->link, f->offset, buf, nbytes);
   f->offset += i;
-  f->size = (f->size > f->offset) ? f->size : f->offset;
+  //f->size = (f->size > f->offset) ? f->size : f->offset;
   return i;
 }
 
@@ -211,57 +208,17 @@ int _stat(int fd) {
   return PAGE_SIZE; //f->size;
 }
 
+int _remove(const char* path) {
+  const char* npath = path_normalize(get_cwd(), path);
+  assert(path);
 
-const char * path_name(const char * path) {
-  size_t len = strlen(path);
+  const char * parent = path_parent(npath);
+  const char * name = path_name(npath);
 
-  // special case for "/"
-  if (len == 1 && path[0] == '/') return path;
-  for(int i = len - 1; i >= 0; i--) {
-    if (path[i] == '/') {
-      return path + i + 1;
-    }
-  }
+  Node * n = walk(parent);
+  free((char*)parent);
+  free((char*)npath);
 
-  // There is only the filename in the path, return it.
-  return path;
-}
-
-const char* path_parent(const char * path)  {
-  size_t len = strlen(path);
-
-  // special case for "/"
-  if (len == 1 && path[0] == '/') return path;
-
-  for(int i = len - 1; i >= 0; i--) {
-    if (path[i] == '/') {
-      char * s = malloc(len + 1);
-      strncpy(s, path, len + 1);
-      s[len] = '\0';
-      return s;
-    }
-  }
-
-  // There is only the filename in the path, return .
-  char * s = malloc(2);
-  s[0] = '.';
-  s[1] = '\0';
-  return s;
-}
-  
-const char * path_normalize(const char * cwd, const char * path) {
-  if (!path || !cwd) return 0;
-
-  if (path[0] == '/') return path;
-
-  if (!strcmp(cwd, ".")) {
-    char * s = malloc(strlen(cwd) + 1);
-    strcpy(s, cwd);
-    return s;
-  }
-
-  char * s = malloc(strlen(cwd) + strlen(path) + 1);
-  strcpy(s, cwd);
-  strcat(s, path);
-  return s;
+  Directory* dir = get_dir(n);
+  return dir_remove(dir, name);
 }

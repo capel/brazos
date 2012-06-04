@@ -45,7 +45,7 @@ void cleanup_vector(vector* v);
 // it should be passed to cleanup_vector with the FreeItems flag set when
 // its lifespan has ended.
 // The original string and seps are unmodified and can be safely freed.
-vector* ksplit_to_vector(const char * str, const char* seps);
+vector* vector_split(const char * str, const char* seps);
 
 // Prints out a vector
 // format_string will be passed once to printf() for each argument

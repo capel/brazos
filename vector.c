@@ -86,13 +86,13 @@ bool is_sep(const char c, const char* seps)
   return false;
 }
 
-vector* ksplit_to_vector(const char * str, const char* seps)
+vector* vector_split(const char * str, const char* seps)
 {
 
   if (!str || !seps)
     return 0;
 
-  vector * v = kmake_vector(sizeof(char*), __SPLIT_TO_VECTOR);
+  vector * v = make_vector(8);
 
   size_t len = strlen(str);
   v->__source = malloc(len+2);
@@ -148,7 +148,9 @@ void print_vector(vector* v, const char* format_string, size_t start)
 const char* vector_join(vector* v, const char* joiner)
 {
   if (v->size == 0) {
-    return "";
+    char * s = malloc(2);
+    s[0] = '\0';
+    return s;
   }
   size_t needed = 0;
   size_t pos = 0;

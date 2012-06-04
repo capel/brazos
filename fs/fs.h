@@ -3,6 +3,7 @@
 #define MAX_ARGS 32
 
 #include <stdlib.h>
+#include <stdbool.h>
 
 typedef struct Block Block;
 typedef const char Link;
@@ -12,7 +13,7 @@ typedef struct File File;
 typedef struct Node Node;
 
 
-Directory* directory_ctor(Block * b);
+Directory* dir_ctor(Block * b);
 File* file_ctor(int size, Block** blocks, int num_args);
 Link* link_ctor(const char* path);
 Block* block_ctor(int bid);
@@ -26,25 +27,34 @@ void entry_dtor(Entry* e);
 void file_dtor(File* f);
 void node_dtor(Node* n);
 
-char* serialize_directory(Node* n);
-char* serialize_link(Link* n);
-char* serialize_block(Block* n);
-char* serialize_entry(Entry* n);
-char* serialize_file(File* n);
+char* dir_serialize(Directory* n);
+char* link_serialize(Link* n);
+char* block_serialize(Block* n);
+char* entry_serialize(Entry* n);
+char* file_serialize(File* n);
+char* node_serialize(Node* n);
 
-void pretty_print(Directory *d, int indent);
+//void pretty_print(Directory *d, int indent);
 
 #define DTOR(o) do { if (o)  _Generic((o), \
-    Directory*: dtor_directory, \
-    Link*: dtor_link, \
-    Block*: dtor_block, \
-    Node*: dtor_node, \
-    Entry*: dtor_entry) \
+    Directory*: dir_dtor, \
+    Link*: link_dtor, \
+    Block*: block_dtor, \
+    Node*: node_dtor, \
+    Entry*: entry_dtor) \
       (o); } while(0)
 
 Node* dir2Node(Directory* d);
 Node* link2Node(Link* l);
 Node* file2Node(File* f);
+
+bool is_dir(Node* n);
+bool is_link(Node* n);
+bool is_file(Node* n);
+
+Directory* get_dir(Node *n);
+File* get_file(Node *n);
+Link* get_link(Node *n);
 
 #define NODE(o) _Generic((o), \
     Directory*: dir2Node, \
@@ -52,6 +62,8 @@ Node* file2Node(File* f);
     File*: file2Node)(o)
 
 Node* walk(const char * path);
+
+int bid_alloc(void);
 
 #define SUCCESS 0
 #define E_EXISTS -50
@@ -90,14 +102,14 @@ int dir_move(Directory* src, Directory* dst, const char* name);
 // Returns Node* on success
 Node* dir_lookup(Directory* dir, const char* name);
 
-#define Read(b, pos, buf, nbtes) (_Generic((b), \
+#define Read(b, pos, buf, nbytes) (_Generic((b), \
     Directory*: dir_read, \
     File*: file_read, \
     Block*: block_read, \
     Link*: link_read,\
     Node*: node_read))(b, pos, buf, nbytes)
 
-#define Write(b, pos, buf, nbtes) (_Generic((b), \
+#define Write(b, pos, buf, nbytes) (_Generic((b), \
     File*: file_write, \
     Block*: block_write, \
     Link*: link_write,\

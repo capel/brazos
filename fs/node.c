@@ -6,11 +6,11 @@
   do { \
   switch ((o)->type) { \
     case DIRECTORY: \
-      return dir_ ## func ((Directory*)o, ## args); \
+      return dir_ ## func (o->dir, ## args); \
     case _FILE: \
-      return file_ ## func ((File*)o, ##  args);\
+      return file_ ## func (o->file, ##  args);\
     case LINK: \
-      return link_ ## func ((Link*)o, ## args);\
+      return link_ ## func (o->link, ## args);\
     default:\
       assert(0); \
   } } while(0);
@@ -45,7 +45,7 @@ Node * file2Node(File* f) {
   return n;
 }
 
-void dtor_node(Node* n) {
+void node_dtor(Node* n) {
   RETYPE(n, dtor);
 }
 
@@ -60,4 +60,16 @@ int node_write(Node* n, size_t pos, const void *buf, size_t nbytes) {
 int node_sync(Node* n) {
   RETYPE(n, sync);
 }
+
+char* node_serialize(Node* n) {
+  RETYPE(n, serialize);
+}
+
+bool is_dir(Node* n) { return n->type == DIRECTORY; }
+bool is_link(Node* n) { return n->type == LINK; }
+bool is_file(Node* n) { return n->type == _FILE; }
+
+Directory* get_dir(Node *n) { assert(is_dir(n)); return n->dir; }
+File* get_file(Node *n) { assert(is_file(n)); return n->file; }
+Link* get_link(Node *n) { assert(is_link(n)); return n->link; }
 

@@ -2,6 +2,14 @@
 #include <assert.h>
 #include <string.h>
 #include "../vector.h"
+#include "../chars.h"
+#include <stdio.h>
+
+#include <extras.h>
+
+#define PAGE_SIZE 4096
+
+vector* parse_dir_block(const char * s);
 
 struct Entry {
   char name[NAME_LEN];
@@ -13,7 +21,7 @@ struct Directory {
   vector* v;
 };
 
-Entry* ctor_entry(const char* name, Node* n) {
+Entry* entry_ctor(const char* name, Node* n) {
   Entry* e = malloc(sizeof(Entry));
   strncpy(e->name, name, NAME_LEN);
   e->n = n;
@@ -21,10 +29,11 @@ Entry* ctor_entry(const char* name, Node* n) {
   return e;
 }
 
-void dtor_entry(Entry *e) {
+void entry_dtor(Entry *e) {
   DTOR(e->n);
   free(e);
 }
+
 
 
 static Directory* _root = 0;
@@ -34,14 +43,27 @@ void set_root(Directory* root) {
   _root = root;
 }
 
-Directory* ctor_directory(Block * b) {
+void root_init() {
+  set_root(dir_ctor(block_ctor(0)));
+}
+
+void root_shutdown() {
+  Sync(_root);
+  DTOR(_root);
+  printk("root shutdown");
+}
+
+Directory* dir_ctor(Block * b) {
   Directory* d = malloc(sizeof(Directory));
   d->b = b;
-  d->v = make_vector(8);
+  char buf[PAGE_SIZE];
+  block_read(d->b, 0, buf, PAGE_SIZE);
+
+  d->v = parse_dir_block(buf);
   return d;
 }
 
-void dtor_directory(Directory* dir) {
+void dir_dtor(Directory* dir) {
   foreach(Entry*,e,idx,dir->v) {
     DTOR(e);
   }
@@ -54,10 +76,15 @@ int dir_read(Directory* d, size_t pos, void *buf, size_t nbytes) {
   return block_read(d->b, pos, buf, nbytes);
 }
 
+
 Node* walk(const char* path) {
+  if (!strcmp(path, "/")) {
+    return NODE(_root);
+  }
+
   Directory* start = _root;
   Node * o;
-  vector* v = ksplit_to_vector(path, "/");
+  vector* v = vector_split(path, "/");
   for (size_t i = 0; i < v->size; i++) {
     o = dir_lookup(start, v->data[i]);
     if (!o) {
@@ -70,8 +97,8 @@ Node* walk(const char* path) {
       return o;
     }
 
-    if (o->type == DIRECTORY) {
-      start = o->dir;
+    if (is_dir(o)) {
+      start = get_dir(o);
     } else {
       cleanup_vector(v);
       return 0;
@@ -97,7 +124,7 @@ int dir_add(Directory* dir, const char* name, Node* n) {
     return E_EXISTS;
   }
 
-  vector_push(dir->v, (char*)ctor_entry(name, n));
+  vector_push(dir->v, (char*)entry_ctor(name, n));
   return 0;
 }
 
@@ -139,4 +166,72 @@ int dir_move(Directory* src, Directory* dst, const char* name) {
   }
 
   assert(0);
+}
+
+char* entry_serialize(Entry * e) {
+  char *n = node_serialize(e->n);
+  printk("%s", n);
+
+  int needed = 1;
+  needed += strlen(n);
+  needed += strlen("E('' )");
+  needed += strlen(e->name);
+
+  char *s = malloc(needed);
+  snprintf(s, needed, "E('%s' %s)", e->name, n);
+  free(n);
+
+  return s;
+}
+
+char* dir_serialize(Directory* dir) {
+  char * s = block_serialize(dir->b);
+  char * buf=  malloc(sizeof("D()" + strlen(s) + 1));
+  sprintf(buf, "D(%s)", s);
+  free(s);
+  return buf;
+}
+
+static const char* dir_entries_serialize(Directory* d) {
+  vector* v = make_vector(d->v->size);
+
+  foreach(Entry*, e, idx, d->v) {
+    vector_push(v, entry_serialize(e));
+  }
+
+  const char* s = vector_join(v, "\n");
+
+  foreach(char*, s, idx2, v) {
+    free(s);
+  }
+
+  cleanup_vector(v);
+  return s;
+}
+
+
+static void indent_print(int indent) {
+  for(int i = 0; i < indent; i++) {
+    printf(" ");
+  }
+}
+
+/*
+static void pretty_print_entry(Entry* e, int indent) {
+  if (!e) return;
+  indent_print(indent);
+  printf("%s: ", e->name);
+  pretty_print(e->n, indent);
+  printf("\n");
+}*/
+
+
+int dir_write(Directory* b, size_t pos, const void *buf, size_t nbytes) {
+  return E_CANT;
+}
+int dir_sync(Directory* d) {
+  const char * s = dir_entries_serialize(d);
+  Write(d->b, 0, s, strlen(s));
+  Sync(d->b);
+  return 0;
 }

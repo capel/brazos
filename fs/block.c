@@ -1,21 +1,29 @@
-#include "fs.h"
-#include "io.h"
+#include <mach/io.h>
 #include <assert.h>
 #include <string.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <extras.h>
+#include "fs.h"
+
 
 struct Block {
   size_t bid;
   char* data;
 };
 
-Block* ctor_block(int bid) {
+int bid_alloc() {
+  return rand();
+}
+
+Block* block_ctor(int bid) {
   Block *b = malloc(sizeof(Block));
   b->bid = bid;
   b->data = 0;
   return b;
 }
 
-void dtor_block(Block* b) {
+void block_dtor(Block* b) {
   if (b->data) {
     free(b->data);
   }
@@ -65,3 +73,12 @@ int block_sync(Block* b) {
   b->data = 0;
   return 0;
 }
+
+char* block_serialize(Block * b) {
+  int needed = strlen("B()" + 33);
+  char *s = malloc(needed);
+  snprintf(s, needed, "B(%zd)", b->bid);
+  printk("%s", s);
+  return s;
+}
+

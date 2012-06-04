@@ -6,14 +6,14 @@
 #include <string.h>
 #include "../chars.h"
 
+#include "../vector.h"
+
 #define CONSUME(c) do { if(s[*pos] != c) { DIE(); } (*pos)++; } while (0)
 #define NOM() s[(*pos)++]
 
 #define NOM_SPACE() while (isspace(s[*pos])) { (*pos)++; }
 
 #define PARSE(name) name(const char * s, size_t *pos, bool* die)
-
-PARSE(_parse);
 
 #define printk(x, args...) printf(GREEN "pk: " WHITE __FILE__ ":%d  [" LIGHT_BLUE "%s" WHITE "] " x, __LINE__, __func__, ## args)
 
@@ -64,7 +64,7 @@ static Block* PARSE(block_parse) {
   CONSUME('(');
   NOM_SPACE();
   int i = int_parse(s, pos, die);
-  Block* b =  ctor_block(i);
+  Block* b = block_ctor(i);
 
   NOM_SPACE();
   CONSUME(')');
@@ -76,8 +76,8 @@ static Link* PARSE(link_parse) {
   CONSUME('L');
   CONSUME('(');
   NOM_SPACE();
-  int i = str_parse(s, pos, die);
-  Link* l =  ctor_link(i);
+  const char * ls = str_parse(s, pos, die);
+  Link* l =  link_ctor(ls);
 
   NOM_SPACE();
   CONSUME(')');
@@ -89,74 +89,82 @@ static Directory* PARSE(dir_parse) {
   CONSUME('(');
   NOM_SPACE();
   Block * b = block_parse(s, pos, die);
-  Directory* d =  ctor_directory(b);
+  Directory* d =  dir_ctor(b);
 
   NOM_SPACE();
   CONSUME(')');
   return d;
 }
 
-static Entry* PARSE(entry_prase) {
+static Node* PARSE(node_parse);
+
+static Entry* PARSE(entry_parse) {
   CONSUME('E');
   CONSUME('(');
   NOM_SPACE();
 
-  const char * s = str_parse(s, pos, die);
+  const char * ls = str_parse(s, pos, die);
   NOM_SPACE();
   Node * n = node_parse(s, pos, die);
 
-  Entry* e = ctor_entry(s, n);
+  Entry* e = entry_ctor(ls, n);
 
   NOM_SPACE();
   CONSUME(')');
   return e;
 }
 
-static int file_parse(const char *s, size_t *pos, bool* die) {
+
+static File* PARSE(file_parse) {
+  CONSUME('F');
+  CONSUME('(');
+
   int num_args = 0;
-  Block args[MAX_ARGS];
+  Block* args[MAX_ARGS];
   memset(args, 0, sizeof(args));
 
-  int i = int_parse(s, pos, die);
+  int len = int_parse(s, pos, die);
   for(;;) {
     HOPE(num_args < MAX_ARGS);
+    NOM_SPACE();
     args[num_args++] = block_parse(s, pos, die);
     NOM_SPACE();
+    if (s[*pos] == ')') {
+      CONSUME(')');
+      break;
+    }
   }
 
-  File* f = ctor_file(i, args, num_args);
-
-  NOM_SPACE();
-  CONSUME(')');
+  File* f = file_ctor(len, args, num_args);
   return f;
 }
 
 static Node* PARSE(node_parse) {
   switch(s[*pos]) {
     case 'L':
-      return NODE(parse_link(s, pos, die));
-    case 'E':
-      return NODE(parse_entry(s, pos, die));
+      return NODE(link_parse(s, pos, die));
     case 'D':
-      return NODE(parse_directory(s, pos, die));
+      return NODE(dir_parse(s, pos, die));
+    case 'F':
+      return NODE(file_parse(s, pos, die));
     default:
       DIE();
   }
 }
 
-Entry* parse_dir_block(const char * s, size_t *num_args) {
-  bool die = 0;
-  size_t pos = 0;
-  *num_args = 0;
+vector* parse_dir_block(const char * s) {
+  bool _die = 0;
+  bool *die = &_die;
+  size_t _pos = 0;
+  size_t *pos = &_pos;
   
-  Entry* args[MAX_ARGS];
-  memset(args, 0, sizeof(args));
+  vector* v = make_vector(8);
 
   for(;;) {
-    HOPE(*num_args < MAX_ARGS);
-    args[num_args++] = entry_parse(s, pos, die);
+    vector_push(v,(void*) entry_parse(s, pos, die));
     NOM_SPACE();
+    if (s[*pos] != 'E') break;
   }
 
-  return args;
+  return v;
 }
