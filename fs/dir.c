@@ -1,8 +1,7 @@
 #include "fs.h"
 #include <assert.h>
 #include <string.h>
-#include "../vector.h"
-#include "../chars.h"
+#include <vector.h>
 #include <stdio.h>
 
 #include <extras.h>
@@ -35,6 +34,10 @@ void entry_dtor(Entry *e) {
 }
 
 
+const char* dir_entry(Directory* dir, int pos) {
+  if (pos < 0 || (size_t)pos >= dir->v->size) return NULL;
+  return ((Entry*)dir->v->data[pos])->name;
+}
 
 static Directory* _root = 0;
 
@@ -55,6 +58,13 @@ void root_shutdown() {
 
 Directory* dir_ctor(Block * b) {
   Directory* d = malloc(sizeof(Directory));
+
+  if (b == 0) {
+    d->b = block_ctor(bid_alloc());
+    d->v = make_vector(8);
+    return d;
+  }
+
   d->b = b;
   char buf[PAGE_SIZE];
   block_read(d->b, 0, buf, PAGE_SIZE);
@@ -230,8 +240,10 @@ int dir_write(Directory* b, size_t pos, const void *buf, size_t nbytes) {
   return E_CANT;
 }
 int dir_sync(Directory* d) {
-  const char * s = dir_entries_serialize(d);
-  Write(d->b, 0, s, strlen(s));
+  char buf[PAGE_SIZE];
+  memset(buf, 0, PAGE_SIZE);
+  strncpy(buf, dir_entries_serialize(d), PAGE_SIZE);
+  Write(d->b, 0, buf, PAGE_SIZE);
   Sync(d->b);
   return 0;
 }

@@ -9,6 +9,8 @@
 int cat_main(int argc, char** argv);
 int touch_main(int argc, char** argv);
 int rm_main(int argc, char** argv);
+int ls_main(int argc, char** argv);
+int mkdir_main(int argc, char** argv);
 
 int sh_dispatch(char* cmd, int argc, char** argv);
 
@@ -25,6 +27,12 @@ int sh_dispatch(char* cmd, int argc, char** argv) {
       goto not_found;
     case 'r':
       DISPATCH("rm", rm_main);
+      goto not_found;
+    case 'l':
+      DISPATCH("ls", ls_main);
+      goto not_found;
+    case 'm':
+      DISPATCH("mkdir", mkdir_main);
       goto not_found;
     default:
       goto not_found;
@@ -58,8 +66,6 @@ int sh_main(int argc, char** argv) {
     int code = sh_dispatch(v->data[0], v->size, v->data);
     if (code == -1337) {
       printf("Command not found\n");
-    } else {
-      printf("--> %d\n", code);
     }
   }
 }

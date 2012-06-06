@@ -19,5 +19,8 @@ ${OBJS}: %.o: %.c
 clean:
 	rm -f *.o ${TARGET} 
 	rm -f sys/*.o
+	rm -f user/*.o
+	rm -f test
+	rm -f a.out
 
 distclean:: clean

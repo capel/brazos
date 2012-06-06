@@ -54,17 +54,16 @@ static int allocate_fd() {
 }
 
 
-static char * _cwd = 0;
+static const char * _cwd = 0;
 const char * get_cwd() {
   return _cwd;
 }
 
 void set_cwd(const char* cwd) {
   assert(cwd);
-  if (_cwd) free(_cwd);
+  if (_cwd) free((char*)_cwd);
 
-  _cwd = malloc(strlen(cwd) + 1);
-  strcpy(_cwd, cwd);
+  _cwd = strclone(cwd);
 }
 
 int _open(const char *orig_path, int flags) {
@@ -82,14 +81,17 @@ int _open(const char *orig_path, int flags) {
       free((char*) path);
       return E_NOTFOUND;
     } else {
-      File * f = file_ctor(0,0,0);
+      n = NODE(file_ctor(0,0,0));
+      assert(n);
+
       const char * parent = path_parent(path);
       const char * name = path_name(path);
 
-      Node * n = walk(parent);
+      Node * parent_dir = walk(parent);
       free((char*)parent);
-      Directory* dir = get_dir(n);
-      dir_add(dir, name, NODE(f));
+
+      Directory* dir = get_dir(parent_dir);
+      dir_add(dir, name, n);
     }
   }
 

@@ -9,10 +9,10 @@ typedef struct _stat_entry {
   size_t size;
 } _stat_entry;
 
-int _stat(int fd, struct _stat_entry* e);
+//int _stat(int fd, struct _stat_entry* e);
 
-int _opendir(const char* path);
-int _nextfile(int dir_fd);
+int _opendir(const char* path, int flags);
+int _nextfile(int dir_fd, char* buf, int len);
 int _closedir(int dir_fd);
 
 #endif

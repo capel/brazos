@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <assert.h>
+#include <extras.h>
 
 const char * path_name(const char * path) {
   size_t len = strlen(path);
@@ -44,12 +45,10 @@ const char* path_parent(const char * path)  {
 const char * path_normalize(const char * cwd, const char * path) {
   if (!path || !cwd) return 0;
 
-  if (path[0] == '/') return path;
+  if (path[0] == '/') return strclone("/");
 
-  if (!strcmp(cwd, ".")) {
-    char * s = malloc(strlen(cwd) + 1);
-    strcpy(s, cwd);
-    return s;
+  if (!strcmp(path, ".")) {
+    return strclone(cwd);
   }
 
   char * s = malloc(strlen(cwd) + strlen(path) + 1);

@@ -5,7 +5,7 @@
 
 void bload(int bid, void* page) {
   char name[64];
-  sprintf(name, "%d.block", bid);
+  sprintf(name, "disk/%d.block", bid);
 
   FILE * f = fopen(name, "rb");
   if (!f) {
@@ -19,7 +19,7 @@ void bload(int bid, void* page) {
 
 void bsync(int bid, void* page) {
   char name[64];
-  sprintf(name, "%d.block", bid);
+  sprintf(name, "disk/%d.block", bid);
 
   FILE * f = fopen(name, "wb");
   fwrite(page, PAGE_SIZE, 1, f);

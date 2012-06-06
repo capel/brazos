@@ -7,13 +7,15 @@
 #include "fs.h"
 
 
+#include <time.h>
+
 struct Block {
   size_t bid;
   char* data;
 };
 
 int bid_alloc() {
-  return rand();
+  return (int) time(NULL);
 }
 
 Block* block_ctor(int bid) {

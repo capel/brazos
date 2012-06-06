@@ -102,6 +102,9 @@ int dir_move(Directory* src, Directory* dst, const char* name);
 // Returns Node* on success
 Node* dir_lookup(Directory* dir, const char* name);
 
+
+const char* dir_entry(Directory* dir, int pos);
+
 #define Read(b, pos, buf, nbytes) (_Generic((b), \
     Directory*: dir_read, \
     File*: file_read, \

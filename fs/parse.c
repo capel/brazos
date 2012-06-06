@@ -4,9 +4,9 @@
 #include <stdbool.h>
 #include <ctype.h>
 #include <string.h>
-#include "../chars.h"
 
-#include "../vector.h"
+#include <vector.h>
+#include <extras.h>
 
 #define CONSUME(c) do { if(s[*pos] != c) { DIE(); } (*pos)++; } while (0)
 #define NOM() s[(*pos)++]
@@ -14,9 +14,6 @@
 #define NOM_SPACE() while (isspace(s[*pos])) { (*pos)++; }
 
 #define PARSE(name) name(const char * s, size_t *pos, bool* die)
-
-#define printk(x, args...) printf(GREEN "pk: " WHITE __FILE__ ":%d  [" LIGHT_BLUE "%s" WHITE "] " x, __LINE__, __func__, ## args)
-
 #define DIE() do { *die = true; printk("Parse error\n"); return 0; } while(0)
 
 #define HOPE(cond) if (!(cond)) { DIE(); }
@@ -41,9 +38,7 @@ static const char* PARSE(str_parse) {
   CONSUME('\'');
   if (s[*pos] == '\'') {
     CONSUME('\'');
-    char *s = malloc(1);
-    s[0] = '\0';
-    return s;
+    return strclone("");
   }
   size_t len = 0;
   while(s[*pos+len] != '\'') { len++; }

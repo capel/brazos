@@ -2,7 +2,7 @@
 #include <assert.h>
 #include <string.h>
 #include <stdio.h>
-#include "../vector.h"
+#include <vector.h>
 #include <extras.h>
 
 struct File {
