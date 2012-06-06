@@ -10,6 +10,10 @@ struct File {
   size_t size;
 };
 
+int file_size(File* f) {
+  return f->size;
+}
+
 File* file_ctor(int size, Block** b, int num_blocks) {
   File * f = malloc(sizeof(File));
 

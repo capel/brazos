@@ -202,6 +202,7 @@ int _write(int fd, const void *buf, size_t nbytes) {
   return i;
 }
 
+/*
 int _stat(int fd) {
   if (fd > MAX_FDS) return E_BADFD;
   file_desc* f = fd_table[fd];
@@ -209,6 +210,7 @@ int _stat(int fd) {
 
   return PAGE_SIZE; //f->size;
 }
+*/
 
 int _remove(const char* path) {
   const char* npath = path_normalize(get_cwd(), path);

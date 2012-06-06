@@ -7,6 +7,7 @@
 #include <assert.h>
 
 #include <extras.h>
+#include <dir.h>
 
 #include "path_util.h"
 #include "fs.h"
@@ -73,11 +74,13 @@ int _opendir(const char* orig_path, int flags) {
   return fd;
 }
 
-int _nextfile(int fd, char* buf, size_t len) {
+int _nextfile(int fd, struct _stat_entry* out) {
   if (fd > MAX_FDS) return E_BADFD;
 
   dir_desc* f = fd_table[fd];
   if (!f) return E_BADFD;
+
+  if (!out) return E_INVAL;
 
   Node * n = walk(f->link);
   if (!n) return E_CANT;
@@ -85,11 +88,10 @@ int _nextfile(int fd, char* buf, size_t len) {
 
   Directory* d = get_dir(n);
 
-  const char* s = dir_entry(d, f->pos);
-  if (!s) return E_NOTFOUND;
-
-  strncpy(buf, s, len);
+  int ret = dir_stat(d, f->pos, out);
+  if (ret != 0) return ret;
   f->pos++;
+
   return 0;
 }
 

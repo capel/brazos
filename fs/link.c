@@ -16,6 +16,11 @@ void link_dtor(Link * link) {
   free((char*)link);
 }
 
+int link_size(Link* l) {
+  Node * n = resolve(l);
+  return Size(n);
+}
+
 int link_sync(Link* l) {
   return 0;
 }

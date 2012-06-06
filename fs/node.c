@@ -16,13 +16,18 @@
   } } while(0);
 
 struct Node {
-  enum { DIRECTORY, LINK, _FILE } type;
+  enum { DIRECTORY = 0, LINK = 1, _FILE =2 } type;
   union {
     Directory* dir;
     Link* link;
     File* file;
   };
 };
+
+int node_type(Node* n) {
+  return n->type;
+}
+
 
 Node * dir2Node(Directory* d) {
   Node * n = malloc(sizeof(Node));
@@ -59,6 +64,10 @@ int node_write(Node* n, size_t pos, const void *buf, size_t nbytes) {
 
 int node_sync(Node* n) {
   RETYPE(n, sync);
+}
+
+int node_size(Node* n) {
+  RETYPE(n, size);
 }
 
 char* node_serialize(Node* n) {

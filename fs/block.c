@@ -14,6 +14,10 @@ struct Block {
   char* data;
 };
 
+int block_size(Block* b) {
+  return PAGE_SIZE;
+}
+
 int bid_alloc() {
   return (int) time(NULL);
 }

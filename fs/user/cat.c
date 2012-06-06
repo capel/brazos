@@ -18,7 +18,7 @@ int cat_main(int argc, char** argv) {
   }
   assert(fd > 0);
 
-  int size = _stat(fd);
+  int size = 4096; // heh. FIXME
   assert(size > 0);
 
   char * buf = malloc(size + 1);

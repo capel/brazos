@@ -1,14 +1,21 @@
 #include "fs.h"
 #include <assert.h>
 #include <string.h>
+
 #include <vector.h>
 #include <stdio.h>
 
 #include <extras.h>
 
+#include <dir.h>
+
 #define PAGE_SIZE 4096
 
 vector* parse_dir_block(const char * s);
+
+int dir_size(Directory* d) {
+  return PAGE_SIZE;
+}
 
 struct Entry {
   char name[NAME_LEN];
@@ -28,15 +35,25 @@ Entry* entry_ctor(const char* name, Node* n) {
   return e;
 }
 
+int entry2stat(Entry* e, struct _stat_entry *out) {
+  if (!e) return E_INVAL;
+
+  strncpy(out->name, e->name, NAME_LEN);
+  out->type = node_type(e->n);
+  out->size = Size(e->n);
+  return 0;
+}
+
 void entry_dtor(Entry *e) {
   DTOR(e->n);
   free(e);
 }
 
 
-const char* dir_entry(Directory* dir, int pos) {
-  if (pos < 0 || (size_t)pos >= dir->v->size) return NULL;
-  return ((Entry*)dir->v->data[pos])->name;
+int dir_stat(Directory* dir, int pos, struct _stat_entry* out) {
+  if (pos < 0 || (size_t)pos >= dir->v->size) return E_NOTFOUND;
+
+  return entry2stat((Entry*)dir->v->data[pos], out);
 }
 
 static Directory* _root = 0;

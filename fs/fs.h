@@ -4,6 +4,7 @@
 
 #include <stdlib.h>
 #include <stdbool.h>
+#include <dir.h>
 
 typedef struct Block Block;
 typedef const char Link;
@@ -56,6 +57,8 @@ Directory* get_dir(Node *n);
 File* get_file(Node *n);
 Link* get_link(Node *n);
 
+int node_type(Node* n);
+
 #define NODE(o) _Generic((o), \
     Directory*: dir2Node, \
     Link*: link2Node, \
@@ -103,7 +106,7 @@ int dir_move(Directory* src, Directory* dst, const char* name);
 Node* dir_lookup(Directory* dir, const char* name);
 
 
-const char* dir_entry(Directory* dir, int pos);
+int dir_stat(Directory* dir, int pos, struct _stat_entry* out);
 
 #define Read(b, pos, buf, nbytes) (_Generic((b), \
     Directory*: dir_read, \
@@ -125,6 +128,13 @@ const char* dir_entry(Directory* dir, int pos);
     Link*: link_sync,\
     Node*: node_sync))(o)
 
+#define Size(o) (_Generic((o), \
+    File*: file_size, \
+    Block*: block_size, \
+    Directory*: dir_size,\
+    Link*: link_size,\
+    Node*: node_size))(o)
+
 int file_read(File* b, size_t pos, void *buf, size_t nbytes);
 int dir_read(Directory* d, size_t pos, void *buf, size_t nbytes);
 int link_read(Link* b, size_t pos, void *buf, size_t nbytes);
@@ -144,3 +154,8 @@ int file_sync(File* b);
 int link_sync(Link* b);
 int node_sync(Node* b);
 
+int dir_size(Directory* d);
+int block_size(Block* b);
+int file_size(File* b);
+int link_size(Link* b);
+int node_size(Node* b);
