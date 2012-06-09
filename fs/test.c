@@ -4,6 +4,7 @@
 #include <string.h>
 #include "fs.h"
 #include <file.h>
+#include <vector.h>
 
 int sh_main(int argc, char** argv);
 
@@ -12,7 +13,48 @@ void root_shutdown();
 void file_shutdown();
 void set_cwd(const char* s);
 
-int main(int argc, char** argv) {
+int main(int argc, char** argv) { 
+  vector * v = make_vector(8);
+  push(v, -1);
+  push(v, 2);
+  push(v, 3);
+  push(v, 5);
+
+  printf("sum: %d\n", sum(int, v));
+  printf("min: %d\n", min(int, v));
+  printf("max: %d\n", max(int, v));
+
+  printf("find: %d\n", find(int, x, v, x == 3));
+  printf("reduce: %d\n", reduce(int, x, v, o, o * x));
+
+  printf("orig: ");
+  each(int, x, v, printf("%d ", x));
+  printf("\n");
+
+  vector * m = map(int, x, v, x * 3);
+
+  printf("map: "); 
+  each(int, x, m, printf("%d ", x));
+  printf("\n");
+
+  vector * f = filter(int, x, v, x > 0);
+
+  printf("filter: "); 
+  each(int, x, f, printf("%d ", x));
+  printf("\n");
+
+  printf("contains: %d\n", contains(int, v, 5));
+  printf("all: %d\n", all(int, x, v, x > 0));
+  printf("any: %d\n", any(int, x, v, x > 0));
+
+  return 0;
+}
+
+
+
+
+
+int main0(int argc, char** argv) {
   root_init();
   set_cwd("/");
 

@@ -9,6 +9,8 @@
 
 #include "vector.h"
 
+#include <functional.h>
+
 void* vector_pop_front(vector* v)
 {
   void* p = (void*)v->data[0];

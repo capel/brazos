@@ -2,10 +2,7 @@
 #define CAPEL_VECTOR_H
 
 #include <stdlib.h>
-
-#define foreach(type, x, idx, v) \
-  size_t idx = 0; \
-  for(type x = (type)v->data[0]; idx < v->size; x = (type)v->data[++idx])
+#include <functional.h>
 
 #define fori(x, n) for(size_t i = 0; i < n; i++)
 
