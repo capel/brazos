@@ -109,7 +109,6 @@ Node* dir_lookup(Directory* dir, const char* name);
 int dir_stat(Directory* dir, int pos, struct _stat_entry* out);
 
 #define Read(b, pos, buf, nbytes) (_Generic((b), \
-    Directory*: dir_read, \
     File*: file_read, \
     Block*: block_read, \
     Link*: link_read,\

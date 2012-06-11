@@ -138,7 +138,9 @@ Node* walk(const char* path) {
 }
 
 Node* dir_lookup(Directory* dir, const char* name) {
-  return find(Entry*, e, dir->v, !strcmp(name, e->name))->n;
+  Entry* e = find(Entry*, e, dir->v, !strcmp(name, e->name));
+  if (!e) return 0;
+  return e->n;
 }
 
 int dir_add(Directory* dir, const char* name, Node* n) {

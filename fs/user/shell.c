@@ -51,7 +51,9 @@ int sh_main(int argc, char** argv) {
     fflush(stdout);
     memset(buf, 0, sizeof(buf));
     int r = read(0, buf, sizeof(buf));
-    assert(r > 0);
+    assert(r >= 0);
+
+    if (r == 0) continue;
 
     size_t end = strlen(buf);
     if (buf[end-1] == '\n') {
