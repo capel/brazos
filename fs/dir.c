@@ -13,9 +13,6 @@
 
 vector* parse_dir_block(const char * s);
 
-int dir_size(Directory* d) {
-  return PAGE_SIZE;
-}
 
 struct Entry {
   char name[NAME_LEN];
@@ -26,6 +23,10 @@ struct Directory {
   Block * b;
   vector* v;
 };
+
+int dir_size(Directory* d) {
+  return d->v->size;
+}
 
 Entry* entry_ctor(const char* name, Node* n) {
   Entry* e = malloc(sizeof(Entry));
@@ -137,13 +138,7 @@ Node* walk(const char* path) {
 }
 
 Node* dir_lookup(Directory* dir, const char* name) {
-  foreach(Entry*, e, i, dir->v) {
-    assert(e);
-    if (!strcmp(e->name, name)) {
-      return e->n;
-    }
-  }
-  return 0;
+  return find(Entry*, e, dir->v, !strcmp(name, e->name))->n;
 }
 
 int dir_add(Directory* dir, const char* name, Node* n) {
@@ -160,46 +155,29 @@ int dir_remove(Directory* dir, const char* name) {
     return E_NOTFOUND;
   }
 
-  foreach(Entry*, e, idx, dir->v) {
-    assert(e);
-    if (!strcmp(e->name, name)) {
-      DTOR(e);
-      vector_remove(dir->v, idx);
-      return SUCCESS;
-    }
-  }
-
-  assert(0);
+  Entry* e = take(Entry*, e, dir->v, !strcmp(e->name, name));
+  DTOR(e);
+  return SUCCESS;
 }
 
 int dir_move(Directory* src, Directory* dst, const char* name) {
-  Node * n = dir_lookup(src, name);
-  if (!n) {
-    return E_NOTFOUND;
-  }
-
   if (dir_lookup(dst, name)) {
     return E_EXISTS;
   }
 
-  dir_add(dst, name, n);
-
-  foreach(Entry*, e, idx, dst->v) {
-    assert(e);
-    if (!strcmp(e->name, name)) {
-      vector_remove(dst->v, idx);
-      return SUCCESS;
-    }
+  Entry* e = take(Entry*, e, dst->v, !strcmp(e->name, name));
+  if (!e) {
+    return E_NOTFOUND;
   }
-
-  assert(0);
+  dir_add(dst, name, e->n);
+  return SUCCESS;
 }
 
 char* entry_serialize(Entry * e) {
   char *n = node_serialize(e->n);
   printk("%s", n);
 
-  int needed = 1;
+  int needed = 3;
   needed += strlen(n);
   needed += strlen("E('' )");
   needed += strlen(e->name);

@@ -13,7 +13,7 @@ void root_shutdown();
 void file_shutdown();
 void set_cwd(const char* s);
 
-int main(int argc, char** argv) { 
+int main0(int argc, char** argv) { 
   vector * v = make_vector(8);
   push(v, -1);
   push(v, 2);
@@ -47,6 +47,14 @@ int main(int argc, char** argv) {
   printf("all: %d\n", all(int, x, v, x > 0));
   printf("any: %d\n", any(int, x, v, x > 0));
 
+
+  each(int, x, v, printf("%d ", x));
+  printf("\n");
+  printf("take: %d\n", take(int, x, v, x == 2));
+  each(int, x, v, printf("%d ", x));
+  printf("\n");
+
+
   return 0;
 }
 
@@ -54,7 +62,7 @@ int main(int argc, char** argv) {
 
 
 
-int main0(int argc, char** argv) {
+int main(int argc, char** argv) {
   root_init();
   set_cwd("/");
 

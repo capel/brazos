@@ -28,11 +28,15 @@
   foreach(type, x, idx, v) { if (constraint) { res = x; break; }  } \
   res; })
 
+#define take(type, x, v, constraint) \
+  ({  type res = 0; \
+  foreach(type, x, idx, v) { if (constraint) { res = x; vector_remove(v, idx); break; }  } \
+  res; })
+
 #define reduce(type, x, v, old, expr) \
   ({  type old; \
   foreach(type, x, idx, v) { if (idx == 0) { old = x; } else { old = expr; } } \
   old; })
-
   
 #define filter(type, x, v, constraint) \
   ({  vector *n = make_vector(v->size); \
@@ -68,5 +72,6 @@
   ({ bool res = false; \
   foreach(char*, x, idx, v) { if (!strcmp(x, val)) { res = true; break; }  } \
   res; })
+
 
 #endif

@@ -13,7 +13,10 @@ int cat_main(int argc, char** argv) {
 
   int fd = _open(path, _O_RDONLY);
   if (fd == E_NOTFOUND) {
-    printf("%s not found", path);
+    printf("cat: %s not found\n", path);
+    return -1;
+  } else if (fd == E_INVAL) {
+    printf("cat: %s is a directroy\n", path);
     return -1;
   }
   assert(fd > 0);

@@ -14,7 +14,7 @@
 #define NOM_SPACE() while (isspace(s[*pos])) { (*pos)++; }
 
 #define PARSE(name) name(const char * s, size_t *pos, bool* die)
-#define DIE() do { *die = true; printk("Parse error\n"); return 0; } while(0)
+#define DIE() do { *die = true; printk("Parse error at pos %lu [[%s]]\n", *pos, s); return 0; } while(0)
 
 #define HOPE(cond) if (!(cond)) { DIE(); }
 
@@ -148,12 +148,18 @@ static Node* PARSE(node_parse) {
 }
 
 vector* parse_dir_block(const char * s) {
+  vector* v = make_vector(8);
+
+  // empty directory
+  if (strlen(s) == 0) {
+    return v;
+  }
+
   bool _die = 0;
   bool *die = &_die;
   size_t _pos = 0;
   size_t *pos = &_pos;
   
-  vector* v = make_vector(8);
 
   for(;;) {
     vector_push(v,(void*) entry_parse(s, pos, die));
