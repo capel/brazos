@@ -20,4 +20,6 @@ int _opendir(const char* path, int flags);
 int _nextfile(int dir_fd, struct _stat_entry* out);
 int _closedir(int dir_fd);
 
+int _chdir(const char* path);
+
 #endif

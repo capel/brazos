@@ -42,17 +42,20 @@ const char* path_parent(const char * path)  {
   assert(0);
 }
   
-const char * path_normalize(const char * cwd, const char * path) {
-  if (!path || !cwd) return 0;
+char * path_normalize(const char * cwd, const char * path) {
+  assert(path && cwd);
 
-  if (path[0] == '/') return strclone("/");
+  if (path[0] == '/') {
+    return strclone(path);
+  }
 
   if (!strcmp(path, ".")) {
     return strclone(cwd);
   }
 
-  char * s = malloc(strlen(cwd) + strlen(path) + 1);
+  char * s = malloc(strlen(cwd)  + 1 + strlen(path) + 1);
   strcpy(s, cwd);
+  strcat(s, "/");
   strcat(s, path);
   return s;
 }

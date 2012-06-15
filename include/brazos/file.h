@@ -31,9 +31,6 @@ const char* path_parent(const char * path);
 // If the path is /, it returns "/"
 const char * path_name(const char * path);
 
-void _chdir(const char * path);
-const char * _getcwd();
-
 // File Operations
 // Opens a filename and returns a file handle.
 // Supported flags: O_RDONLY, O_WRONLY, O_RDWR, O_CREAT

@@ -41,11 +41,23 @@ void file_shutdown() {
   printk("shutdown");
 }
 
+int _chdir(const char* orig_path) {
+  char* path = path_normalize(get_cwd(st()), orig_path);
+
+  Node * dir = walk(path);
+  if (!dir) return E_NOTFOUND;
+  if (!is_dir(dir)) return E_INVAL;
+
+  set_cwd(st(), path);
+  free(path);
+  return 0;
+}
+
 int _open(const char *orig_path, int flags) {
   // the new value must be freed
   // we can just ignore the old value
   const char* path = path_normalize(get_cwd(st()), orig_path);
-  assert(path);
+  printk("norm %s", path);
 
   Node * n = walk(path);
   if (!n) {
@@ -54,6 +66,7 @@ int _open(const char *orig_path, int flags) {
       return E_NOTFOUND;
     } else {
       const char * parent = path_parent(path);
+      printk("parent %s", parent);
       const char * name = path_name(path);
 
       Node * parent_dir = walk(parent);

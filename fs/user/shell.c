@@ -13,6 +13,7 @@ int rm_main(int argc, char** argv);
 int ls_main(int argc, char** argv);
 int mkdir_main(int argc, char** argv);
 int echo_main(int argc, char** argv);
+int cd_main(int argc, char** argv);
 
 int sh_dispatch(char* cmd, int argc, char** argv);
 
@@ -23,6 +24,7 @@ int sh_dispatch(char* cmd, int argc, char** argv) {
   switch (cmd[0]) {
     case 'c':
       DISPATCH("cat", cat_main);
+      DISPATCH("cd", cd_main);
       goto not_found;
     case 'e':
       DISPATCH("echo", echo_main);
