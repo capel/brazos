@@ -3,6 +3,7 @@
 #include <assert.h>
 #include <unistd.h>
 #include <string.h>
+#include <stdbool.h>
 
 #include <vector.h>
 
@@ -64,7 +65,8 @@ int sh_main(int argc, char** argv) {
       buf[end-1] = '\0'; // kill newline
     }
 
-    vector* v = vector_split(buf, " ");
+    vector* v = vector_split_quoted(buf, " ");
+
     if (vsize(v) == 0) {
       cleanup_vector(v);
       continue;

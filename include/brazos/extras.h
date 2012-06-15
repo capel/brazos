@@ -4,6 +4,6 @@
 
 #define printk(x, args...) printf(GREEN "pk: " WHITE __FILE__ ":%d  [" LIGHT_BLUE "%s" WHITE "] " x "\n", __LINE__, __func__, ## args)
 
-const char* strclone(const char* s);
+char* strclone(const char* s);
 
 #endif

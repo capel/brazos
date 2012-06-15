@@ -10,6 +10,7 @@
 #include "vector.h"
 
 #include <functional.h>
+#include <extras.h>
 //
 // An auto-expanding array. You must use make_vector(data_type_size) to make it 
 // and vector_push to add items to it. When you are finished, call cleanup_vector.
@@ -116,6 +117,7 @@ void* vector_remove(vector* v, size_t i)
 
 bool is_sep(const char c, const char* seps)
 {
+  if (!c) return true;
   size_t len = strlen(seps);
   for (size_t i = 0; i < len; ++i) {
     if (c == seps[i])
@@ -175,7 +177,73 @@ vector* vector_split(const char * str, const char* seps)
   }
 }
 
-const char* vector_join(vector* v, const char* joiner)
+static bool is_quote(char c) {
+  return (!c || c == '\'' || c == '"');
+}
+
+static void add(vector* v, char* src, size_t i, char* beginnning) {
+  src[i] = '\0';
+  vector_push(v, beginnning);
+}
+
+static void get_str(vector*v, char* s, size_t *i) {
+  assert(is_quote(s[*i]));
+  *i += 1;
+
+  char* beginning = s + *i; 
+
+  while(!is_quote(s[*i])) { *i += 1; }
+  assert(is_quote(s[*i]));
+  
+  add(v, s, *i, beginning);
+  *i += 1;
+}
+
+static void eat_seps(char* s, size_t *i, const char* seps) {
+  while(is_sep(s[*i], seps)) { *i += 1; }
+}
+
+static void get_token(vector*v, char* s, size_t *i, const char* seps) {
+  char* beginning = s + *i; 
+
+  while(!is_sep(s[*i], seps)) { *i += 1; }
+  assert(is_sep(s[*i], seps));
+  
+  add(v, s, *i, beginning);
+  *i += 1;
+}
+
+vector* vector_split_quoted(const char * str, const char* seps)
+{
+  if (!str || !seps)
+    return 0;
+
+  vector * v = make_vector(8);
+
+  v->__source = strclone(str);
+  size_t len = strlen(v->__source);
+
+  // for ease of use
+  char* s = v->__source;
+
+  size_t i = 0;
+
+  while (true) {
+    eat_seps(s, &i, seps);
+
+    if (i >= len) {
+      return v;
+    }
+
+    if (is_quote(s[i])) {
+      get_str(v, s, &i);
+    } else {
+      get_token(v, s, &i, seps);
+    }
+  }
+}
+
+char* vector_join(vector* v, const char* joiner)
 {
   if (v->size == 0) {
     char * s = malloc(2);

@@ -25,8 +25,9 @@ char** vdata(vector* v);
 // its lifespan has ended.
 // The original string and seps are unmodified and can be safely freed.
 vector* vector_split(const char * str, const char* seps);
+vector* vector_split_quoted(const char * str, const char* seps);
 
 void* vector_pop_front(vector* v);
-const char* vector_join(vector* v, const char* joiner);
+char* vector_join(vector* v, const char* joiner);
 
 #endif
