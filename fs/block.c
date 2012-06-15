@@ -27,8 +27,13 @@ void blocks_init() {
   Read(bmap_block, 0, bmap, PAGE_SIZE);
 }
 
-void blocks_shutdown() {
+static void blocks_sync() {
   Write(bmap_block, 0, bmap, PAGE_SIZE);
+  Sync(bmap_block);
+}
+
+void blocks_shutdown() {
+  blocks_sync();
   DTOR(bmap_block);
 }
 
@@ -36,6 +41,7 @@ int bid_alloc() {
   for(int i = 0; i < PAGE_SIZE; i++) {
     if (bmap[i] == 'E') {
       bmap[i] = 'F';
+      blocks_sync();
       printk("Allocing block %d", i);
       return i;
     }
@@ -51,6 +57,7 @@ Block* block_ctor(int bid) {
 }
 
 void block_dtor(Block* b) {
+  Sync(b);
   if (b->data) {
     free(b->data);
   }
@@ -105,7 +112,6 @@ char* block_serialize(Block * b) {
   int needed = strlen("B()" + 33);
   char *s = malloc(needed);
   snprintf(s, needed, "B(%zd)", b->bid);
-  printk("%s", s);
   return s;
 }
 

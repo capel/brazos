@@ -173,7 +173,6 @@ int dir_move(Directory* src, Directory* dst, const char* name) {
 
 char* entry_serialize(Entry * e) {
   char *n = node_serialize(e->n);
-  printk("%s", n);
 
   int needed = 3;
   needed += strlen(n);
@@ -191,7 +190,6 @@ char* dir_serialize(Directory* dir) {
   char * s = block_serialize(dir->b);
   char * buf=  malloc(sizeof("D()") + strlen(s) + 2);
   sprintf(buf, "D(%s)", s);
-  printk("%s", buf);
   free(s);
   return buf;
 }
@@ -228,6 +226,8 @@ int dir_write(Directory* b, size_t pos, const void *buf, size_t nbytes) {
   return E_CANT;
 }
 int dir_sync(Directory* d) {
+  each(Entry*, e, d->v, Sync(e->n));
+
   char buf[PAGE_SIZE];
   memset(buf, 0, PAGE_SIZE);
 

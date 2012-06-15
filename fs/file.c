@@ -67,6 +67,5 @@ char* file_serialize(File* f) {
   each(char*, s, v, free(s));
 
   cleanup_vector(v);
-  printk("file %s", s);
   return s;
 }

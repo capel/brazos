@@ -4,7 +4,7 @@ OBJS    := ${SRCS:.c=.o}
 AOBJS   := ${ASRCS:.s=.o}
 DEPS    := ${SRCS:.c=.dep} 
 
-CCFLAGS=-Wall -Werror -Wextra  -std=gnu99 -Wno-unused-parameter -Wno-unused-function -g3 -ferror-limit=3 -fcatch-undefined-behavior -fstack-protector-all -ggdb -I ../include/brazos
+CCFLAGS= -Wall -Werror -Wextra  -std=gnu99 -Wno-unused-parameter -Wno-unused-function -g3 -ferror-limit=3 -fcatch-undefined-behavior -fstack-protector-all -ggdb -I ../include/brazos
 CC=clang
 
 .PHONY: all clean distclean 
