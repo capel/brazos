@@ -25,7 +25,7 @@ struct Directory {
 };
 
 int dir_size(Directory* d) {
-  return d->v->size;
+  return vsize(d->v);
 }
 
 Entry* entry_ctor(const char* name, Node* n) {
@@ -52,20 +52,17 @@ void entry_dtor(Entry *e) {
 
 
 int dir_stat(Directory* dir, int pos, struct _stat_entry* out) {
-  if (pos < 0 || (size_t)pos >= dir->v->size) return E_NOTFOUND;
+  if (pos < 0 || (size_t)pos >= vsize(dir->v)) return E_NOTFOUND;
 
-  return entry2stat((Entry*)dir->v->data[pos], out);
+  return entry2stat((Entry*)vget(dir->v, pos), out);
 }
 
-static Directory* _root = 0;
+static Node* _root = 0;
 
-void set_root(Directory* root) {
-  assert(!_root && root);
-  _root = root;
-}
+Node* root() { return _root; }
 
 void root_init() {
-  set_root(dir_ctor(block_ctor(0)));
+  _root = NODE(dir_ctor(block_ctor(0)));
 }
 
 void root_shutdown() {
@@ -92,9 +89,8 @@ Directory* dir_ctor(Block * b) {
 }
 
 void dir_dtor(Directory* dir) {
-  foreach(Entry*,e,idx,dir->v) {
-    DTOR(e);
-  }
+  each(Entry*, e, dir->v, DTOR(e));
+  cleanup_vector(dir->v);
   DTOR(dir->b);
   free(dir);
 }
@@ -107,20 +103,20 @@ int dir_read(Directory* d, size_t pos, void *buf, size_t nbytes) {
 
 Node* walk(const char* path) {
   if (!strcmp(path, "/")) {
-    return NODE(_root);
+    return root();
   }
 
-  Directory* start = _root;
+  Directory* start = get_dir(root());
   Node * o;
   vector* v = vector_split(path, "/");
-  for (size_t i = 0; i < v->size; i++) {
-    o = dir_lookup(start, v->data[i]);
+  fori(i, vsize(v)) {
+    o = dir_lookup(start, vcget(v, i));
     if (!o) {
       cleanup_vector(v);
       return 0;
     }
 
-    if (i+1 == v->size) {
+    if (i+1 == vsize(v)) {
       cleanup_vector(v);
       return o;
     }
@@ -138,9 +134,9 @@ Node* walk(const char* path) {
 }
 
 Node* dir_lookup(Directory* dir, const char* name) {
-  Entry* e = find(Entry*, e, dir->v, !strcmp(name, e->name));
-  if (!e) return 0;
-  return e->n;
+  size_t i = findi(Entry*, e, dir->v, !strcmp(name, e->name));
+  if (i == NOT_FOUND) return 0;
+  return ((Entry*)(vget(dir->v, i)))->n;
 }
 
 int dir_add(Directory* dir, const char* name, Node* n) {
@@ -193,24 +189,19 @@ char* entry_serialize(Entry * e) {
 
 char* dir_serialize(Directory* dir) {
   char * s = block_serialize(dir->b);
-  char * buf=  malloc(sizeof("D()" + strlen(s) + 1));
+  char * buf=  malloc(sizeof("D()") + strlen(s) + 2);
   sprintf(buf, "D(%s)", s);
+  printk("%s", buf);
   free(s);
   return buf;
 }
 
 static const char* dir_entries_serialize(Directory* d) {
-  vector* v = make_vector(d->v->size);
-
-  foreach(Entry*, e, idx, d->v) {
-    vector_push(v, entry_serialize(e));
-  }
+  vector* v = map(Entry*, e, d->v, entry_serialize(e));
 
   const char* s = vector_join(v, "\n");
 
-  foreach(char*, s, idx2, v) {
-    free(s);
-  }
+  each(char*, s, v, free(s));
 
   cleanup_vector(v);
   return s;
@@ -239,7 +230,11 @@ int dir_write(Directory* b, size_t pos, const void *buf, size_t nbytes) {
 int dir_sync(Directory* d) {
   char buf[PAGE_SIZE];
   memset(buf, 0, PAGE_SIZE);
-  strncpy(buf, dir_entries_serialize(d), PAGE_SIZE);
+
+  const char * s = dir_entries_serialize(d);
+  strncpy(buf, s, PAGE_SIZE);
+  free((char*)s);
+
   Write(d->b, 0, buf, PAGE_SIZE);
   Sync(d->b);
   return 0;

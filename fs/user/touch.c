@@ -10,6 +10,14 @@ int touch_main(int argc, char** argv) {
   }
 
   int fd = _open(argv[1], _O_CREAT | _O_RDONLY);
+  if (fd == E_INVAL) {
+    printf("touch: invalid argument\n");
+    return -1;
+  } else if (fd == E_NOTFOUND) {
+    printf("touch: parent directory does not exist\n");
+    return -1;
+  }
+
   assert(fd > 0);
 
   int r = _close(fd);

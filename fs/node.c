@@ -50,8 +50,20 @@ Node * file2Node(File* f) {
   return n;
 }
 
+// retype can't be used here because we need to free the node afterwards
 void node_dtor(Node* n) {
-  RETYPE(n, dtor);
+  switch(n->type) {
+    case DIRECTORY:
+      dir_dtor(n->dir);
+      break;
+    case LINK:
+      link_dtor(n->link);
+      break;
+    case _FILE:
+      file_dtor(n->file);
+      break;
+  }
+  free(n);
 }
 
 int node_read(Node* n, size_t pos, void *buf, size_t nbytes) {

@@ -1,3 +1,7 @@
+#ifndef FS_H
+#define FS_H
+
+
 #define NAME_LEN 8
 #define PATH_LEN 32
 #define MAX_ARGS 32
@@ -12,6 +16,7 @@ typedef struct Directory Directory;
 typedef struct Entry Entry;
 typedef struct File File;
 typedef struct Node Node;
+typedef struct fs_state fs_state;
 
 
 Directory* dir_ctor(Block * b);
@@ -65,6 +70,7 @@ int node_type(Node* n);
     File*: file2Node)(o)
 
 Node* walk(const char * path);
+Node* root();
 
 int bid_alloc(void);
 
@@ -158,3 +164,5 @@ int block_size(Block* b);
 int file_size(File* b);
 int link_size(Link* b);
 int node_size(Node* b);
+
+#endif

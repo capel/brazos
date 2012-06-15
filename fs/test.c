@@ -11,6 +11,10 @@ int sh_main(int argc, char** argv);
 void root_init();
 void root_shutdown();
 void file_shutdown();
+void fs_init();
+void blocks_init();
+void blocks_shutdown();
+
 void set_cwd(const char* s);
 
 int main0(int argc, char** argv) { 
@@ -19,6 +23,10 @@ int main0(int argc, char** argv) {
   push(v, 2);
   push(v, 3);
   push(v, 5);
+
+  printf("orig: ");
+  each(int, x, v, printf("%d ", x));
+  printf("\n");
 
   printf("sum: %d\n", sum(int, v));
   printf("min: %d\n", min(int, v));
@@ -31,22 +39,18 @@ int main0(int argc, char** argv) {
   each(int, x, v, printf("%d ", x));
   printf("\n");
 
-  vector * m = map(int, x, v, x * 3);
+  {
+    vector *m = make_vector(vsize(v));
+    //each(int, x, v, vector_push(m,(char*) (x*3)));
 
-  printf("map: "); 
-  each(int, x, m, printf("%d ", x));
-  printf("\n");
-
-  vector * f = filter(int, x, v, x > 0);
-
-  printf("filter: "); 
-  each(int, x, f, printf("%d ", x));
-  printf("\n");
-
-  printf("contains: %d\n", contains(int, v, 5));
-  printf("all: %d\n", all(int, x, v, x > 0));
-  printf("any: %d\n", any(int, x, v, x > 0));
-
+    /*
+    printf("map: "); 
+    each(int, x, m, printf("%d ", x));
+    printf("\n");
+    */
+    
+    cleanup_vector(m);
+  }
 
   each(int, x, v, printf("%d ", x));
   printf("\n");
@@ -54,17 +58,45 @@ int main0(int argc, char** argv) {
   each(int, x, v, printf("%d ", x));
   printf("\n");
 
+  {
+    vector * f = filter(int, x, v, x > 0);
 
+    /*
+    printf("filter: "); 
+    each(int, x, f, printf("%d ", x));
+    printf("\n");
+    */
+
+    cleanup_vector(f);
+  }
+
+  printf("orig: ");
+  each(int, x, v, printf("%d ", x));
+  printf("\n");
+  printf("contains: %d\n", contains(int, v, 5));
+  printf("all: %d\n", all(int, x, v, x > 0));
+  printf("any: %d\n", any(int, x, v, x > 0));
+
+
+  cleanup_vector(v);
+
+  return 0;
+}
+
+int main3() {
+  vector* v = make_vector(8);
+  cleanup_vector(v);
+  v = 0;
   return 0;
 }
 
 
 
 
-
 int main(int argc, char** argv) {
+  blocks_init();
   root_init();
-  set_cwd("/");
+  fs_init();
 
   /*
   int fd = _open("/woot", _O_CREAT);
@@ -75,6 +107,7 @@ int main(int argc, char** argv) {
 
   file_shutdown();
   root_shutdown();
+  blocks_shutdown();
   return 0;
   
   /*

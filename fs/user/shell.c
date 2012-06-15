@@ -11,6 +11,7 @@ int touch_main(int argc, char** argv);
 int rm_main(int argc, char** argv);
 int ls_main(int argc, char** argv);
 int mkdir_main(int argc, char** argv);
+int echo_main(int argc, char** argv);
 
 int sh_dispatch(char* cmd, int argc, char** argv);
 
@@ -21,6 +22,9 @@ int sh_dispatch(char* cmd, int argc, char** argv) {
   switch (cmd[0]) {
     case 'c':
       DISPATCH("cat", cat_main);
+      goto not_found;
+    case 'e':
+      DISPATCH("echo", echo_main);
       goto not_found;
     case 't':
       DISPATCH("touch", touch_main);
@@ -61,13 +65,20 @@ int sh_main(int argc, char** argv) {
     }
 
     vector* v = vector_split(buf, " ");
-    if (!strcmp(v->data[0], "exit")) {
+    if (vsize(v) == 0) {
+      cleanup_vector(v);
+      continue;
+    }
+
+    if (!strcmp(vcget(v, 0), "exit")) {
+      cleanup_vector(v);
       return 0;
     }
 
-    int code = sh_dispatch(v->data[0], v->size, v->data);
+    int code = sh_dispatch(vcget(v, 0), vsize(v), vdata(v));
     if (code == -1337) {
       printf("Command not found\n");
     }
+    cleanup_vector(v);
   }
 }

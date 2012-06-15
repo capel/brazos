@@ -103,6 +103,7 @@ static Entry* PARSE(entry_parse) {
   Node * n = node_parse(s, pos, die);
 
   Entry* e = entry_ctor(ls, n);
+  free((char*)ls);
 
   NOM_SPACE();
   CONSUME(')');
@@ -162,7 +163,7 @@ vector* parse_dir_block(const char * s) {
   
 
   for(;;) {
-    vector_push(v,(void*) entry_parse(s, pos, die));
+    push(v, entry_parse(s, pos, die));
     NOM_SPACE();
     if (s[*pos] != 'E') break;
   }

@@ -9,10 +9,14 @@
 
 #include "path_util.h"
 #include "fs.h"
+#include "interface_common.h"
 
-#define MAX_FDS 64
+fs_state* _st;
+fs_state* st() { return _st; }
 
-void set_root(Directory* root);
+void fs_init() {
+  _st = ctor_state();
+}
 
 int valid(int off) {
   if (off < 0) return 0;
@@ -20,59 +24,27 @@ int valid(int off) {
   return off;
 }
 
-static int bid = 1;
-int allocate_bid() {
-  return bid++;
-}
-
-typedef struct file_desc {
+struct file_desc {
   Link* link;
   size_t offset;
   int flags;
-} file_desc;
-
-static file_desc* fd_table[MAX_FDS];
+};
 
 void file_shutdown() {
   for(size_t i = 0; i < MAX_FDS; i++) {
-    if (fd_table[i]) {
-      _sync(i);
-      _close(i);
-    }
+    file_desc* fd = state_fd(st(), i);
+    if (!fd) continue;
+    _sync(i);
+    _close(i);
   }
   
   printk("shutdown");
 }
 
-static int allocate_fd() {
-  for (int i = 1; i < MAX_FDS; i++) {
-    if (fd_table[i] == 0) {
-      return i;
-    }
-  }
-  return E_FULL;
-}
-
-
-static const char * _cwd = 0;
-const char * get_cwd() {
-  return _cwd;
-}
-
-void set_cwd(const char* cwd) {
-  assert(cwd);
-  if (_cwd) free((char*)_cwd);
-
-  _cwd = strclone(cwd);
-}
-
 int _open(const char *orig_path, int flags) {
-  int fd = allocate_fd();
-  if (fd == E_FULL) return E_FULL;
-
   // the new value must be freed
   // we can just ignore the old value
-  const char* path = path_normalize(get_cwd(), orig_path);
+  const char* path = path_normalize(get_cwd(st()), orig_path);
   assert(path);
 
   Node * n = walk(path);
@@ -81,16 +53,20 @@ int _open(const char *orig_path, int flags) {
       free((char*) path);
       return E_NOTFOUND;
     } else {
-      n = NODE(file_ctor(0,0,0));
-      assert(n);
-
       const char * parent = path_parent(path);
       const char * name = path_name(path);
 
       Node * parent_dir = walk(parent);
+      if (!parent_dir) return E_NOTFOUND;
+
       free((char*)parent);
 
+      if (!is_dir(parent_dir)) return E_INVAL;
+
       Directory* dir = get_dir(parent_dir);
+
+      n = NODE(file_ctor(0,0,0));
+      assert(n);
       dir_add(dir, name, n);
     }
   }
@@ -106,16 +82,12 @@ int _open(const char *orig_path, int flags) {
   f->offset = 0;
   f->flags = flags & (_O_RDWR); // mask out O_CREAT
 
-  fd_table[fd] = f;
-
   free((char*) path);
-  return fd;
+  return state_ctor_fd(st(), f);
 }
 
 int _close(int fd) {
-  if (fd > MAX_FDS) return E_BADFD;
-
-  file_desc* f = fd_table[fd];
+  file_desc* f = state_fd(st(), fd);
   if (!f) return E_BADFD;
 
   Sync(f->link);
@@ -123,14 +95,12 @@ int _close(int fd) {
   DTOR(f->link);
 
   free(f);
-  fd_table[fd] = 0;
+  state_dtor_fd(st(), fd);
   return 0;
 }
 
 int _sync(int fd) {
-  if (fd > MAX_FDS) return E_BADFD;
-
-  file_desc* f = fd_table[fd];
+  file_desc* f = state_fd(st(), fd);
   if (!f) return E_BADFD;
 
   Sync(f->link);
@@ -138,9 +108,7 @@ int _sync(int fd) {
 }
 
 int _seek(int fd, int offset, int whence) {
-  if (fd > MAX_FDS) return E_BADFD;
-
-  file_desc* f = fd_table[fd];
+  file_desc* f = state_fd(st(), fd);
   if (!f) return E_BADFD;
 
   switch (whence) {
@@ -168,8 +136,7 @@ int _seek(int fd, int offset, int whence) {
 }
 
 int _read(int fd, void *buf, size_t nbytes) {
-  if (fd > MAX_FDS) return E_BADFD;
-  file_desc* f = fd_table[fd];
+  file_desc* f = state_fd(st(), fd);
   if (!f) return E_BADFD;
 
   if (!buf) return 0;
@@ -185,8 +152,7 @@ int _read(int fd, void *buf, size_t nbytes) {
 }
 
 int _write(int fd, const void *buf, size_t nbytes) {
-  if (fd > MAX_FDS) return E_BADFD;
-  file_desc* f = fd_table[fd];
+  file_desc* f = state_fd(st(), fd);
   if (!f) return E_BADFD;
 
   if (!buf) return 0;
@@ -202,18 +168,8 @@ int _write(int fd, const void *buf, size_t nbytes) {
   return i;
 }
 
-/*
-int _stat(int fd) {
-  if (fd > MAX_FDS) return E_BADFD;
-  file_desc* f = fd_table[fd];
-  if (!f) return E_BADFD;
-
-  return PAGE_SIZE; //f->size;
-}
-*/
-
 int _remove(const char* path) {
-  const char* npath = path_normalize(get_cwd(), path);
+  const char* npath = path_normalize(get_cwd(st()), path);
   assert(path);
 
   const char * parent = path_parent(npath);
@@ -221,8 +177,9 @@ int _remove(const char* path) {
 
   Node * n = walk(parent);
   free((char*)parent);
-  free((char*)npath);
 
   Directory* dir = get_dir(n);
-  return dir_remove(dir, name);
+  int r = dir_remove(dir, name);
+  free((char*)npath);
+  return r;
 }

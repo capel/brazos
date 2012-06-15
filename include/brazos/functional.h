@@ -1,77 +1,66 @@
 #ifndef FUNCTIONAL_H
 #define FUNCTIONAL_H
 
-#define foreach(type, x, idx, v) \
-  size_t idx = 0; \
-  for(type x = (type)v->data[0]; idx < v->size; x = (type)v->data[++idx])
+#define fori(_x, n) for(size_t _x = 0; _x < n; _x++)
+
+#define each(type, x, v, expr) \
+ ({ fori(i, vsize(v)) {\
+   type x = (type) vget(v, i); \
+   { expr; } \
+  } })\
 
 #define push(v, val) vector_push(v, (void*)(val))
 
 #define max(type, v) \
-  ({  type res = (type) v->data[0]; \
-  foreach(type, x, idx, v) { if (x > res) { res = x; }  } \
-  res; })
+  ({  type res = (type) vget(v, 0); \
+   each(type, x, v, res = (x > res) ? x : res); res; })
 
 #define min(type, v) \
-  ({  type res = (type) v->data[0]; \
-  foreach(type, x, idx, v) { if (x < res) { res = x; }  } \
-  res; })
+  ({  type res = (type) vget(v, 0); \
+   each(type, x, v, res = (x < res) ? x : res); res; })
 
 #define sum(type, v) \
-  ({  type res = 0; \
-  foreach(type, x, idx, v) {  res +=  x; }  \
+  ({  type res = 0; each(type, x, v, res += x); res; })
+
+#define NOT_FOUND ((size_t)-1)
+#define findi(type, x, v, constraint) \
+  ({  size_t res = NOT_FOUND; \
+   fori(i, vsize(v)) { \
+    type x = (type) vget(v, i); \
+    if (constraint) { res = i; break; } \
+   } \
   res; })
 
-
-#define find(type, x, v, constraint) \
-  ({  type res = 0; \
-  foreach(type, x, idx, v) { if (constraint) { res = x; break; }  } \
-  res; })
-
-#define take(type, x, v, constraint) \
-  ({  type res = 0; \
-  foreach(type, x, idx, v) { if (constraint) { res = x; vector_remove(v, idx); break; }  } \
-  res; })
+#define find(type, x, v, constraint) (type)vget(v, findi(type, x, v, constraint))
+#define take(type, x, v, constraint) (type)vector_remove(v, findi(type, x, v, constraint))
 
 #define reduce(type, x, v, old, expr) \
   ({  type old; \
-  foreach(type, x, idx, v) { if (idx == 0) { old = x; } else { old = expr; } } \
+   fori(idx, vsize(v)) { type x = (type) vget(v, idx); \
+   if (idx == 0) { old = x; } else { old = expr; } } \
   old; })
   
 #define filter(type, x, v, constraint) \
-  ({  vector *n = make_vector(v->size); \
-  foreach(type, x, idx, v) { if (constraint) { push(n, x); }  } \
+  ({  vector *n = make_vector(vsize(v)); \
+  each(type, x,v, if (constraint) { push(n, x); }); \
   n; })
   
 #define map(type, x, v, expr) \
-  ({  vector *n = make_vector(v->size); \
-  foreach(type, x, idx, v) { push(n, (expr)); }  \
+  ({  vector *n = make_vector(vsize(v)); \
+  each(type, x, v, push(n, (expr))); \
   n; })
-
-#define each(type, x, v, expr) \
- ({  foreach(type, x, idx, v) { expr; } })
-
-
 
 #define all(type, x, v, constraint) \
   ({ bool res = true; \
-  foreach(type, x, idx, v) { if (constraint) { res = false; break; }  } \
+  each(type, x, v, res = (constraint) ? res : false); \
   res; })
 
 #define any(type, x, v, constraint) \
   ({ bool res = false; \
-  foreach(type, x, idx, v) { if (constraint) { res = true; break; }  } \
+  each(type, x, v, res = (constraint) ? true : res); \
   res; })
 
-#define contains(type, v, val) \
-  ({ bool res = false; \
-  foreach(type, x, idx, v) { if (x == val) { res = true; break; }  } \
-  res; })
-
-#define strcontains(v, val) \
-  ({ bool res = false; \
-  foreach(char*, x, idx, v) { if (!strcmp(x, val)) { res = true; break; }  } \
-  res; })
-
+#define contains(type, v, val) (NOT_FOUND != findi(type, x, v, x == val))
+#define strcontains(type, v, val) (NOT_FOUND != findi(const char*, x, v, !strcmp(x, val)))
 
 #endif

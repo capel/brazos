@@ -18,8 +18,29 @@ int block_size(Block* b) {
   return PAGE_SIZE;
 }
 
+static Block* bmap_block = 0;
+static char bmap[PAGE_SIZE];
+
+void blocks_init() {
+  memset(bmap, 0, PAGE_SIZE);
+  bmap_block = block_ctor(1);
+  Read(bmap_block, 0, bmap, PAGE_SIZE);
+}
+
+void blocks_shutdown() {
+  Write(bmap_block, 0, bmap, PAGE_SIZE);
+  DTOR(bmap_block);
+}
+
 int bid_alloc() {
-  return (int) time(NULL);
+  for(int i = 0; i < PAGE_SIZE; i++) {
+    if (bmap[i] == 'E') {
+      bmap[i] = 'F';
+      printk("Allocing block %d", i);
+      return i;
+    }
+  }
+  assert(0);
 }
 
 Block* block_ctor(int bid) {

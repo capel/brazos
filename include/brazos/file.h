@@ -31,8 +31,8 @@ const char* path_parent(const char * path);
 // If the path is /, it returns "/"
 const char * path_name(const char * path);
 
-void set_cwd(const char * path);
-const char * get_cwd();
+void _chdir(const char * path);
+const char * _getcwd();
 
 // File Operations
 // Opens a filename and returns a file handle.

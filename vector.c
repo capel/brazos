@@ -3,13 +3,28 @@
 // Implementation of the auto-expanding array data structure.
 
 #include <stdlib.h>
-#include <stdio.h>
 #include <string.h>
 #include <stdbool.h>
+#include <assert.h>
 
 #include "vector.h"
 
 #include <functional.h>
+//
+// An auto-expanding array. You must use make_vector(data_type_size) to make it 
+// and vector_push to add items to it. When you are finished, call cleanup_vector.
+// data_type_size is the size of the data type you are storing in the array.
+// example: vector* v = make_vector(sizeof(whatever*));
+struct vector {
+  // Public data -- use these and the provided vector functions.
+  char** data;
+  size_t size;
+
+  // Private data -- do not use them.
+  size_t __allocated_size;
+  // This is used for the split_to_vector function.
+  char* __source;
+};
 
 void* vector_pop_front(vector* v)
 {
@@ -18,20 +33,41 @@ void* vector_pop_front(vector* v)
   return p;
 }
 
+size_t vsize(vector* v) {
+  assert(v);
+  return v->size;
+}
+
 void vector_push(vector* v, char* object)
 {
-  if (!v) // null objects are allowed, so we don't bother checking the object.
-    return;
+  assert(v);
 
   if (v->size >= v->__allocated_size-2) {
+    size_t old_size = v->__allocated_size;
     v->__allocated_size *= 2;
     void* old = v->data;
     v->data = malloc(v->__allocated_size * sizeof(char*));
-    memcpy((char*)v->data, old, v->__allocated_size * sizeof(char*));
+    memcpy(v->data, old, old_size * sizeof(char*));
+
+    free(old);
   }
 
   v->data[v->size] = object;
   ++v->size;
+}
+
+void* vget(vector* v, size_t idx) {
+  assert(v);
+  assert(idx < v->size);
+  return (void*)( v->data[idx]);
+}
+
+char** vdata(vector* v) {
+  return v->data;
+}
+
+char* vcget(vector* v, size_t idx) {
+  return vget(v, idx);
 }
 
 vector* make_vector(int init_size)
@@ -137,14 +173,6 @@ vector* vector_split(const char * str, const char* seps)
       return v;
     }
   }
-}
-
-void print_vector(vector* v, const char* format_string, size_t start)
-{
-  for	(size_t i = start; i < v->size; ++i) {
-    printf(format_string, v->data[i]);
-  }
-  printf("\n");
 }
 
 const char* vector_join(vector* v, const char* joiner)
