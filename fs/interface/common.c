@@ -6,7 +6,7 @@
 #include <assert.h>
 
 #include <extras.h>
-#include "interface_common.h"
+#include "common.h"
 
 struct fs_state {
   file_desc* fds[MAX_FDS];

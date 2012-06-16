@@ -5,22 +5,22 @@
 #include <assert.h>
 #include <extras.h>
 
-const char * path_name(const char * path) {
+char * path_name(const char * path) {
   size_t len = strlen(path);
 
   // special case for "/"
-  if (len == 1 && path[0] == '/') return path;
+  if (len == 1 && path[0] == '/') return strclone(path);
   for(int i = len - 1; i >= 0; i--) {
     if (path[i] == '/') {
-      return path + i + 1;
+      return strclone(path + i + 1);
     }
   }
 
   // There is only the filename in the path, return it.
-  return path;
+  return strclone(path);
 }
 
-const char* path_parent(const char * path)  {
+char* path_parent(const char * path)  {
   size_t len = strlen(path);
   char * s = malloc(len + 1);
   strcpy(s, path);
@@ -55,7 +55,7 @@ char * path_normalize(const char * cwd, const char * path) {
 
   char * s = malloc(strlen(cwd)  + 1 + strlen(path) + 1);
   strcpy(s, cwd);
-  strcat(s, "/");
+  if (s[strlen(s) - 1] != '/') strcat(s, "/");
   strcat(s, path);
   return s;
 }

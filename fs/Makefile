@@ -20,6 +20,8 @@ clean:
 	rm -f *.o ${TARGET} 
 	rm -f sys/*.o
 	rm -f user/*.o
+	rm -f interface/*.o
+	rm -f file/*.o
 	rm -f test
 	rm -f a.out
 

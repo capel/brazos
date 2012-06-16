@@ -26,6 +26,11 @@ int cat_main(int argc, char** argv) {
 
   char * buf = malloc(size + 1);
   int r = _read(fd, buf, size);
+  if (r == E_CANT) {
+    printf("cat: no permission to read %s", path);
+    free(buf);
+    return -1;
+  }
   assert(r > 0);
 
   r = _close(fd);

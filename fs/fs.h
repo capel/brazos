@@ -1,7 +1,6 @@
 #ifndef FS_H
 #define FS_H
 
-
 #define NAME_LEN 8
 #define PATH_LEN 32
 #define MAX_ARGS 32
@@ -25,6 +24,12 @@ Link* link_ctor(const char* path);
 Block* block_ctor(int bid);
 Entry* entry_ctor(const char* path, Node* n);
 
+#define STYPE_STDIN 0
+#define STYPE_STDOUT 1
+#define STYPE_BLOCK 3
+File* stdin_ctor();
+File* stdout_ctor();
+
 // Should be called using DTOR()
 void dir_dtor(Directory* d);
 void link_dtor(Link* l);
@@ -39,8 +44,6 @@ char* block_serialize(Block* n);
 char* entry_serialize(Entry* n);
 char* file_serialize(File* n);
 char* node_serialize(Node* n);
-
-//void pretty_print(Directory *d, int indent);
 
 #define DTOR(o) do { if (o)  _Generic((o), \
     Directory*: dir_dtor, \

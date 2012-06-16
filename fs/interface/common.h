@@ -3,7 +3,7 @@
 
 
 #define MAX_FDS 64
-#include "fs.h"
+#include "../fs.h"
 
 typedef struct file_desc file_desc;
 typedef struct dir_desc dir_desc;

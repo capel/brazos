@@ -3,7 +3,7 @@
 
 
 char * path_normalize(const char * cwd, const char * path);
-const char * path_name(const char * path);
-const char* path_parent(const char * path);
+char * path_name(const char * path);
+char* path_parent(const char * path);
 
 #endif

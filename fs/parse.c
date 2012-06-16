@@ -4,6 +4,7 @@
 #include <stdbool.h>
 #include <ctype.h>
 #include <string.h>
+#include <assert.h>
 
 #include <vector.h>
 #include <extras.h>
@@ -135,6 +136,25 @@ static File* PARSE(file_parse) {
   return f;
 }
 
+static File* PARSE(special_parse) {
+  CONSUME('S');
+  CONSUME('(');
+
+  int type = int_parse(s, pos, die);
+
+  NOM_SPACE();
+  CONSUME(')');
+
+  switch (type) {
+    case STYPE_STDIN:
+      return stdin_ctor();
+    case STYPE_STDOUT:
+      return stdout_ctor();
+    default:
+      assert(0);
+  }
+}
+
 static Node* PARSE(node_parse) {
   switch(s[*pos]) {
     case 'L':
@@ -143,6 +163,8 @@ static Node* PARSE(node_parse) {
       return NODE(dir_parse(s, pos, die));
     case 'F':
       return NODE(file_parse(s, pos, die));
+    case 'S':
+      return NODE(special_parse(s, pos, die));
     default:
       DIE();
   }

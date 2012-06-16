@@ -7,9 +7,10 @@
 
 #include <extras.h>
 
+#include "../fs.h"
+
 #include "path_util.h"
-#include "fs.h"
-#include "interface_common.h"
+#include "common.h"
 
 fs_state* _st;
 fs_state* st() { return _st; }
@@ -65,22 +66,19 @@ int _open(const char *orig_path, int flags) {
       free((char*) path);
       return E_NOTFOUND;
     } else {
-      const char * parent = path_parent(path);
-      printk("parent %s", parent);
-      const char * name = path_name(path);
-
+      char * parent = path_parent(path);
       Node * parent_dir = walk(parent);
+      free(parent);
+
       if (!parent_dir) return E_NOTFOUND;
-
-      free((char*)parent);
-
       if (!is_dir(parent_dir)) return E_INVAL;
-
-      Directory* dir = get_dir(parent_dir);
 
       n = NODE(file_ctor(0,0,0));
       assert(n);
-      dir_add(dir, name, n);
+
+      char * name = path_name(path);
+      dir_add(get_dir(parent_dir), name, n);
+      free(name);
     }
   }
 
@@ -182,17 +180,20 @@ int _write(int fd, const void *buf, size_t nbytes) {
 }
 
 int _remove(const char* path) {
-  const char* npath = path_normalize(get_cwd(st()), path);
+  char* npath = path_normalize(get_cwd(st()), path);
   assert(path);
 
-  const char * parent = path_parent(npath);
-  const char * name = path_name(npath);
+  char * parent = path_parent(npath);
+  char * name = path_name(npath);
+  free(npath);
 
   Node * n = walk(parent);
-  free((char*)parent);
+  free(parent);
 
-  Directory* dir = get_dir(n);
-  int r = dir_remove(dir, name);
-  free((char*)npath);
+  if (!n) return E_NOTFOUND;
+  if (!is_dir(n)) return E_INVAL;
+
+  int r = dir_remove(get_dir(n), name);
+  free(name);
   return r;
 }

@@ -7,6 +7,8 @@
 
 #include <vector.h>
 
+#include <file.h>
+
 int cat_main(int argc, char** argv);
 int touch_main(int argc, char** argv);
 int rm_main(int argc, char** argv);
@@ -52,12 +54,18 @@ not_found:
 #undef DISPATCH
 
 int sh_main(int argc, char** argv) {
+  int _stdin = _open("/dev/stdin", _O_RDONLY);
+  assert(_stdin > 0);
+  int _stdout = _open("/dev/stdout", _O_WRONLY);
+  assert(_stdout > 0);
+
   char buf[4096];
   for(;;) {
-    printf("brazos> ");
-    fflush(stdout);
+    int wr = _write(_stdout, "brazos> ", strlen("brazos> "));
+    assert(wr > 0);
+    _sync(_stdout);
     memset(buf, 0, sizeof(buf));
-    int r = read(0, buf, sizeof(buf));
+    int r = _read(_stdin, buf, sizeof(buf));
     assert(r >= 0);
 
     if (r == 0) continue;

@@ -13,6 +13,9 @@ int rm_main(int argc, char** argv) {
   if (r == E_NOTFOUND) {
     printf("rm: %s not found\n", argv[1]);
     return -1;
+  } else if (r == E_INVAL) {
+    printf("rm: invalid argument\n");
+    return -1;
   }
   assert(r == 0);
 

@@ -9,9 +9,9 @@
 #include <extras.h>
 #include <dir.h>
 
+#include "../fs.h"
 #include "path_util.h"
-#include "fs.h"
-#include "interface_common.h"
+#include "common.h"
 
 struct dir_desc {
   Link* link;
@@ -23,7 +23,7 @@ fs_state* st();
 int _opendir(const char* orig_path, int flags) {
   // the new value must be freed
   // we can just ignore the old value
-  const char* path = path_normalize(get_cwd(st()), orig_path);
+  char* path = path_normalize(get_cwd(st()), orig_path);
   assert(path);
 
   Node * n = walk(path);
@@ -32,20 +32,18 @@ int _opendir(const char* orig_path, int flags) {
       free((char*) path);
       return E_NOTFOUND;
     } else {
-      const char * parent = path_parent(path);
-      const char * name = path_name(path);
-
+      char * parent = path_parent(path);
       Node * parent_dir = walk(parent);
-      if (!parent_dir) return E_NOTFOUND;
-
       free((char*)parent);
 
+      if (!parent_dir) return E_NOTFOUND;
       if (!is_dir(parent_dir)) return E_INVAL;
 
-      Directory* dir = get_dir(parent_dir);
-
       n = NODE(dir_ctor(0));
-      dir_add(dir, name, n);
+
+      char * name = path_name(path);
+      dir_add(get_dir(parent_dir), name, n);
+      free(name);
     }
   }
 

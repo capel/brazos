@@ -18,19 +18,6 @@
 #define _O_RDWR 0x1 | 0x2
 #define _O_CREAT 0x4
 
-// Path operations
-
-// Returns the parent in a path (eg, /parent/name -> /parent)
-// This returns a new string that must be freed manually
-// If the path is relative and contains no parent, it returns "."
-// If the path is /, it returns "/"
-const char* path_parent(const char * path);
-
-// Returns the filename in a path (eg, /parent/name -> name)
-// This does _NOT_ return a new string, only a pointer into the old one
-// If the path is /, it returns "/"
-const char * path_name(const char * path);
-
 // File Operations
 // Opens a filename and returns a file handle.
 // Supported flags: O_RDONLY, O_WRONLY, O_RDWR, O_CREAT
