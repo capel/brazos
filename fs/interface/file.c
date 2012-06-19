@@ -17,6 +17,10 @@ fs_state* st() { return _st; }
 
 void fs_init() {
   _st = ctor_state();
+  int _stdin = _open("/dev/stdin", _O_RDONLY);
+  assert(_stdin == 0);
+  int _stdout = _open("/dev/stdout", _O_WRONLY);
+  assert(_stdout == 1);
 }
 
 int valid(int off) {

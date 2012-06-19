@@ -1,5 +1,5 @@
 TARGET  := test
-SRCS   := $(shell find ./ -type f -name '*.c') ../vector.c
+SRCS   := $(shell find ./ -type f -name '*.c') 
 OBJS    := ${SRCS:.c=.o} 
 AOBJS   := ${ASRCS:.s=.o}
 DEPS    := ${SRCS:.c=.dep} 
@@ -11,7 +11,7 @@ CC=clang
 all: ${TARGET} 
 
 ${TARGET}: ${OBJS}
-	${CC} -lcurses -o ${TARGET} ${OBJS}
+	${CC} -lcurses  -o ${TARGET} ${OBJS}
 
 ${OBJS}: %.o: %.c
 	${CC} ${CCFLAGS} -o $@ -c $< 
@@ -22,7 +22,6 @@ clean:
 	rm -f user/*.o
 	rm -f interface/*.o
 	rm -f file/*.o
-	rm -f user/curses/*.o
 	rm -f test
 	rm -f a.out
 

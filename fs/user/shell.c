@@ -8,6 +8,7 @@
 #include <vector.h>
 
 #include <file.h>
+#include <extras.h>
 
 int cat_main(int argc, char** argv);
 int touch_main(int argc, char** argv);
@@ -16,6 +17,7 @@ int ls_main(int argc, char** argv);
 int mkdir_main(int argc, char** argv);
 int echo_main(int argc, char** argv);
 int cd_main(int argc, char** argv);
+int vim_main(int argc, char** argv);
 
 int sh_dispatch(char* cmd, int argc, char** argv);
 
@@ -40,6 +42,9 @@ int sh_dispatch(char* cmd, int argc, char** argv) {
     case 'l':
       DISPATCH("ls", ls_main);
       goto not_found;
+    case 'v':
+      DISPATCH("vim", vim_main);
+      goto not_found;
     case 'm':
       DISPATCH("mkdir", mkdir_main);
       goto not_found;
@@ -54,18 +59,11 @@ not_found:
 #undef DISPATCH
 
 int sh_main(int argc, char** argv) {
-  int _stdin = _open("/dev/stdin", _O_RDONLY);
-  assert(_stdin > 0);
-  int _stdout = _open("/dev/stdout", _O_WRONLY);
-  assert(_stdout > 0);
-
   char buf[4096];
   for(;;) {
-    int wr = _write(_stdout, "brazos> ", strlen("brazos> "));
-    assert(wr > 0);
-    _sync(_stdout);
+    Printf("brazos> ");
     memset(buf, 0, sizeof(buf));
-    int r = _read(_stdin, buf, sizeof(buf));
+    int r = _read(0, buf, sizeof(buf));
     assert(r >= 0);
 
     if (r == 0) continue;
@@ -89,7 +87,7 @@ int sh_main(int argc, char** argv) {
 
     int code = sh_dispatch(vcget(v, 0), vsize(v), vdata(v));
     if (code == -1337) {
-      printf("Command not found\n");
+      Printf("Command not found\n");
     }
     cleanup_vector(v);
   }

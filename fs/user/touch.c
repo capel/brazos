@@ -2,19 +2,20 @@
 #include <stdlib.h>
 #include <file.h>
 #include <assert.h>
+#include <extras.h>
 
 int touch_main(int argc, char** argv) {
   if (argc == 1) {
-    printf("touch: too few arguments");
+    Printf("touch: too few arguments");
     return -1;
   }
 
   int fd = _open(argv[1], _O_CREAT | _O_RDONLY);
   if (fd == E_INVAL) {
-    printf("touch: invalid argument\n");
+    Printf("touch: invalid argument\n");
     return -1;
   } else if (fd == E_NOTFOUND) {
-    printf("touch: parent directory does not exist\n");
+    Printf("touch: parent directory does not exist\n");
     return -1;
   }
 

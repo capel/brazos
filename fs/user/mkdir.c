@@ -3,11 +3,12 @@
 #include <file.h>
 #include <assert.h>
 #include <dir.h>
+#include <extras.h>
 
 int mkdir_main(int argc, char** argv) {
   char * path;
   if (argc == 1) {
-    printf("mkdir: too few arguments\n");
+    Printf("mkdir: too few arguments\n");
     return -1;
   }
   path = argv[1];
@@ -20,11 +21,11 @@ int mkdir_main(int argc, char** argv) {
     assert(r == 0);
     return 0;
   } else if (fd == E_INVAL) {
-    printf("mkdir: file %s already exists\n", path);
+    Printf("mkdir: file %s already exists\n", path);
     return -1;
   } else {
     _closedir(fd);
-    printf("mkdir: directory %s already exists\n", path);
+    Printf("mkdir: directory %s already exists\n", path);
     return -1;
   }
 }

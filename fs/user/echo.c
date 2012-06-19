@@ -3,14 +3,15 @@
 #include <file.h>
 #include <assert.h>
 #include <dir.h>
+#include <extras.h>
 
 int echo_main(int argc, char** argv) {
   for(int i = 1; i < argc; i++) {
-    printf("%s", argv[i]);
+    Printf("%s", argv[i]);
     if (i != argc-1) {
-      printf(" ");
+      Printf(" ");
     }
   }
-  printf("\n");
+  Printf("\n");
   return 0;
 }

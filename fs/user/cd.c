@@ -3,6 +3,7 @@
 #include <file.h>
 #include <assert.h>
 #include <dir.h>
+#include <extras.h>
 
 int cd_main(int argc, char** argv) {
   char * path;
@@ -14,10 +15,10 @@ int cd_main(int argc, char** argv) {
 
   int r = _chdir(path);
   if (r == E_NOTFOUND) {
-    printf("cd: %s not found\n", path);
+    Printf("cd: %s not found\n", path);
     return -1;
   } else if (r == E_INVAL) {
-    printf("cd: %s is not a directory\n", path);
+    Printf("cd: %s is not a directory\n", path);
     return -1;
   }
   return 0;

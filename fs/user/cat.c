@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <file.h>
 #include <assert.h>
+#include <extras.h>
 
 int cat_main(int argc, char** argv) {
   char * path;
@@ -13,10 +14,10 @@ int cat_main(int argc, char** argv) {
 
   int fd = _open(path, _O_RDONLY);
   if (fd == E_NOTFOUND) {
-    printf("cat: %s not found\n", path);
+    Printf("cat: %s not found\n", path);
     return -1;
   } else if (fd == E_INVAL) {
-    printf("cat: %s is a directroy\n", path);
+    Printf("cat: %s is a directroy\n", path);
     return -1;
   }
   assert(fd > 0);
@@ -27,7 +28,7 @@ int cat_main(int argc, char** argv) {
   char * buf = malloc(size + 1);
   int r = _read(fd, buf, size);
   if (r == E_CANT) {
-    printf("cat: no permission to read %s", path);
+    Printf("cat: no permission to read %s", path);
     free(buf);
     return -1;
   }
@@ -36,7 +37,7 @@ int cat_main(int argc, char** argv) {
   r = _close(fd);
   assert(r == 0);
 
-  printf("%s\n", buf);
+  Printf("%s\n", buf);
   free(buf);
 
   return 0;

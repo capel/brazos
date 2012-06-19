@@ -4,6 +4,8 @@
 #include <assert.h>
 #include <dir.h>
 
+#include <extras.h>
+
 #include <../../chars.h>
 
 int ls_main(int argc, char** argv) {
@@ -16,10 +18,10 @@ int ls_main(int argc, char** argv) {
 
   int fd = _opendir(path, _O_RDONLY);
   if (fd == E_NOTFOUND) {
-    printf("ls: %s not found\n", path);
+    Printf("ls: %s not found\n", path);
     return -1;
   } else if (fd == E_INVAL) {
-    printf("ls: %s not a directory\n", path);
+    Printf("ls: %s not a directory\n", path);
     return -1;
   }
   assert(fd > 0);
@@ -30,16 +32,16 @@ int ls_main(int argc, char** argv) {
   while((r = _nextfile(fd, &e)) == 0) {
     switch (e.type) {
       case _TYPE_DIR:
-        printf("%s", RED);
+        Printf("%s", RED);
         break;
       case _TYPE_LINK:
-        printf("%s", BLUE);
+        Printf("%s", BLUE);
         break;
       case _TYPE_FILE:
-        printf("%s", WHITE);
+        Printf("%s", WHITE);
         break;
     }
-    printf("%s%s %lu\n", e.name, WHITE, e.size);
+    Printf("%s%s %lu\n", e.name, WHITE, e.size);
   }
 
   r = _closedir(fd);
