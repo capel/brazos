@@ -11,6 +11,7 @@ void setup() {
   initscr();
   raw();
   noecho();
+  keypad(stdscr, TRUE);
 }
 
 void teardown() {

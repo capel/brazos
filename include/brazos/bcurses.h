@@ -4,6 +4,11 @@
 #include <stdbool.h>
 #include <stdlib.h>
 
+#define KEY_DOWN	0402		/* down-arrow key */
+#define KEY_UP		0403		/* up-arrow key */
+#define KEY_LEFT	0404		/* left-arrow key */
+#define KEY_RIGHT	0405		/* right-arrow key */
+
 typedef struct scr scr;
 typedef struct region region;
 
@@ -27,6 +32,8 @@ bool is_magic(int ch);
 bool standard_magic(region*, int ch);
 
 bool move_cur(region*, int x, int y);
+int cur_x(region*);
+int cur_y(region*);
 bool writech(region*, int ch);
 bool backspace(region*);
 bool newline(region* r);

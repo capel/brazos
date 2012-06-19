@@ -181,6 +181,15 @@ end:
   return pos;
 }
 
+
+int cur_x(region* r) {
+  return r->cur_x;
+}
+
+int cur_y(region* r) {
+  return r->cur_y;
+}
+
 bool move_cur(region* r, int x, int y) {
   if (!INSIDE(r, x, y)) return false;
 
@@ -239,6 +248,10 @@ bool is_magic(int ch) {
   switch(ch) {
     case '\b':
     case '\n':
+    case KEY_LEFT:
+    case KEY_RIGHT:
+    case KEY_UP:
+    case KEY_DOWN:
       return true;
     default:
       return false;
@@ -251,6 +264,14 @@ bool standard_magic(region* r, int ch) {
       return backspace(r);
     case '\n':
       return newline(r);
+    case KEY_LEFT:
+      return move_cur(r, r->cur_x - 1, r->cur_y);
+    case KEY_RIGHT:
+      return move_cur(r, r->cur_x + 1, r->cur_y);
+    case KEY_UP:
+      return move_cur(r, r->cur_x, r->cur_y - 1);
+    case KEY_DOWN:
+      return move_cur(r, r->cur_x, r->cur_y + 1);
     default:
       return false;
   }
