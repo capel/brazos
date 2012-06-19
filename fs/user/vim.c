@@ -45,18 +45,12 @@ int vim_main(int argc, char** argv) {
   blit(sc);
   for (;;) {
     ch = readch();
-    switch (ch) {
-      case '\b':
-        backspace(cur);
-        break;
-      case '\n':
-        newline(cur);
-        break;
-      case '!':
-        goto end;
-      default:
-        writech(cur, ch); 
-        break;
+    if (is_magic(ch)) {
+      standard_magic(cur, ch);
+    } else if (ch == '!') {
+      goto end;
+    } else {
+      writech(cur, ch); 
     }
     blit(sc);
   }

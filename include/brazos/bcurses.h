@@ -23,6 +23,9 @@ bool draw_box(region*, int x1, int y1, int x2, int y2);
 
 int readch();
 
+bool is_magic(int ch);
+bool standard_magic(region*, int ch);
+
 bool move_cur(region*, int x, int y);
 bool writech(region*, int ch);
 bool backspace(region*);

@@ -235,3 +235,23 @@ bool newline(region* r) {
   return false;
 }
 
+bool is_magic(int ch) {
+  switch(ch) {
+    case '\b':
+    case '\n':
+      return true;
+    default:
+      return false;
+  }
+}
+
+bool standard_magic(region* r, int ch) {
+  switch(ch) {
+    case '\b':
+      return backspace(r);
+    case '\n':
+      return newline(r);
+    default:
+      return false;
+  }
+}
