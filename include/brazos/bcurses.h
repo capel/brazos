@@ -1,8 +1,14 @@
-#ifndef CURSES_H
-#define CURSES_H
+#ifndef BCURSES_H
+#define BCURSES_H
 
 #include <stdbool.h>
 #include <stdlib.h>
+
+#define NCURSES_ATTR_SHIFT       8
+#define NCURSES_BITS(mask,shift) ((mask) << ((shift) + NCURSES_ATTR_SHIFT))
+#define A_NORMAL	(1U - 1U)
+#define A_UNDERLINE	NCURSES_BITS(1U,9)
+#define A_REVERSE	NCURSES_BITS(1U,10)
 
 #define KEY_DOWN	0402		/* down-arrow key */
 #define KEY_UP		0403		/* up-arrow key */
@@ -10,6 +16,11 @@
 #define KEY_RIGHT	0405		/* right-arrow key */
 #define KEY_ENTER	0527		/* enter/send key */
 #define KEY_BACKSPACE	0407		/* backspace key */
+
+typedef struct glyph {
+  int ch;
+  unsigned int attr;
+} glyph;
 
 typedef struct scr scr;
 typedef struct canvas canvas;

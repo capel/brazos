@@ -3,6 +3,8 @@
 #include <unistd.h>
 #include <assert.h>
 
+#include <bcurses.h>
+
 int readch() {
   return getch();
 }
@@ -24,12 +26,18 @@ static int linearize(int max_x, int max_y, int x, int y) {
   return y * max_x + x;
 }
 
-void _blit(int* buf, int max_x, int max_y) {
+void _blit(glyph* buf, int max_x, int max_y) {
   for(int y = 0; y < max_y; y++) {
     for(int x = 0; x < max_x; x++) {
-      mvaddch(y, x, (char) buf[linearize(max_x, max_y, x, y)]);
+      glyph g = buf[linearize(max_x, max_y, x, y)];
+      if (g.attr != A_NORMAL) {
+        attron(g.attr);
+        mvaddch(y, x, (char)g.ch);
+        attroff(g.attr);
+      } else {
+        mvaddch(y, x, (char)g.ch);
+      }
     }
-    //putchar('\n');
   }
   refresh();
 }
