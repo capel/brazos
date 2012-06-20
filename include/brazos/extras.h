@@ -9,4 +9,7 @@ void rtrim(char* s);
 
 int Printf(const char* fmt, ...);
 
+#define MAX(x, y) (((x) > (y)) ? (x) : (y))
+#define MIN(x, y) (((x) < (y)) ? (x) : (y))
+
 #endif

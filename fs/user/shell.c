@@ -73,7 +73,7 @@ int sh_main(int argc, char** argv) {
       buf[end-1] = '\0'; // kill newline
     }
 
-    vector* v = vector_split_quoted(buf, " ");
+    vector* v = split_quoted(buf, " ");
 
     if (vsize(v) == 0) {
       cleanup_vector(v);
@@ -85,7 +85,7 @@ int sh_main(int argc, char** argv) {
       return 0;
     }
 
-    int code = sh_dispatch(vcget(v, 0), vsize(v), vdata(v));
+    int code = sh_dispatch(vcget(v, 0), vsize(v), (char**)vdata(v));
     if (code == -1337) {
       Printf("Command not found\n");
     }

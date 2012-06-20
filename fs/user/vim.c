@@ -37,30 +37,27 @@ int vim_main(int argc, char** argv) {
   assert(r > 0);
 
   scr* sc = init_screen(50, 10);
-  region* cur = full_region(sc);
-
-  draw_text(cur, 0, 0, buf);
+  canvas* cur = full_canvas(sc);
+  textbox* tb = init_textbox(cur, buf);
 
   int ch;
   blit(sc);
   for (;;) {
     ch = readch();
     if (is_magic(ch)) {
-      standard_magic(cur, ch);
+      standard_magic(tb, ch);
     } else if (ch == '!') {
       goto end;
     } else {
-      writech(cur, ch); 
+      insert(tb, ch); 
     }
     blit(sc);
   }
 
 end:
 
-  region_to_buffer(cur, buf, 4096);
-  //rtrim(buf);
+  get_text(tb, buf, 4096);
 
-  dtor_region(cur);
   dtor_screen(sc);
 
   Printf("buf: %s\n", buf);

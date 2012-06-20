@@ -18,7 +18,7 @@
 // example: vector* v = make_vector(sizeof(whatever*));
 struct vector {
   // Public data -- use these and the provided vector functions.
-  char** data;
+  void** data;
   size_t size;
 
   // Private data -- do not use them.
@@ -30,7 +30,7 @@ struct vector {
 void* vector_pop_front(vector* v)
 {
   void* p = (void*)v->data[0];
-  vector_remove(v, 0);
+  vremove(v, 0);
   return p;
 }
 
@@ -39,7 +39,7 @@ size_t vsize(vector* v) {
   return v->size;
 }
 
-void vector_push(vector* v, char* object)
+void vpush(vector* v, void* object)
 {
   assert(v);
 
@@ -60,10 +60,10 @@ void vector_push(vector* v, char* object)
 void* vget(vector* v, size_t idx) {
   assert(v);
   assert(idx < v->size);
-  return (void*)( v->data[idx]);
+  return v->data[idx];
 }
 
-char** vdata(vector* v) {
+void** vdata(vector* v) {
   return v->data;
 }
 
@@ -91,7 +91,17 @@ void cleanup_vector(vector* v)
   free(v);
 }
 
-void* vector_remove(vector* v, size_t i)
+void vinsert(vector* v, size_t idx, void* item) {
+  vpush(v, 0); // so we have enough space
+
+  for(size_t i = vsize(v) - 1; i != idx; i--) {
+    v->data[i] = vget(v, i-1);
+  }
+
+  v->data[idx] = item;
+}
+
+void* vremove(vector* v, size_t i)
 {
   if (i >= v->size)
     return 0;
@@ -126,7 +136,7 @@ bool is_sep(const char c, const char* seps)
   return false;
 }
 
-vector* vector_split(const char * str, const char* seps)
+vector* split(const char * str, const char* seps)
 {
 
   if (!str || !seps)
@@ -161,7 +171,7 @@ vector* vector_split(const char * str, const char* seps)
     for (; i < len; ++i) {
       if (is_sep(src[i], seps)) {
         src[i++] = '\0';
-        vector_push(v, src+beginning);
+        vpush(v, src+beginning);
         break;
       }
     }
@@ -170,7 +180,7 @@ vector* vector_split(const char * str, const char* seps)
     if (i == len) {
       if (i != beginning) {
         src[++i] = '\0';
-        vector_push(v, src+beginning);
+        vpush(v, src+beginning);
       }
       return v;
     }
@@ -183,7 +193,7 @@ static bool is_quote(char c) {
 
 static void add(vector* v, char* src, size_t i, char* beginnning) {
   src[i] = '\0';
-  vector_push(v, beginnning);
+  vpush(v, beginnning);
 }
 
 static void get_str(vector*v, char* s, size_t *i) {
@@ -213,7 +223,7 @@ static void get_token(vector*v, char* s, size_t *i, const char* seps) {
   *i += 1;
 }
 
-vector* vector_split_quoted(const char * str, const char* seps)
+vector* split_quoted(const char * str, const char* seps)
 {
   if (!str || !seps)
     return 0;
@@ -243,7 +253,7 @@ vector* vector_split_quoted(const char * str, const char* seps)
   }
 }
 
-char* vector_join(vector* v, const char* joiner)
+char* join(vector* v, const char* joiner)
 {
   if (v->size == 0) {
     char * s = malloc(2);

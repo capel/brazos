@@ -35,7 +35,7 @@ static char* _serialize(File* f) {
 
   vector* v = map(Block*, b, f->v, block_serialize(b));
 
-  const char* inner = vector_join(v, " ");
+  const char* inner = join(v, " ");
   needed += strlen(inner) + 1;
 
   char* s = malloc(needed);

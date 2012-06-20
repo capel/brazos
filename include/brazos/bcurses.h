@@ -8,34 +8,35 @@
 #define KEY_UP		0403		/* up-arrow key */
 #define KEY_LEFT	0404		/* left-arrow key */
 #define KEY_RIGHT	0405		/* right-arrow key */
+#define KEY_ENTER	0527		/* enter/send key */
+#define KEY_BACKSPACE	0407		/* backspace key */
 
 typedef struct scr scr;
-typedef struct region region;
+typedef struct canvas canvas;
+typedef struct textbox textbox;
 
 scr* init_screen(int sx, int sy);
-region* init_region(scr*, int x1, int y1, int x2, int y2);
-region* full_region(scr*);
+canvas* init_canvas(scr*, int x1, int y1, int x2, int y2);
+canvas* full_canvas(scr*);
+textbox* init_textbox(canvas* c, const char* data);
 
 void dtor_screen(scr* s);
-void dtor_region(region* r);
-
 void blit(scr* sc);
 
-bool draw_text(region*, int x, int y, const char* buf);
-bool draw_vline(region*, int x, int y1, int y2);
-bool draw_hline(region*, int x1, int x2, int y);
-bool draw_box(region*, int x1, int y1, int x2, int y2);
-
-int readch();
+bool blank(canvas* c);
+bool draw_text(canvas*, int x, int y, const char* buf);
+bool draw_text_nowrap(canvas *r, int x, int y, const char* buf);
+bool draw_vline(canvas*, int x, int y1, int y2);
+bool draw_hline(canvas*, int x1, int x2, int y);
+bool draw_box(canvas*, int x1, int y1, int x2, int y2);
 
 bool is_magic(int ch);
-bool standard_magic(region*, int ch);
+bool standard_magic(textbox*, int ch);
 
-bool move_cur(region*, int x, int y);
-int cur_x(region*);
-int cur_y(region*);
-bool writech(region*, int ch);
-bool backspace(region*);
-bool newline(region* r);
-int region_to_buffer(region *r, char* buf, size_t size);
+bool get_text(textbox* tb, char* buf, size_t size);
+
+int readch();
+bool insert(textbox*, int ch);
+bool backspace(textbox*);
+bool newline(textbox* r);
 #endif

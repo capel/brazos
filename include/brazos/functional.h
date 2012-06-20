@@ -9,7 +9,7 @@
    { expr; } \
   } })\
 
-#define push(v, val) vector_push(v, (void*)(val))
+#define push(v, val) vpush(v, (void*)(val))
 
 #define max(type, v) \
   ({  type res = (type) vget(v, 0); \
@@ -32,7 +32,7 @@
   res; })
 
 #define find(type, x, v, constraint) (type)vget(v, findi(type, x, v, constraint))
-#define take(type, x, v, constraint) (type)vector_remove(v, findi(type, x, v, constraint))
+#define take(type, x, v, constraint) (type)vremove(v, findi(type, x, v, constraint))
 
 #define reduce(type, x, v, old, expr) \
   ({  type old; \

@@ -108,7 +108,7 @@ Node* walk(const char* path) {
 
   Directory* start = get_dir(root());
   Node * o;
-  vector* v = vector_split(path, "/");
+  vector* v = split(path, "/");
   fori(i, vsize(v)) {
     o = dir_lookup(start, vcget(v, i));
     if (!o) {
@@ -144,7 +144,7 @@ int dir_add(Directory* dir, const char* name, Node* n) {
     return E_EXISTS;
   }
 
-  vector_push(dir->v, (char*)entry_ctor(name, n));
+  vpush(dir->v, (char*)entry_ctor(name, n));
   return 0;
 }
 
@@ -197,7 +197,7 @@ char* dir_serialize(Directory* dir) {
 static const char* dir_entries_serialize(Directory* d) {
   vector* v = map(Entry*, e, d->v, entry_serialize(e));
 
-  const char* s = vector_join(v, "\n");
+  const char* s = join(v, "\n");
 
   each(char*, s, v, free(s));
 
