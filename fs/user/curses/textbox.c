@@ -22,7 +22,7 @@ struct textbox {
 
 static line* create_line(const char* s) {
   line* l = malloc(sizeof(line));
-  l->size = 2 * strlen(s);
+  l->size = MAX(64, 2 * strlen(s));
   l->buf = malloc(l->size);
   l->idx = 0;
 
@@ -90,11 +90,13 @@ bool get_text(textbox* tb, char* buf, size_t size) {
   vector * v = map(line*, l, tb->v, l->buf);
   each(char*, s, v, s[strlen(s) -1] = '\n');
 
-  const char* joined = join(v, "");
+  char* joined = join(v, "");
   cleanup_vector(v);
 
   strncpy(buf, joined, size);
   buf[size-1] = '\0';
+
+  free(joined);
   return true;
 }
 
@@ -125,6 +127,8 @@ bool is_magic(int ch) {
 bool standard_magic(textbox* tb, int ch) {
   line * l = current_line(tb);
   switch(ch) {
+    case '\n':
+      return newline(tb);
     case KEY_BACKSPACE:
       return backspace(tb);
     case KEY_LEFT:
@@ -137,9 +141,21 @@ bool standard_magic(textbox* tb, int ch) {
       tb->idx = MAX(0, tb->idx - 1);
       return true;
     case KEY_DOWN:
-      tb->idx = MIN((int)vsize(tb->v), tb->idx + 1);
+      tb->idx = MIN((int)vsize(tb->v) - 1, tb->idx + 1);
       return true;
     default:
       return false;
   }
 }
+
+void dtor_line(line* l) {
+  free(l->buf);
+  free(l);
+}
+
+void dtor_textbox(textbox* tb) {
+  each(line*, l, tb->v, dtor_line(l));
+  cleanup_vector(tb->v);
+  free(tb);
+}
+

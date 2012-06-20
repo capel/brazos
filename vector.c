@@ -210,7 +210,7 @@ static void get_str(vector*v, char* s, size_t *i) {
 }
 
 static void eat_seps(char* s, size_t *i, const char* seps) {
-  while(is_sep(s[*i], seps)) { *i += 1; }
+  while(s[*i] && is_sep(s[*i], seps)) { *i += 1; }
 }
 
 static void get_token(vector*v, char* s, size_t *i, const char* seps) {

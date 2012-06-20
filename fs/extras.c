@@ -12,7 +12,7 @@ int Printf(const char* fmt, ...)
 
     va_list va;
     va_start(va, fmt);
-    vsprintf(buf, fmt, va);
+    vsnprintf(buf, 4096, fmt, va);
     va_end(va);
 
     int r = _write(1, buf, strlen(buf));

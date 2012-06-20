@@ -27,3 +27,6 @@ clean:
 	rm -f a.out
 
 distclean:: clean
+
+valgrind:
+	valgrind --leak-check=full --dsymutil=yes --log-file=out.log --vgdb=full ./test	

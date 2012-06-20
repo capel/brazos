@@ -8,8 +8,8 @@
 struct scr {
   int x;
   int y;
-  glyph* buf;
   canvas* canvas_list;
+  glyph* buf;
 };
 
 #define BUFSIZE(s) ((s)->x * (s)->y)
@@ -47,6 +47,8 @@ scr* init_screen(int sx, int sy) {
     s->buf[i].attr = A_NORMAL;
   }
 
+  s->canvas_list = 0;
+
   return s;
 }
 
@@ -68,7 +70,9 @@ void blit(scr* sc) {
   _blit(sc->buf, sc->x, sc->y);
 }
 
+void dtor_canvas(canvas* c);
 void dtor_screen(scr* s) {
+  dtor_canvas(s->canvas_list);
   free(s->buf);
   free(s);
   teardown();

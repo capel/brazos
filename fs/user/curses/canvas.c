@@ -164,3 +164,13 @@ bool draw_box(canvas* r, int x1, int y1, int x2, int y2) {
   draw_hline(r, x1, x2, y2);
   return true;
 }
+
+
+void dtor_textbox(textbox*);
+void dtor_canvas(canvas* c) {
+  if (!c) return;
+
+  dtor_canvas(c->next);
+  dtor_textbox(c->tb);
+  free(c);
+}
