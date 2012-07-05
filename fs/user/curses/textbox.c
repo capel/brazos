@@ -7,44 +7,25 @@
 #include <vector.h>
 #include <extras.h>
 
-typedef struct {
-  char* buf;
-  int size;
-  int idx;
-} line;
-
 struct textbox {
   canvas* c;
-  int idx;
+  int yidx;
+  int xidx;
 
   vector* v;
 };
 
-static line* create_line(const char* s) {
-  line* l = malloc(sizeof(line));
-  l->size = MAX(64, 2 * strlen(s));
-  l->buf = malloc(l->size);
-  l->idx = 0;
+static vector* create_line(const char* s) {
+  vector* l = make_vector(strlen(s) * 2);
 
-  strcpy(l->buf, s);
+  fori(i, strlen(s)) {
+    vpush(l, (void*)s[i]);
+  }
   return l;
 }
 
-static bool shift(line* l, int start, int amt) {
-  if (amt == 0) {
-  } else if (amt > 0) {
-    int nchars = l->size - start - amt;
-    memmove(l->buf + start + amt, l->buf + start, nchars);
-  } else {
-    int nchars = l->size - start;
-    memmove(l->buf + start + amt, l->buf + start, nchars);
-    memset(l->buf + start + amt + nchars, '~', nchars);
-  }
-  return true;
-}
-
-static line* current_line(textbox* tb) {
-  return (line*) vget(tb->v, tb->idx);
+static vector* current_line(textbox* tb) {
+  return vget(tb->v, tb->yidx);
 }
 
 void register_tb(canvas* c, textbox* tb);
@@ -52,51 +33,60 @@ void register_tb(canvas* c, textbox* tb);
 textbox* init_textbox(canvas* c, const char * s) {
   textbox* tb = malloc(sizeof(textbox));
   tb->c = c;
-  tb->idx = 0;
+  tb->yidx = 0;
+  tb->xidx = 0;
 
   register_tb(c, tb);
 
   vector* v = split(s, "\n");
   tb->v = map(char*, s, v, create_line(s));
   cleanup_vector(v);
+
+  if (vsize(tb->v) == 0) {
+    vector* l = create_line("  ");
+    vpush(tb->v, l);
+  }
   return tb;
 }
 
 bool insert(textbox* tb, int ch) {
-  line* l = current_line(tb);
-  shift(l, l->idx, 1);
-  l->buf[l->idx++] = ch;
+  vector* l = current_line(tb);
+  vinsert(l, tb->xidx++, (void*)ch);
   return true;
 }
 
 bool backspace(textbox* tb) {
-  line* l = current_line(tb);
-  shift(l, l->idx, -1);
-  l->idx--;
+  if (tb->xidx == 0) return false;
+
+  vector* l = current_line(tb);
+  vremove(l, tb->xidx--);
   return true;
 }
 
 bool newline(textbox* tb) {
-  line *old = current_line(tb);
-  line* l = create_line(old->buf + old->idx);
-  old->buf[old->idx] = '\0';
+  return false;
 
-  vinsert(tb->v, tb->idx + 1, l);
-  tb->idx++;
+  vector *old = current_line(tb);
+  vector* l = create_line("");
+
+  while((unsigned)tb->xidx < vsize(old)) {
+    vpush(l, vget(old, tb->xidx));
+    vremove(old, tb->xidx);
+  }
+
+  tb->yidx++;
+  tb->xidx = 0;
+  vinsert(tb->v, tb->yidx + 1, l);
   return true;
 }
 
 bool get_text(textbox* tb, char* buf, size_t size) {
-  vector * v = map(line*, l, tb->v, l->buf);
-  each(char*, s, v, s[strlen(s) -1] = '\n');
-
-  char* joined = join(v, "");
-  cleanup_vector(v);
-
-  strncpy(buf, joined, size);
-  buf[size-1] = '\0';
-
-  free(joined);
+  int pos = 0;
+  fori(i, vsize(tb->v)) {
+    each(char, c, vget(tb->v, i), buf[pos++] = c);
+    buf[pos++] = '\n';
+  }
+  buf[pos++] = '\0';
   return true;
 }
 
@@ -104,10 +94,19 @@ int RATTR(canvas* r, int x, int y, unsigned attr);
 
 void draw_tb(textbox* tb) {
   blank(tb->c);
+  if (vsize(tb->v) == 0) return;
+
+  char buf[4096];
+  int pos = 0;
+
   fori(i, vsize(tb->v)) {
-    draw_text_nowrap(tb->c, 0, i, ((line*)vget(tb->v, i))->buf);
+    pos = 0;
+    each(char, c, vget(tb->v, i), buf[pos++] = c);
+    buf[pos++] = '\0';
+    
+    draw_text_nowrap(tb->c, 0, i, buf);
   }
-  RATTR(tb->c, current_line(tb)->idx, tb->idx, A_UNDERLINE);
+  RATTR(tb->c, tb->xidx, tb->yidx, A_UNDERLINE);
 }
 
 bool is_magic(int ch) {
@@ -125,36 +124,38 @@ bool is_magic(int ch) {
 }
 
 bool standard_magic(textbox* tb, int ch) {
-  line * l = current_line(tb);
   switch(ch) {
     case '\n':
       return newline(tb);
     case KEY_BACKSPACE:
       return backspace(tb);
     case KEY_LEFT:
-      l->idx = MAX(0, l->idx - 1);
+      tb->xidx = MAX(0, tb->xidx - 1);
       return true;
     case KEY_RIGHT:
-      l->idx = MIN((int)strlen(l->buf), l->idx + 1);
+      tb->xidx = MIN(vsize(current_line(tb)) - 1, (unsigned ) tb->xidx + 1);
       return true;
     case KEY_UP:
-      tb->idx = MAX(0, tb->idx - 1);
+      tb->yidx = MAX(0, tb->yidx - 1);
+      tb->xidx = MIN(vsize(current_line(tb)), (unsigned)tb->xidx);
       return true;
     case KEY_DOWN:
-      tb->idx = MIN((int)vsize(tb->v) - 1, tb->idx + 1);
+      tb->yidx = MIN((int)vsize(tb->v) - 1, tb->yidx + 1);
+      tb->xidx = MIN(vsize(current_line(tb)), (unsigned)tb->xidx);
       return true;
     default:
       return false;
   }
 }
 
-void dtor_line(line* l) {
-  free(l->buf);
-  free(l);
+void dtor_line(vector* l) {
+  cleanup_vector(l);
 }
 
 void dtor_textbox(textbox* tb) {
-  each(line*, l, tb->v, dtor_line(l));
+  if (!tb) return;
+
+  each(vector*, l, tb->v, dtor_line(l));
   cleanup_vector(tb->v);
   free(tb);
 }

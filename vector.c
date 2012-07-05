@@ -74,8 +74,8 @@ char* vcget(vector* v, size_t idx) {
 vector* make_vector(int init_size)
 {
   vector* v = malloc(sizeof(vector));
-  v->__allocated_size = init_size;
-  v->data = malloc(init_size * sizeof(char*));
+  v->__allocated_size = MAX(init_size, 8);
+  v->data = malloc(v->__allocated_size * sizeof(char*));
   v->size = 0;
   v->__source = 0;
   return v;
@@ -239,11 +239,16 @@ vector* split_quoted(const char * str, const char* seps)
   size_t i = 0;
 
   while (true) {
+    if (i >= len) {
+      return v;
+    }
+
     eat_seps(s, &i, seps);
 
     if (i >= len) {
       return v;
     }
+
 
     if (is_quote(s[i])) {
       get_str(v, s, &i);

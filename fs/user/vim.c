@@ -14,7 +14,7 @@ int vim_main(int argc, char** argv) {
   }
   char * path = argv[1];
 
-  int fd = _open(path, _O_RDWR);
+  int fd = _open(path, _O_RDONLY);
   if (fd == E_NOTFOUND) {
     Printf("vim: %s not found\n", path);
     return -1;
@@ -60,10 +60,15 @@ end:
 
   dtor_screen(sc);
 
-  Printf("buf: %s\n", buf);
+  r = _close(fd);
+  assert(r == 0);
 
-  r = _seek(fd, 0, _SEEK_SET);
-  assert(r >= 0);
+  r = _remove(path);
+  assert(r == 0);
+
+  fd = _open(path, _O_CREAT | _O_WRONLY);
+  assert(fd >= 0);
+
   r = _write(fd, buf, strlen(buf));
   assert(r >= 0);
 
